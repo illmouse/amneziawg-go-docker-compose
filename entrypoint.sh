@@ -158,7 +158,7 @@ ip link set up dev "$WG_IFACE" >>"$WG_LOGFILE" 2>&1
 # Enable forwarding/NAT through the same interface
 iptables -t nat -A POSTROUTING -o "$WG_IFACE" -j MASQUERADE 2>>"$WG_LOGFILE" || true
 iptables -A FORWARD -i "$WG_IFACE" -j ACCEPT 2>>"$WG_LOGFILE" || true
-iptables -A FORWARD -o "$WG_IFACE" -m state --state RELATED,ESTABLISHED -j ACCEPT 2>>"$WG_LOGFILE" || true
+iptables -A INPUT -i "$WG_IFACE" -j ACCEPT 2>>"$WG_LOGFILE" || true
 
 log "Setup complete. Interface $WG_IFACE is up and peer.conf available."
 tail -F "$WG_LOGFILE"
