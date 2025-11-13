@@ -133,6 +133,7 @@ chmod +x setup.sh && ./setup.sh
 ```
 
 Что делает скрипт:
+- устанавливает docker и docker compose если отсутствуют
 - включает IP forwarding в /etc/sysctl.conf
 - копирует скрипт мониторинга в /usr/local/bin/amneziawg-monitor.sh
 - добавляет крон джобу для запуска скрипта в /etc/cron.d/amneziawg-monitor
@@ -148,6 +149,9 @@ chmod +x setup.sh && ./setup.sh
 
 Пример вывода скрипта конфигурации:
 ```bash
+[SETUP] Starting AmneziaWG setup...
+[SETUP] Checking Docker installation...
+[SETUP] Docker and Docker Compose are already installed
 [SETUP] Configuring IP forwarding in sysctl...
 [SETUP] IP forwarding already enabled in sysctl.conf
 [SETUP] Applying sysctl settings...

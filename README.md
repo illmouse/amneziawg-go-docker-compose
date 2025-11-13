@@ -133,6 +133,7 @@ chmod +x setup.sh && ./setup.sh
 ```
 
 What the script does:
+- Installs docker and docker compose if missing
 - Enables IP forwarding in /etc/sysctl.conf
 - Copies the monitoring script to /usr/local/bin/amneziawg-monitor.sh
 - Adds a cron job to run the script in /etc/cron.d/amneziawg-monitor
@@ -148,6 +149,9 @@ The configuration file can be found at `./config/peer.conf`
 
 Example script configuration output:
 ```bash
+[SETUP] Starting AmneziaWG setup...
+[SETUP] Checking Docker installation...
+[SETUP] Docker and Docker Compose are already installed
 [SETUP] Configuring IP forwarding in sysctl...
 [SETUP] IP forwarding already enabled in sysctl.conf
 [SETUP] Applying sysctl settings...
