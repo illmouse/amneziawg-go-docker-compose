@@ -121,7 +121,16 @@ cat > "$PEER_PATH" <<EOF
 [Interface]
 PrivateKey = $CLIENT_PRIV_KEY
 Address = $WG_CLIENT_ADDR
-DNS = 1.1.1.1
+DNS = 9.9.9.9,149.112.112.112
+Jc = $Jc
+Jmin = $Jmin
+Jmax = $Jmax
+S1 = $S1
+S2 = $S2
+H1 = $H1
+H2 = $H2
+H3 = $H3
+H4 = $H4
 
 [Peer]
 PublicKey = $SERVER_PUB_KEY
