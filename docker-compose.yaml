@@ -1,0 +1,23 @@
+services:
+  amneziawg:
+    image: amneziavpn/amneziawg-go:0.2.15
+    container_name: amneziawg
+    cap_add:
+      - NET_ADMIN
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv4.conf.all.src_valid_mark=1
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    ports:
+      - ${WG_PORT}:${WG_PORT}/udp
+    volumes:
+      - ./config:/etc/amneziawg:ro
+      - ./entrypoint.sh:/entrypoint.sh:ro
+    entrypoint: ["/entrypoint.sh"]
+    restart: always
+    networks:
+      awg:
+
+networks:
+   awg:
