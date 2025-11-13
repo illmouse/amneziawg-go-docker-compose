@@ -8,7 +8,6 @@ WG_PEER_FILE="peer.conf"
 WG_LOGFILE="/var/log/amneziawg/amneziawg.log"
 
 mkdir -p "$WG_DIR" "$TMP_DIR"
-: > "$WG_LOGFILE"
 
 # Load environment variables
 : "${WG_IFACE:=wg0}"
