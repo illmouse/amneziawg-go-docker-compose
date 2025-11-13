@@ -9,14 +9,12 @@ WG_PEER_FILE="peer.conf"
 WG_LOGFILE="/var/log/amneziawg/amneziawg.log"
 
 # ensure volume is writable by user
-if [ ! -w "$CONFIG_DIR" ]; then
+echo "Creating dirs..."
+mkdir -p "$WG_DIR" "$TMP_DIR" "$WG_LOGDIR"
 
-    echo "Creating dirs..."
-    mkdir -p "$WG_DIR" "$TMP_DIR" "$WG_LOGDIR"
+echo "Fixing permissions for dirs..."
+chown -R 1000:1000 "$WG_DIR" "$TMP_DIR" "$WG_LOGDIR"
 
-    echo "Fixing permissions for dirs..."
-    chown -R 1000:1000 "$CONFIG_DIR" "$TMP_DIR" "$WG_LOGDIR"
-fi
 
 # Load environment variables
 : "${WG_IFACE:=wg0}"
