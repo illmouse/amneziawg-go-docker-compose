@@ -82,14 +82,13 @@ H4=1515483925
 ## Docker Compose Example
 
 ```yaml
-version: "3.9"
-
 services:
   amneziawg:
     image: amneziavpn/amneziawg-go:0.2.15
     container_name: amneziawg
     env_file:
       - .env
+    user: "1000:1000" 
     cap_add:
       - NET_ADMIN
     sysctls:
@@ -98,11 +97,20 @@ services:
     devices:
       - /dev/net/tun:/dev/net/tun
     ports:
-      - "${WG_PORT}:${WG_PORT}/udp"
+      - ${WG_PORT}:${WG_PORT}/udp
     volumes:
-      - ./config:/etc/amneziawg
+      - amneziawg_data:/etc/amneziawg
       - ./entrypoint.sh:/entrypoint.sh:ro
+    entrypoint: ["/entrypoint.sh"]
     restart: always
+    networks:
+      awg:
+
+networks:
+   awg:
+
+volumes:
+  amneziawg_data:
 ```
 
 **Notes:**
