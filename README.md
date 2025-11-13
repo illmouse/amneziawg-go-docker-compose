@@ -88,7 +88,6 @@ services:
     container_name: amneziawg
     env_file:
       - .env
-    user: "1000:1000" 
     cap_add:
       - NET_ADMIN
     sysctls:
@@ -99,7 +98,8 @@ services:
     ports:
       - ${WG_PORT}:${WG_PORT}/udp
     volumes:
-      - amneziawg_data:/etc/amneziawg
+      - ./config:/etc/amneziawg
+      - ./logs:/var/log/amneziawg
       - ./entrypoint.sh:/entrypoint.sh:ro
     entrypoint: ["/entrypoint.sh"]
     restart: always
@@ -108,9 +108,6 @@ services:
 
 networks:
    awg:
-
-volumes:
-  amneziawg_data:
 ```
 
 **Notes:**
@@ -126,8 +123,6 @@ volumes:
 1. **Create a directory for configs:**
 
 ```bash
-mkdir -p ./config
-chmod 700 ./config
 chmod +x entrypoint.sh
 ```
 

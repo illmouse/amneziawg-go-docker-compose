@@ -7,6 +7,9 @@ WG_CONF_FILE="wg0.conf"
 WG_PEER_FILE="peer.conf"
 WG_LOGFILE="/var/log/amneziawg/amneziawg.log"
 
+mkdir -p "$WG_DIR" "$TMP_DIR"
+: > "$WG_LOGFILE"
+
 # Load environment variables
 : "${WG_IFACE:=wg0}"
 : "${WG_ADDRESS:=10.100.0.1/24}"
@@ -33,9 +36,9 @@ PSK_KEY="$WG_DIR/presharedkey"
 CLIENT_PRIV="$WG_DIR/client_privatekey"
 
 # Helper: generate keys if missing
-gen_key() { amneziawg-go genkey 2>/dev/null || wg genkey; }
-gen_psk() { amneziawg-go genpsk 2>/dev/null || wg genpsk; }
-pub_from_priv() { echo "$1" | amneziawg-go pubkey 2>/dev/null || echo "$1" | wg pubkey; }
+gen_key() { awg genkey 2>/dev/null || awg genkey; }
+gen_psk() { awg genpsk 2>/dev/null || awg genpsk; }
+pub_from_priv() { echo "$1" | awg pubkey 2>/dev/null || echo "$1" | awg pubkey; }
 
 # 1️⃣ Server keys
 if [ ! -f "$SERVER_PRIV" ]; then
