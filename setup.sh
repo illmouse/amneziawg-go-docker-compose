@@ -26,29 +26,29 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 # Check required files exist
-if [ ! -f "./amneziawg-monitor.sh" ]; then
-    error "amneziawg-monitor.sh not found in current directory"
+if [ ! -f "./scripts/amneziawg-monitor.sh" ]; then
+    error "amneziawg-monitor.sh not found in ./scripts/ directory"
     exit 1
 fi
 
-if [ ! -f "../cron/amneziawg-monitor" ]; then
-    error "amneziawg-monitor file not found in ../cron/amneziawg-monitor"
+if [ ! -f "./cron/amneziawg-monitor" ]; then
+    error "amneziawg-monitor file not found in ./cron/ directory"
     exit 1
 fi
 
-if [ ! -f "../docker-compose.yml" ]; then
-    error "docker-compose.yml not found in parent directory"
+if [ ! -f "./docker-compose.yaml" ]; then
+    error "docker-compose.yaml not found in current directory"
     exit 1
 fi
 
 # Step 1: Copy monitor script
 log "Copying amneziawg-monitor.sh to /usr/local/bin/"
-cp ./amneziawg-monitor.sh /usr/local/bin/amneziawg-monitor.sh
+cp ./scripts/amneziawg-monitor.sh /usr/local/bin/amneziawg-monitor.sh
 chmod +x /usr/local/bin/amneziawg-monitor.sh
 
 # Step 2: Copy cron file
 log "Copying amneziawg-monitor to /etc/cron.d/"
-cp ../cron/amneziawg-monitor /etc/cron.d/
+cp ./cron/amneziawg-monitor /etc/cron.d/
 
 # Step 3: Ensure proper permissions for cron file
 chmod 644 /etc/cron.d/amneziawg-monitor
