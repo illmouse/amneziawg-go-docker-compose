@@ -55,7 +55,7 @@ chmod 644 /etc/cron.d/amneziawg-monitor
 
 # Step 5: Start Docker Compose
 log "Starting Docker Compose from current directory"
-cd ..
+chmod +x ./entrypoint.sh
 docker-compose up -d
 
 # Step 6: Wait a moment for container to start
