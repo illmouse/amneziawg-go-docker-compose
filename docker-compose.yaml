@@ -4,7 +4,6 @@ services:
     container_name: amneziawg
     env_file:
       - .env
-    user: "1000:1000" 
     cap_add:
       - NET_ADMIN
     sysctls:
@@ -16,6 +15,7 @@ services:
       - ${WG_PORT}:${WG_PORT}/udp
     volumes:
       - amneziawg_data:/etc/amneziawg
+      - amneziawg_logs:/var/log/amneziawg
       - ./entrypoint.sh:/entrypoint.sh:ro
     entrypoint: ["/entrypoint.sh"]
     restart: always
@@ -27,3 +27,4 @@ networks:
 
 volumes:
   amneziawg_data:
+  amneziawg_logs:
