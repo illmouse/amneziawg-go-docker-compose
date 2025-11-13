@@ -28,13 +28,6 @@ mkdir -p "$WG_DIR" "$TMP_DIR"
 
 log() { echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] $*" | tee -a "$WG_LOGFILE"; }
 
-# Fill WG_ENDPOINT with current public IP if not set
-if [ -z "$WG_ENDPOINT" ]; then
-    log "WG_ENDPOINT not set, fetching external IP..."
-    WG_ENDPOINT=$(curl -s ifconfig.me || echo "<REPLACE_WITH_ENDPOINT>")
-    log "Detected WG_ENDPOINT: $WG_ENDPOINT"
-fi
-
 # Key files
 SERVER_PRIV="$WG_DIR/privatekey"
 SERVER_PUB="$WG_DIR/publickey"

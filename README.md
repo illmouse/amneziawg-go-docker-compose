@@ -22,11 +22,15 @@ Example:
 
 ```bash
 # .env
+
+# Mandatory params
+WG_ENDPOINT=                      # Public endpoint
+
+# Optional default params
 WG_IFACE=wg0                      # Name of the VPN interface inside the container
 WG_ADDRESS=10.100.0.1/24          # Server IP and subnet
 WG_CLIENT_ADDR=10.100.0.2/32      # Client IP
-WG_PORT=13440                      # VPN port to accept connections
-WG_ENDPOINT=                       # Public endpoint; leave empty to auto-detect
+WG_PORT=13440                     # VPN port to accept connections
 
 # AmneziaWG tunable parameters
 Jc=3                           
@@ -42,7 +46,6 @@ H4=1515483925
 
 **Notes:**
 
-* If `WG_ENDPOINT` is empty, the container will automatically determine the external IP via `ifconfig.me`.
 * Parameters `Jc`, `Jmin`, `Jmax`, `S1`, `S2`, `H1-H4` are critical for VPN operation. Do not change them unless necessary.
 
 ---
@@ -98,6 +101,7 @@ services:
       - "${WG_PORT}:${WG_PORT}/udp"
     volumes:
       - ./config:/etc/amneziawg
+      - ./entrypoint.sh:/entrypoint.sh:ro
     restart: always
 ```
 
@@ -116,6 +120,7 @@ services:
 ```bash
 mkdir -p ./config
 chmod 700 ./config
+chmod +x entrypoint.sh
 ```
 
 2. **Create a `.env` file** with the desired parameters.

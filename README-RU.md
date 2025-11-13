@@ -22,11 +22,15 @@
 
 ```bash
 # .env
-WG_IFACE=wg0                      # Имя VPN-интерфейса внутри контейнера
-WG_ADDRESS=10.100.0.1/24          # IP сервера и подсеть
-WG_CLIENT_ADDR=10.100.0.2/32      # IP клиента
-WG_PORT=13440                     # Порт для VPN на котором будет приниматься подключение
-WG_ENDPOINT=                      # Публичный endpoint; оставьте пустым для автоопределения
+
+# Обязательный параметры
+WG_ENDPOINT=                      # Public endpoint
+
+# Опциональные параметры со значениями по-умолчанию
+WG_IFACE=wg0                      # Name of the VPN interface inside the container
+WG_ADDRESS=10.100.0.1/24          # Server IP and subnet
+WG_CLIENT_ADDR=10.100.0.2/32      # Client IP
+WG_PORT=13440                     # VPN port to accept connections                   # Публичный endpoint; оставьте пустым для автоопределения
 
 # Настраиваемые параметры AmneziaWG
 Jc=3                           
@@ -42,7 +46,6 @@ H4=1515483925
 
 **Примечания:**
 
-* Если `WG_ENDPOINT` пуст, контейнер автоматически определяет внешний IP через `ifconfig.me`.
 * Параметры `Jc`, `Jmin`, `Jmax`, `S1`, `S2`, `H1-H4` важны для работы VPN. Не изменяйте их без необходимости.
 
 ---
@@ -98,6 +101,7 @@ services:
       - "${WG_PORT}:${WG_PORT}/udp"
     volumes:
       - ./config:/etc/amneziawg
+      - ./entrypoint.sh:/entrypoint.sh:ro
     restart: always
 ```
 
@@ -116,6 +120,7 @@ services:
 ```bash
 mkdir -p ./config
 chmod 700 ./config
+chmod +x entrypoint.sh
 ```
 
 2. **Создайте файл `.env`** с необходимыми параметрами.
