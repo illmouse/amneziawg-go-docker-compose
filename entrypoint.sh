@@ -36,9 +36,9 @@ PSK_KEY="$WG_DIR/presharedkey"
 CLIENT_PRIV="$WG_DIR/client_privatekey"
 
 # Helper: generate keys if missing
-gen_key() { awg genkey 2>/dev/null || awg genkey; }
-gen_psk() { awg genpsk 2>/dev/null || awg genpsk; }
-pub_from_priv() { echo "$1" | awg pubkey 2>/dev/null || echo "$1" | awg pubkey; }
+gen_key()  { awg genkey 2>/dev/null | tr -d '\n\r'; }
+gen_psk()  { awg genpsk 2>/dev/null | tr -d '\n\r'; }
+pub_from_priv() { echo "$1" | awg pubkey 2>/dev/null | tr -d '\n\r'; }
 
 # 1️⃣ Server keys
 if [ ! -f "$SERVER_PRIV" ]; then
