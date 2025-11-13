@@ -35,13 +35,13 @@ SERVER_PUB="$WG_DIR/publickey"
 PSK_KEY="$WG_DIR/presharedkey"
 CLIENT_PRIV="$WG_DIR/client_privatekey"
 
-# Helper: generate keys if missing
+# Helper functions
 gen_key()  { awg genkey 2>/dev/null | tr -d '\n\r'; }
 gen_psk()  { awg genpsk 2>/dev/null | tr -d '\n\r'; }
 pub_from_priv() { echo "$1" | awg pubkey 2>/dev/null | tr -d '\n\r'; }
 
 # 1️⃣ Server keys
-if [ ! -f "$SERVER_PRIV" ]; then
+if [ ! -s "$SERVER_PRIV" ]; then
   log "Generating server private key..."
   SERVER_PRIV_KEY=$(gen_key)
   echo "$SERVER_PRIV_KEY" > "$SERVER_PRIV"
@@ -50,7 +50,7 @@ else
   SERVER_PRIV_KEY=$(cat "$SERVER_PRIV")
 fi
 
-if [ ! -f "$SERVER_PUB" ]; then
+if [ ! -s "$SERVER_PUB" ]; then
   log "Deriving server public key..."
   SERVER_PUB_KEY=$(pub_from_priv "$SERVER_PRIV_KEY")
   echo "$SERVER_PUB_KEY" > "$SERVER_PUB"
@@ -59,7 +59,7 @@ else
   SERVER_PUB_KEY=$(cat "$SERVER_PUB")
 fi
 
-if [ ! -f "$PSK_KEY" ]; then
+if [ ! -s "$PSK_KEY" ]; then
   log "Generating preshared key..."
   PSK=$(gen_psk)
   echo "$PSK" > "$PSK_KEY"
@@ -68,9 +68,8 @@ else
   PSK=$(cat "$PSK_KEY")
 fi
 
-# 2️⃣ Client key
-CLIENT_PRIV="$WG_DIR/client_privatekey"
-if [ ! -f "$CLIENT_PRIV" ]; then
+# 2️⃣ Client key (preserve)
+if [ ! -s "$CLIENT_PRIV" ]; then
   log "Generating client private key..."
   CLIENT_PRIV_KEY=$(gen_key)
   echo "$CLIENT_PRIV_KEY" > "$CLIENT_PRIV"
@@ -80,7 +79,7 @@ else
 fi
 CLIENT_PUB_KEY=$(pub_from_priv "$CLIENT_PRIV_KEY")
 
-# 3️⃣ Generate server config
+# 3️⃣ Generate server config (replace only if changed)
 TMP_CONF="$TMP_DIR/$WG_CONF_FILE"
 cat > "$TMP_CONF" <<EOF
 [Interface]
@@ -115,7 +114,7 @@ else
   cp "$TMP_CONF" "$CONF_PATH"
 fi
 
-# 4️⃣ Generate peer/client config
+# 4️⃣ Generate peer/client config (always overwrite)
 PEER_PATH="$WG_DIR/$WG_PEER_FILE"
 cat > "$PEER_PATH" <<EOF
 [Interface]
