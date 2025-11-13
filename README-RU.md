@@ -1,7 +1,14 @@
-# AmneziaWG Docker VPN
+# AmneziaWG Docker Compose VPN
 
-Этот репозиторий содержит **Docker-набор для AmneziaWG** — VPN, похожий на WireGuard, используя контейнер `amneziavpn/amneziawg-go:0.2.15`.  
+Этот репозиторий содержит **Docker-набор для AmneziaWG** — VPN, похожий на WireGuard, используя контейнер [amneziavpn/amneziawg-go](https://hub.docker.com/r/amneziavpn/amneziawg-go/tags).
+
 Конфигурации сервера и клиента создаются динамически, ключи управляются автоматически, что делает систему удобной и повторно используемой.
+
+> [!NOTE]
+> Данная конфигурация рассчитана на использование официального контейнера, поэтому все настройки его работы выполняются вне контейнера.
+
+> [!IMPORTANT]
+> Автоматическая конфигурация рассчитана на работу только с одним пиром ввиду специфики решаемой задачи.
 
 ---
 
@@ -9,30 +16,25 @@
 
 - Автоматическая генерация серверных и клиентских ключей при первом запуске.
 - Динамическая генерация конфигураций сервера и клиента на основе переменных окружения.
-- Клиентская конфигурация (`peer.conf`) готова к использованию.
-- Логи выводятся в `docker logs`.
+- Клиентская конфигурация (`./config/peer.conf`) готова к использованию.
+- Логи выводятся в `docker logs` а так же в `./logs/amneziawg.log`.
 - Повторное использование: после генерации ключей и конфигов контейнер просто запускает VPN без повторной генерации.
 
 ---
 
 ## Переменные окружения (`.env`)
-
-Файл `.env` позволяет настраивать контейнер. Разместите его рядом с `docker-compose.yml`.  
-Пример:
-
+ 
 ```bash
 # .env
-
-# Обязательный параметры
-WG_ENDPOINT=                      # Public endpoint
 
 # Опциональные параметры со значениями по-умолчанию
 WG_IFACE=wg0                      # Name of the VPN interface inside the container
 WG_ADDRESS=10.100.0.1/24          # Server IP and subnet
 WG_CLIENT_ADDR=10.100.0.2/32      # Client IP
-WG_PORT=13440                     # VPN port to accept connections                   # Публичный endpoint; оставьте пустым для автоопределения
+WG_PORT=13440                     # VPN port to accept connections
+WG_ENDPOINT=                      # Публичный адрес хоста, на котором будут приниматься подключения. Определяется автоматически через ifconfig.me
 
-# Настраиваемые параметры AmneziaWG
+# Автоматическе генерируемые переменные
 Jc=3                           
 Jmin=1
 Jmax=50
@@ -46,7 +48,7 @@ H4=1515483925
 
 **Примечания:**
 
-* Параметры `Jc`, `Jmin`, `Jmax`, `S1`, `S2`, `H1-H4` важны для работы VPN. Не изменяйте их без необходимости.
+* Параметры `Jc`, `Jmin`, `Jmax`, `S1`, `S2`, `H1-H4` важны для работы VPN. Будут сгенерированы случайные при первом запуске скрипта setup.sh. Можно задать свои. Подробнее в [документации](https://docs.amnezia.org/documentation/amnezia-wg/#%D0%BF%D0%B0%D1%80%D0%B0%D0%BC%D0%B5%D1%82%D1%80%D1%8B-%D0%BA%D0%BE%D0%BD%D1%84%D0%B8%D0%B3%D1%83%D1%80%D0%B0%D1%86%D0%B8%D0%B8)
 
 ---
 
@@ -54,7 +56,7 @@ H4=1515483925
 
 1. **Первый запуск:**
 
-   * Контейнер проверяет ключи и конфиги в `/etc/amneziawg` (подключено через Docker volume).
+   * Контейнер проверяет ключи и конфиги в `/etc/amneziawg`
    * Если чего-то нет, генерирует:
 
      * Серверные ключи (`privatekey`, `publickey`, `presharedkey`)
@@ -70,7 +72,6 @@ H4=1515483925
    * Новая конфигурация генерируется с найденными ключами или генерируются новые.
    * Новая конфигурация сравнивается с существующей и заменяется если они различаются.
    * Запускает VPN и применяет NAT/iptables.
-   * Логи доступны через `docker logs`.
 
 3. **Клиентская конфигурация:**
 
@@ -102,6 +103,12 @@ services:
       - ./logs:/var/log/amneziawg
       - ./entrypoint.sh:/entrypoint.sh:ro
     entrypoint: ["/entrypoint.sh"]
+    healthcheck:
+      test: ["CMD", "sh", "-c", "ip link show wg0 && awg show wg0 2>/dev/null | grep -q listening"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     restart: always
     networks:
       awg:
@@ -112,41 +119,90 @@ networks:
 
 **Примечания:**
 
-* `./config` используется для хранения ключей и конфигураций.
-* Если директория пуста, контейнер автоматически создаст ключи и конфиги.
-* VPN-трафик NATится через интерфейс `WG_IFACE`.
+* `./config` используется для хранения ключей и конфигураций. Если директория пуста, контейнер автоматически создаст ключи и конфиги.
+* `./logs` используется для хранения логов приложения.
 
 ---
 
 ## Использование
 
-1. **Создайте директорию для конфигов:**
+1. **Запустите скрипт конфигурации инсталляции:**
 
 ```bash
-chmod +x entrypoint.sh
+chmod +x setup.sh && ./setup.sh
 ```
 
-2. **Создайте файл `.env`** с необходимыми параметрами.
+Что делает скрипт:
+- включает IP forwarding в /etc/sysctl.conf
+- копирует скрипт мониторинга в /usr/local/bin/amneziawg-monitor.sh
+- добавляет крон джобу для запуска скрипта в /etc/cron.d/amneziawg-monitor
+- проверяет вывод скрипта мониторинга
+- при отсутствии файла .env формирует файл автоматически генерируя переменные
+- выводит конфигурацию для настройки клиента в консоль
 
-3. **Запустите контейнер:**
+2. **Получение клиентской конфигурации:**
 
+В конце работы скрипта выводится конфигурация для настройки на стороне пира.
+
+Файл с конфигурацией можно найти в `./config/peer.conf`
+
+Пример вывода скрипта конфигурации:
 ```bash
-docker-compose up -d
+[SETUP] Configuring IP forwarding in sysctl...
+[SETUP] IP forwarding already enabled in sysctl.conf
+[SETUP] Applying sysctl settings...
+[SETUP] Sysctl settings applied successfully
+[SETUP] IP forwarding is enabled (net.ipv4.ip_forward=1)
+[SETUP] Creating .env file with generated obfuscation values
+[SETUP] Generated obfuscation values:
+[SETUP]   JC=3, JMIN=50, JMAX=1000
+[SETUP]   S1=124, S2=52
+[SETUP]   H1=7799, H2=16627, H3=7319, H4=10232
+[WARNING] WG_ENDPOINT is not set or empty in .env file
+[SETUP] Detecting public IP address...
+[SETUP] Detected public IP: <external_ip>
+[SETUP] WG_ENDPOINT has been set to: <external_ip>
+[SETUP] Copying amneziawg-monitor.sh to /usr/local/bin/
+[SETUP] Copying amneziawg-monitor to /etc/cron.d/
+[SETUP] Making entrypoint.sh executable
+[SETUP] Starting Docker Compose from current directory
+[+] Running 1/1
+ ✔ Container amneziawg  Started                                                                            11.4s 
+[SETUP] Waiting for container to initialize...
+[SETUP] Testing monitor script...
+amneziawg
+[SETUP] Monitor script executed successfully
+[SETUP] Checking container status...
+CONTAINER ID   IMAGE                            COMMAND            CREATED          STATUS                                     PORTS                                             NAMES
+1a7a42d203ac   amneziavpn/amneziawg-go:0.2.15   "/entrypoint.sh"   34 seconds ago   Up Less than a second (health: starting)   0.0.0.0:13440->13440/udp, [::]:13440->13440/udp   amneziawg
+[SETUP] Setup complete!
+[SETUP] - IP forwarding configured in /etc/sysctl.conf
+[SETUP] - Monitor script: /usr/local/bin/amneziawg-monitor.sh
+[SETUP] - Cron job: /etc/cron.d/amneziawg-monitor
+[SETUP] - Container logs: docker logs amneziawg
+[SETUP] - .env file configured with WG_ENDPOINT and obfuscation values
+[SETUP] Output peer configuration...
+[Interface]
+PrivateKey = <client_private_key>
+Address = 10.100.0.2/32
+DNS = 9.9.9.9,149.112.112.112
+Jc = 3
+Jmin = 1
+Jmax = 50
+S1 = 124
+S2 = 52
+H1 = 7799
+H2 = 16627
+H3 = 7319
+H4 = 10232
+
+[Peer]
+PublicKey = <server_public_key>
+PresharedKey = <preshared_key>
+Endpoint = <external_ip>:13440
+AllowedIPs = 0.0.0.0/0, ::/0
+PersistentKeepalive = 25
 ```
-
-4. **Просмотр логов:**
-
-```bash
-docker logs -f amneziawg
-```
-
-5. **Получение клиентской конфигурации:**
-
-```bash
-docker cp amneziawg:/etc/amneziawg/peer.conf ./peer.conf
-```
-
-Используйте `peer.conf` на клиентском устройстве для подключения к VPN.
 
 ---
 
