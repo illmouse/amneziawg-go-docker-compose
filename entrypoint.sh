@@ -3,11 +3,20 @@ set -eu
 
 WG_DIR="/etc/amneziawg"
 TMP_DIR="/tmp/amneziawg"
+WG_LOGDIR="/var/log/amneziawg"
 WG_CONF_FILE="wg0.conf"
 WG_PEER_FILE="peer.conf"
-WG_LOGFILE="/var/log/amneziawg.log"
-mkdir -p "$WG_DIR" "$TMP_DIR"
-: > "$WG_LOGFILE"
+WG_LOGFILE="/var/log/amneziawg/amneziawg.log"
+
+# ensure volume is writable by user
+if [ ! -w "$CONFIG_DIR" ]; then
+
+    echo "Creating dirs..."
+    mkdir -p "$WG_DIR" "$TMP_DIR" "$WG_LOGDIR"
+
+    echo "Fixing permissions for dirs..."
+    chown -R 1000:1000 "$CONFIG_DIR" "$TMP_DIR" "$WG_LOGDIR"
+fi
 
 # Load environment variables
 : "${WG_IFACE:=wg0}"
