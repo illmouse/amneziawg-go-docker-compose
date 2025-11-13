@@ -148,7 +148,6 @@ log "Bringing interface up..."
 ip link set up dev "$WG_IFACE" >>"$WG_LOGFILE" 2>&1
 
 # Enable forwarding/NAT through the same interface
-sysctl -w net.ipv4.ip_forward=1 >>"$WG_LOGFILE" 2>&1
 iptables -t nat -A POSTROUTING -o "$WG_IFACE" -j MASQUERADE 2>>"$WG_LOGFILE" || true
 iptables -A FORWARD -i "$WG_IFACE" -j ACCEPT 2>>"$WG_LOGFILE" || true
 iptables -A FORWARD -o "$WG_IFACE" -m state --state RELATED,ESTABLISHED -j ACCEPT 2>>"$WG_LOGFILE" || true
