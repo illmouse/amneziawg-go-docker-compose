@@ -115,8 +115,8 @@ else
 fi
 
 # 4️⃣ Generate peer/client config (always overwrite)
-log "Generating client config $PEER_PATH."
 PEER_PATH="$WG_DIR/$WG_PEER_FILE"
+log "Generating client config $PEER_PATH."
 cat > "$PEER_PATH" <<EOF
 [Interface]
 PrivateKey = $CLIENT_PRIV_KEY
