@@ -46,5 +46,5 @@ success "🏁 Container startup complete. Entering sleep..."
 
 # Keep container running
 while true; do
-    sleep 3600
+    sleep infinity
 done
