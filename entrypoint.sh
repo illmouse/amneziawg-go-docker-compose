@@ -44,7 +44,6 @@ if [ ! -s "$SERVER_PRIV" ]; then
   log "Generating server private key..."
   SERVER_PRIV_KEY=$(gen_key)
   echo "$SERVER_PRIV_KEY" > "$SERVER_PRIV"
-  chmod 600 "$SERVER_PRIV"
 else
   SERVER_PRIV_KEY=$(cat "$SERVER_PRIV")
 fi
@@ -53,7 +52,6 @@ if [ ! -s "$SERVER_PUB" ]; then
   log "Deriving server public key..."
   SERVER_PUB_KEY=$(pub_from_priv "$SERVER_PRIV_KEY")
   echo "$SERVER_PUB_KEY" > "$SERVER_PUB"
-  chmod 600 "$SERVER_PUB"
 else
   SERVER_PUB_KEY=$(cat "$SERVER_PUB")
 fi
@@ -62,7 +60,6 @@ if [ ! -s "$PSK_KEY" ]; then
   log "Generating preshared key..."
   PSK=$(gen_psk)
   echo "$PSK" > "$PSK_KEY"
-  chmod 600 "$PSK_KEY"
 else
   PSK=$(cat "$PSK_KEY")
 fi
@@ -72,7 +69,6 @@ if [ ! -s "$CLIENT_PRIV" ]; then
   log "Generating client private key..."
   CLIENT_PRIV_KEY=$(gen_key)
   echo "$CLIENT_PRIV_KEY" > "$CLIENT_PRIV"
-  chmod 600 "$CLIENT_PRIV"
 else
   CLIENT_PRIV_KEY=$(cat "$CLIENT_PRIV")
 fi
@@ -140,7 +136,11 @@ EOF
 
 log "Client config written to $PEER_PATH."
 
-# 5️⃣ Start amneziawg-go and configure interface
+# 5️⃣ Fix permission
+log "Changing permissions to 600 for $WG_DIR"
+chmod -R 600 "$WG_DIR"
+
+# 6️⃣ Start amneziawg-go and configure interface
 log "Starting amneziawg-go on $WG_IFACE..."
 amneziawg-go "$WG_IFACE" >>"$WG_LOGFILE" 2>&1 &
 sleep 2
