@@ -78,17 +78,30 @@ set_db_value() {
     local value="$2"
     local temp_file="$CONFIG_DB.tmp.$$"
     
+    # Validate database exists and is valid JSON
+    if [ ! -f "$CONFIG_DB" ] || ! jq empty "$CONFIG_DB" >/dev/null 2>&1; then
+        error "Configuration database is missing or corrupted: $CONFIG_DB"
+    fi
+    
     if ! jq "$path = $value" "$CONFIG_DB" > "$temp_file" 2>/dev/null; then
         rm -f "$temp_file"
+        warn "Failed to update database path: $path"
         return 1
     fi
     
-    if [ ! -s "$temp_file" ]; then
+    # Validate the temp file is valid JSON and not empty
+    if [ ! -s "$temp_file" ] || ! jq empty "$temp_file" >/dev/null 2>&1; then
         rm -f "$temp_file"
+        warn "Generated invalid JSON for path: $path"
         return 1
     fi
+    
+    # Preserve original permissions
+    local original_perm=$(stat -c "%a" "$CONFIG_DB" 2>/dev/null || echo "600")
     
     if mv "$temp_file" "$CONFIG_DB"; then
+        # Restore permissions
+        chmod "$original_perm" "$CONFIG_DB" 2>/dev/null || true
         return 0
     else
         rm -f "$temp_file"

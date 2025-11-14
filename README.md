@@ -1,41 +1,43 @@
 # AmneziaWG Docker Compose VPN
 
-This repository contains a **Docker setup for AmneziaWG** - a VPN similar to WireGuard, using the [amneziavpn/amneziawg-go](https://hub.docker.com/r/amneziavpn/amneziawg-go/tags) container.
+This repository contains a **Docker setup for AmneziaWG** — a VPN similar to WireGuard, using the [amneziavpn/amneziawg-go](https://hub.docker.com/r/amneziavpn/amneziawg-go/tags) container.
 
-Server and client configurations are created dynamically, keys are managed automatically, making the system convenient and reusable.
+Server and client configurations are created dynamically, keys are managed automatically via a JSON database, making the system convenient and reusable.
 
 > [!NOTE]
-> This configuration is designed to use the official container, so all settings for its operation are performed outside the container.
-
-> [!IMPORTANT]
-> The automatic configuration is designed to work with only one peer due to the specific nature of the task being solved.
+> This configuration is designed to use the official container, so all settings for its operation are performed without rebuilding the container itself.
 
 ---
 
-## Features
+## 🎯 Features
 
-- Automatic generation of server and client keys on first launch.
-- Dynamic generation of server and client configurations based on environment variables.
-- Client configuration (`./config/peer.conf`) is ready to use.
-- Logs are output to `docker logs` as well as to `./logs/amneziawg.log`.
-- Reusability: After generating keys and configs, the container simply runs the VPN without regenerating them.
+- **Automatic key generation** for the server and clients on first start
+- **JSON database** for storing all configurations and keys
+- **Dynamic peer management** - peers can be added/removed without recreating the container
+- **Modular architecture** - each setup stage is in a separate script
+- **Colored logs with emojis** for convenient monitoring
+- **Automatic permission fixing** for configuration files
+- **Client configurations** are generated automatically in `./config/peers/`
+- **Logs are output** to `docker logs` and also to `./logs/amneziawg.log`
 
 ---
 
-## Environment Variables (`.env`)
+## ⚙️ Environment Variables (`.env`)
 
 ```bash
 # .env
 
-# Optional parameters with default values
-WG_IFACE=wg0                      # Name of the VPN interface inside the container
-WG_ADDRESS=10.100.0.1/24          # Server IP and subnet
-WG_CLIENT_ADDR=10.100.0.2/32      # Client IP
-WG_PORT=13440                     # VPN port to accept connections
-WG_ENDPOINT=                      # Public host address for accepting connections. Determined automatically via ifconfig.me
+# Public host address on which connections will be accepted
+WG_ENDPOINT=
 
-# Automatically generated variables
-Jc=3                           
+# Main WireGuard parameters
+WG_IFACE=wg0
+WG_ADDRESS=10.100.0.1/24
+WG_PORT=13440
+WG_PEER_COUNT=1
+
+# AmneziaWG obfuscation parameters
+Jc=3
 Jmin=1
 Jmax=50
 S1=25
@@ -47,40 +49,158 @@ H4=1515483925
 ```
 
 **Notes:**
-
-* The parameters `Jc`, `Jmin`, `Jmax`, `S1`, `S2`, `H1-H4` are important for the VPN operation. They will be randomly generated when the setup.sh script is first run. You can set your own. More details in the [documentation](https://docs.amnezia.org/documentation/amnezia-wg/#%D0%BF%D0%B0%D1%80%D0%B0%D0%BC%D0%B5%D1%82%D1%80%D1%8B-%D0%BA%D0%BE%D0%BD%D1%84%D0%B8%D0%B3%D1%83%D1%80%D0%B0%D1%86%D0%B8%D0%B8).
-
----
-
-## How It Works
-
-1. **First Launch:**
-
-   * The container checks for keys and configs in `/etc/amneziawg`
-   * If anything is missing, it generates:
-
-     * Server keys (`privatekey`, `publickey`, `presharedkey`)
-     * Client key (`client_privatekey`)
-     * Server config (`wg0.conf`)
-     * Client config (`peer.conf`)
-   * Sets permissions to `600` for all keys.
-   * Starts the VPN interface (`WG_IFACE`) and applies NAT/iptables through it.
-
-2. **Subsequent Launches:**
-
-   * The container finds existing keys/configs and skips key generation.
-   * A new configuration is generated with the found keys or new ones are generated.
-   * The new configuration is compared with the existing one and replaced if they differ.
-   * Starts the VPN and applies NAT/iptables.
-
-3. **Client Configuration:**
-
-   * Available in `/etc/amneziawg/peer.conf`.
-   * Can be copied to the client device for connection.
+* Parameters `Jc`, `Jmin`, `Jmax`, `S1`, `S2`, `H1-H4` are important for the VPN operation. More details in the [documentation](https://docs.amnezia.org/documentation/amnezia-wg/#%D0%BF%D0%B0%D1%80%D0%B0%D0%BC%D0%B5%D1%82%D1%80%D1%8B-%D0%BA%D0%BE%D0%BD%D1%84%D0%B8%D0%B3%D1%83%D1%80%D0%B0%D1%86%D0%B8%D0%B8)
 
 ---
 
-## Docker Compose Example
+## 🚀 How it works when starting the container
+
+### Container startup process:
+
+1. **🔵 Environment Initialization** (`init.sh`)
+   - Creating necessary directories
+   - Setting environment variables
+   - Checking dependencies (jq, awg)
+   - Creating directory structure
+
+2. **🗃️ Database Initialization** (`config-db.sh`)
+   - Creating JSON database `config.json`
+   - Writing initial server configuration
+   - Updating parameters from environment variables
+
+3. **🔑 Server Key Generation** (`server-keys.sh`)
+   - Checking for existing keys in the database
+   - Generating new keys if necessary
+   - Saving keys to the database
+
+4. **👤 Peer Management** (`peers.sh`)
+   - Comparing current and desired peer count
+   - Generating new peers if necessary
+   - Creating keys and IP addresses for each peer
+
+5. **⚙️ Configuration Generation** (`generate-configs.sh`)
+   - Creating server configuration (`wg0.conf`)
+   - Generating individual configurations for each peer
+   - Comparing and updating only changed configs
+
+6. **🔒 Permission Fixing** (`functions.sh`)
+   - Setting `700` permissions for directories
+   - Setting `600` permissions for all configuration files and keys
+   - Logging permission changes
+
+7. **🌐 WireGuard Startup** (`start-wireguard.sh`)
+   - Starting the AmneziaWG interface
+   - Applying configuration
+   - Setting up iptables and NAT
+   - Checking functionality
+
+---
+
+## 📊 Peer Management
+
+1. **When decreasing `WG_PEER_COUNT`:**
+   - Peers are **removed from the active configuration** (`wg0.conf`)
+   - But **configurations are preserved** for potential future use in `./config/peers/`
+   - Only the first N peers in alphanumeric order are kept (peer1, peer2, peer3...)
+
+2. **When increasing `WG_PEER_COUNT`:**
+   - The system first **fills gaps** in peer numbering
+   - If peer1 and peer3 exist, but peer2 is missing - peer2 will be created
+   - Then new sequential peers are added
+
+3. **Work examples:**
+
+**Scenario 1: Decreasing peer count**
+```bash
+# Was: WG_PEER_COUNT=3 (peer1, peer2, peer3 in configuration)
+# Became: WG_PEER_COUNT=1
+# Result: Only peer1 remains in wg0.conf, peer2 and peer3 remain in the DB
+```
+
+**Scenario 2: Increasing with gaps**
+```bash
+# In DB: peer1, peer3 (peer2 was manually deleted)
+# WG_PEER_COUNT=3
+# Result: peer2 will be created, then peer4 will NOT be created because only 3 peers are needed
+```
+
+**Scenario 3: Sequential addition**
+```bash
+# In DB: peer1, peer2
+# WG_PEER_COUNT=4
+# Result: peer3, peer4 will be created
+```
+
+### Manual peer management:
+
+**Complete peer removal from the system:**
+```bash
+# Remove a peer from the DB and filesystem
+
+# delete the peer from config/config.json
+nano config/config.json
+
+# Restart to apply changes
+docker compose restart amneziawg
+```
+
+**Peer restoration:**
+```bash
+# Simply increase WG_PEER_COUNT - the system will fill gaps automatically
+WG_PEER_COUNT=3
+docker compose restart amneziawg
+```
+
+---
+
+## 🗃️ Database Structure
+
+```json
+{
+  "server": {
+    "interface": "wg0",
+    "address": "10.100.0.1/24",
+    "port": 13440,
+    "endpoint": "your-server-ip",
+    "junk": {
+      "jc": 3,
+      "jmin": 1,
+      "jmax": 50,
+      "s1": 25,
+      "s2": 72,
+      "h1": 1411927821,
+      "h2": 1212681123,
+      "h3": 1327217326,
+      "h4": 1515483925
+    },
+    "keys": {
+      "private_key": "server_private_key_here",
+      "public_key": "server_public_key_here"
+    }
+  },
+  "peers": {
+    "peer1": {
+      "name": "peer1",
+      "ip": "10.100.0.2/24",
+      "private_key": "peer_private_key",
+      "public_key": "peer_public_key",
+      "preshared_key": "preshared_key",
+      "created": "2024-01-15T10:30:00Z"
+    },
+    "peer2": {
+      "...": "..."
+    }
+  },
+  "meta": {
+    "version": "1.0",
+    "last_updated": "2024-01-15T10:30:00Z"
+  }
+}
+```
+
+---
+
+## 🐳 Docker Compose Example
 
 ```yaml
 services:
@@ -101,8 +221,8 @@ services:
     volumes:
       - ./config:/etc/amneziawg
       - ./logs:/var/log/amneziawg
-      - ./entrypoint.sh:/entrypoint.sh:ro
-    entrypoint: ["/entrypoint.sh"]
+      - ./entrypoint:/entrypoint:ro
+    entrypoint: ["/entrypoint/main.sh"]
     healthcheck:
       test: ["CMD", "sh", "-c", "ip link show wg0 && awg show wg0 2>/dev/null | grep -q listening"]
       interval: 30s
@@ -118,99 +238,88 @@ networks:
 ```
 
 **Notes:**
-
-* `./config` is used to store keys and configurations. If the directory is empty, the container will automatically create keys and configs.
-* `./logs` is used to store application logs.
+* `./config` - stores all keys, configurations and the JSON database
+* `./logs` - directory for application logs
+* `./entrypoint` - modular initialization scripts
+* `./scripts` - initialization scripts for `setup.sh` to work
 
 ---
 
-## Usage
+## 📋 Usage
 
-1. **Run the installation configuration script:**
+### Quick start:
 
 ```bash
-chmod +x setup.sh && ./setup.sh
+# Make scripts executable
+chmod +x setup.sh
+chmod +x entrypoint/*.sh
+
+# Run the setup script
+./setup.sh
+
+# Or run manually
+docker compose up -d
 ```
 
-What the script does:
-- Installs docker and docker compose if missing
-- Enables IP forwarding in /etc/sysctl.conf
-- Copies the monitoring script to /usr/local/bin/amneziawg-monitor.sh
-- Adds a cron job to run the script in /etc/cron.d/amneziawg-monitor
-- Checks the output of the monitoring script
-- If the .env file is missing, it creates the file by automatically generating variables
-- Outputs the configuration for setting up the client to the console
+### Getting client configurations:
 
-2. **Getting the client configuration:**
+Peer configurations are located in:
+```
+./config/peers/
+├── peer1.conf
+├── peer2.conf
+└── peer3.conf
+```
 
-At the end of the script's execution, the configuration for setting up on the peer side is displayed.
+Each file contains a complete configuration for client connection.
 
-The configuration file can be found at `./config/peer.conf`
+### Viewing logs:
 
-Example script configuration output:
 ```bash
-[SETUP] Starting AmneziaWG setup...
-[SETUP] Checking Docker installation...
-[SETUP] Docker and Docker Compose are already installed
-[SETUP] Configuring IP forwarding in sysctl...
-[SETUP] IP forwarding already enabled in sysctl.conf
-[SETUP] Applying sysctl settings...
-[SETUP] Sysctl settings applied successfully
-[SETUP] IP forwarding is enabled (net.ipv4.ip_forward=1)
-[SETUP] Creating .env file with generated obfuscation values
-[SETUP] Generated obfuscation values:
-[SETUP]   JC=3, JMIN=50, JMAX=1000
-[SETUP]   S1=124, S2=52
-[SETUP]   H1=7799, H2=16627, H3=7319, H4=10232
-[WARNING] WG_ENDPOINT is not set or empty in .env file
-[SETUP] Detecting public IP address...
-[SETUP] Detected public IP: <external_ip>
-[SETUP] WG_ENDPOINT has been set to: <external_ip>
-[SETUP] Copying amneziawg-monitor.sh to /usr/local/bin/
-[SETUP] Copying amneziawg-monitor to /etc/cron.d/
-[SETUP] Making entrypoint.sh executable
-[SETUP] Starting Docker Compose from current directory
-[+] Running 1/1
- ✔ Container amneziawg  Started                                                                            11.4s 
-[SETUP] Waiting for container to initialize...
-[SETUP] Testing monitor script...
-amneziawg
-[SETUP] Monitor script executed successfully
-[SETUP] Checking container status...
-CONTAINER ID   IMAGE                            COMMAND            CREATED          STATUS                                     PORTS                                             NAMES
-1a7a42d203ac   amneziavpn/amneziawg-go:0.2.15   "/entrypoint.sh"   34 seconds ago   Up Less than a second (health: starting)   0.0.0.0:13440->13440/udp, [::]:13440->13440/udp   amneziawg
-[SETUP] Setup complete!
-[SETUP] - IP forwarding configured in /etc/sysctl.conf
-[SETUP] - Monitor script: /usr/local/bin/amneziawg-monitor.sh
-[SETUP] - Cron job: /etc/cron.d/amneziawg-monitor
-[SETUP] - Container logs: docker logs amneziawg
-[SETUP] - .env file configured with WG_ENDPOINT and obfuscation values
-[SETUP] Output peer configuration...
-[Interface]
-PrivateKey = <client_private_key>
-Address = 10.100.0.2/32
-DNS = 9.9.9.9,149.112.112.112
-Jc = 3
-Jmin = 1
-Jmax = 50
-S1 = 124
-S2 = 52
-H1 = 7799
-H2 = 16627
-H3 = 7319
-H4 = 10232
+# Colored logs with emojis
+docker logs amneziawg
 
-[Peer]
-PublicKey = <server_public_key>
-PresharedKey = <preshared_key>
-Endpoint = <external_ip>:13440
-AllowedIPs = 0.0.0.0/0, ::/0
-PersistentKeepalive = 25
+# Or raw logs
+tail -f ./logs/amneziawg.log
 ```
 
 ---
 
-## Important Notes
+## 🛠️ Important Notes
 
-* To completely regenerate the VPN configuration, you can delete the contents of `./config`. On the next container launch, it will create new keys and configs.
-* Make sure the UDP port (`WG_PORT`) is open on the router/firewall for client connections.
+### Security:
+- All keys and configuration files automatically receive `600` permissions
+- JSON database is protected from unauthorized access
+- Permissions are checked and fixed on every startup
+
+### Migration and backups:
+- For full VPN regeneration, delete the `./config` directory
+- To save configuration, copy `./config/config.json`
+- To migrate to another server, transfer the entire `./config` directory
+
+### Network settings:
+- Ensure the UDP port (`WG_PORT`) is open on the router/firewall
+- Verify that `WG_ENDPOINT` contains the correct public IP or domain name
+- For NAT to work, ensure IP forwarding is enabled on the host
+
+### Troubleshooting:
+```bash
+# Check interface status
+docker exec amneziawg awg show wg0
+
+# View initialization logs
+docker logs amneziawg
+
+# Check the database
+docker exec amneziawg cat /etc/amneziawg/config.json | jq .
+```
+
+---
+
+## 🔄 Update Process
+
+When changing any parameters in the `.env` file:
+
+1. **Server parameters** (port, endpoint, etc.) - automatically updated in the database
+2. **Obfuscation parameters** - applied to all peers when regenerating configs
+3. **Peer count** - dynamically managed without losing existing configurations
