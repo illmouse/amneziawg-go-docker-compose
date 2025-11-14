@@ -8,21 +8,13 @@ set -eu
 # Create log directory first
 mkdir -p "$(dirname "$WG_LOGFILE")"
 
-# Simple log function that doesn't depend on other variables
-log() { 
-    echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] $*" | tee -a "$WG_LOGFILE" 
-}
+# Source functions to get colors and emojis
+. /entrypoint/functions.sh
 
-error() {
-    echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] ERROR: $*" | tee -a "$WG_LOGFILE"
-    exit 1
-}
-
-log "Initializing container environment..."
+info "📁 Initializing container environment..."
 
 # Now set the rest of the environment variables
 : "${TMP_DIR:=/tmp/amneziawg}"
-: "${KEYS_DIR:=$WG_DIR/keys}"
 : "${PEERS_DIR:=$WG_DIR/peers}"
 : "${CONFIG_DB:=$WG_DIR/config.json}"
 : "${WG_CONF_FILE:=wg0.conf}"
@@ -44,14 +36,15 @@ log "Initializing container environment..."
 : "${H4:=1515483925}"
 
 # Export all variables so they're available to other scripts
-export WG_DIR TMP_DIR KEYS_DIR PEERS_DIR CONFIG_DB WG_CONF_FILE WG_LOGFILE
+export WG_DIR TMP_DIR PEERS_DIR CONFIG_DB WG_CONF_FILE WG_LOGFILE
 export WG_IFACE WG_ADDRESS WG_PORT WG_ENDPOINT WG_PEER_COUNT
 export Jc Jmin Jmax S1 S2 H1 H2 H3 H4
 
 # Install jq for JSON manipulation
 if ! command -v jq >/dev/null 2>&1; then
-    log "Installing jq..."
+    info "Installing jq..."
     apk add --no-cache jq >/dev/null 2>&1
+    success "jq installed successfully"
 fi
 
 # Check if awg command is available
@@ -60,11 +53,12 @@ if ! command -v awg >/dev/null 2>&1; then
 fi
 
 # Create directories
-mkdir -p "$WG_DIR" "$TMP_DIR" "$KEYS_DIR" "$PEERS_DIR"
+mkdir -p "$WG_DIR" "$TMP_DIR" "$PEERS_DIR"
+success "Required directories created"
 
-log "Environment initialized with:"
-log "  WG_IFACE=$WG_IFACE, WG_ADDRESS=$WG_ADDRESS, WG_PORT=$WG_PORT"
-log "  WG_PEER_COUNT=$WG_PEER_COUNT, WG_ENDPOINT=$WG_ENDPOINT"
-log "  Jc=$Jc, Jmin=$Jmin, Jmax=$Jmax"
-log "  S1=$S1, S2=$S2"
-log "  H1=$H1, H2=$H2, H3=$H3, H4=$H4"
+info "Environment initialized with:"
+debug "  WG_IFACE=$WG_IFACE, WG_ADDRESS=$WG_ADDRESS, WG_PORT=$WG_PORT"
+debug "  WG_PEER_COUNT=$WG_PEER_COUNT, WG_ENDPOINT=$WG_ENDPOINT"
+debug "  Jc=$Jc, Jmin=$Jmin, Jmax=$Jmax"
+debug "  S1=$S1, S2=$S2"
+debug "  H1=$H1, H2=$H2, H3=$H3, H4=$H4"

@@ -6,15 +6,8 @@ set -eu
 : "${WG_DIR:=/etc/amneziawg}"
 : "${CONFIG_DB:=$WG_DIR/config.json}"
 
-# Simple log function
-log() { 
-    echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] $*" | tee -a "$WG_LOGFILE" 
-}
-
-error() {
-    echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] ERROR: $*" | tee -a "$WG_LOGFILE"
-    exit 1
-}
+# Source functions to get colors and emojis
+. /entrypoint/functions.sh
 
 # JSON database functions
 init_config_db() {
@@ -34,7 +27,7 @@ init_config_db() {
     : "${H4:=1515483925}"
     
     if [ ! -f "$CONFIG_DB" ]; then
-        log "Initializing configuration database..."
+        info "Initializing configuration database..."
         cat > "$CONFIG_DB" <<EOF
 {
   "server": {
@@ -65,9 +58,9 @@ init_config_db() {
   }
 }
 EOF
-        log "Configuration database initialized"
+        success "Configuration database initialized"
     else
-        log "Using existing configuration database"
+        success "Using existing configuration database"
     fi
 }
 
@@ -131,7 +124,7 @@ update_server_config() {
     
     if [ "$needs_update" -eq 1 ]; then
         set_db_value '.meta.last_updated' "\"$(date -u +'%Y-%m-%dT%H:%M:%SZ')\""
-        log "Server configuration updated in database"
+        info "Server configuration updated in database"
     fi
     
     return $needs_update
@@ -141,4 +134,4 @@ update_server_config() {
 init_config_db
 update_server_config
 
-log "Configuration database setup completed"
+success "🗃️ Configuration database setup completed"

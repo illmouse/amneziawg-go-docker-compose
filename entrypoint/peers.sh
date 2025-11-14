@@ -5,21 +5,21 @@
 current_peer_count=$(jq '.peers | keys | length' "$CONFIG_DB" 2>/dev/null || echo "0")
 desired_peer_count=${WG_PEER_COUNT:-1}
 
-log "Managing peers: current=$current_peer_count, desired=$desired_peer_count"
+info "${PEER_EMOJI} Managing peers: current=$current_peer_count, desired=$desired_peer_count"
 
 # Add new peers if needed
 if [ "$desired_peer_count" -gt "$current_peer_count" ]; then
-    log "Adding $((desired_peer_count - current_peer_count)) new peer(s)..."
+    info "Adding $((desired_peer_count - current_peer_count)) new peer(s)..."
     for i in $(seq $((current_peer_count + 1)) "$desired_peer_count"); do
         peer_ip=$(get_peer_ip "$i")
         peer_name="peer$i"
         
-        log "Adding new peer: $peer_name ($peer_ip)"
+        info "Adding new peer: $peer_name ($peer_ip)"
         
         # Check if peer already exists
         existing_peer=$(get_db_value ".peers.\"$peer_name\"")
         if [ -n "$existing_peer" ] && [ "$existing_peer" != "null" ]; then
-            log "Peer $peer_name already exists, skipping"
+            warn "Peer $peer_name already exists, skipping"
             continue
         fi
         
@@ -45,13 +45,13 @@ if [ "$desired_peer_count" -gt "$current_peer_count" ]; then
             }')
         
         if set_db_value ".peers.\"$peer_name\"" "$peer_json"; then
-            log "Peer $peer_name added to database successfully"
+            success "Peer $peer_name added to database successfully"
         else
             error "Failed to add peer $peer_name to database"
         fi
     done
 else
-    log "No new peers to add"
+    success "No new peers to add"
 fi
 
-log "Peer management completed"
+success "${PEER_EMOJI} Peer management completed"

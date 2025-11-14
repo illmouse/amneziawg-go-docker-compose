@@ -4,50 +4,45 @@ set -eu
 # Global variables
 export WG_DIR="/etc/amneziawg"
 export TMP_DIR="/tmp/amneziawg"
-export KEYS_DIR="$WG_DIR/keys"
 export PEERS_DIR="$WG_DIR/peers"
 export CONFIG_DB="$WG_DIR/config.json"
 export WG_CONF_FILE="wg0.conf"
 export WG_LOGFILE="/var/log/amneziawg/amneziawg.log"
 
-# Simple log function for main script
-log() { 
-    echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] $*" | tee -a "$WG_LOGFILE" 
-}
-
-error() {
-    echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] ERROR: $*" | tee -a "$WG_LOGFILE"
-    exit 1
-}
+# Source functions first to get colors and emojis
+. /entrypoint/functions.sh
 
 # Trap to catch any exits
 trap 'log "Script exiting with code: $?"' EXIT
 
-log "Starting container from modular entrypoint..."
+success "🚀 Starting container from modular entrypoint..."
 
 # Source and execute all scripts in order
-log "=== Starting setup process ==="
+info "🌈 === Starting setup process ==="
 
-log "1. Initializing environment..."
+info "1. 📁 Initializing environment..."
 . /entrypoint/init.sh
 
-log "2. Initializing configuration database..."
+info "2. 🗃️ Initializing configuration database..."
 . /entrypoint/config-db.sh
 
-log "3. Generating server keys..."
+info "3. ${KEY_EMOJI} Generating server keys..."
 . /entrypoint/server-keys.sh
 
-log "4. Managing peers..."
+info "4. ${PEER_EMOJI} Managing peers..."
 . /entrypoint/peers.sh
 
-log "5. Generating configurations..."
+info "5. ${CONFIG_EMOJI} Generating configurations..."
 . /entrypoint/generate-configs.sh
 
-log "6. Starting WireGuard..."
+info "6. ${SECURITY_EMOJI} Fixing permissions..."
+fix_permissions
+
+info "7. ${NETWORK_EMOJI} Starting WireGuard..."
 . /entrypoint/start-wireguard.sh
 
-log "=== All setup steps completed successfully ==="
-log "Container startup complete. Entering sleep..."
+success "🎉 === All setup steps completed successfully ==="
+success "🏁 Container startup complete. Entering sleep..."
 
 # Keep container running
 while true; do

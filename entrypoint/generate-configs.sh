@@ -2,7 +2,7 @@
 
 . /entrypoint/functions.sh
 
-log "Generating server configuration..."
+info "${CONFIG_EMOJI} Generating server configuration..."
 
 server_priv_key=$(get_db_value '.server.keys.private_key')
 server_jc=$(get_db_value '.server.junk.jc')
@@ -42,27 +42,28 @@ EOF
 # Add peers from database
 peers_count=$(jq '.peers | keys | length' "$CONFIG_DB")
 if [ "$peers_count" -gt 0 ]; then
-    log "Adding $peers_count peer(s) to server config"
+    info "Adding $peers_count peer(s) to server config"
     jq -r '.peers | to_entries[] | 
         "[Peer]\n" +
         "PublicKey = " + .value.public_key + "\n" +
         "PresharedKey = " + .value.preshared_key + "\n" +
-        "AllowedIPs = " + .value.ip + "\n"' "$CONFIG_DB" >> "$TMP_CONF"
+        "AllowedIPs = " + (.value.ip | sub("/.*"; "")) + "/32\n"' "$CONFIG_DB" >> "$TMP_CONF"
 else
-    log "No peers found in database to add to server config"
+    warn "No peers found in database to add to server config"
 fi
 
 # Deploy config if changed
 CONF_PATH="$WG_DIR/$WG_CONF_FILE"
 if [ -f "$CONF_PATH" ] && cmp -s "$TMP_CONF" "$CONF_PATH"; then
-    log "Server config unchanged."
+    success "Server config unchanged"
 else
-    log "Server config updated."
+    info "Server config updated"
     cp "$TMP_CONF" "$CONF_PATH"
+    success "Server configuration file deployed: $CONF_PATH"
 fi
 
 # Generate peer configs
-log "Generating peer configurations..."
+info "${CONFIG_EMOJI} Generating peer configurations..."
 
 server_pub_key=$(get_db_value '.server.keys.public_key')
 server_endpoint=$(get_db_value '.server.endpoint')
@@ -74,9 +75,9 @@ if [ -z "$server_pub_key" ] || [ "$server_pub_key" = "null" ]; then
 fi
 
 if [ "$peers_count" -eq 0 ]; then
-    log "No peers found in database to generate configs for"
+    warn "No peers found in database to generate configs for"
 else
-    log "Generating $peers_count peer configuration file(s)..."
+    info "Generating $peers_count peer configuration file(s)..."
     
     jq -r '.peers | to_entries[] | 
         .key + " " + .value.private_key + " " + .value.ip + " " + .value.preshared_key' "$CONFIG_DB" | \
@@ -105,8 +106,8 @@ Endpoint = $server_endpoint:$server_port
 AllowedIPs = 0.0.0.0/0, ::/0
 PersistentKeepalive = 25
 EOF
-        log "Peer config generated: $PEER_CONF_FILE"
+        success "Peer config generated: $PEER_CONF_FILE"
     done
 fi
 
-log "Configuration generation completed"
+success "${CONFIG_EMOJI} Configuration generation completed"
