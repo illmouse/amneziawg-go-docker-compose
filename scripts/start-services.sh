@@ -29,14 +29,6 @@ start_services() {
     log "Checking container status..."
     docker ps --filter "name=amneziawg"
     
-    # Output peer configuration
-    log "Output peer configuration..."
-    if [ -f "$project_dir/config/peer.conf" ]; then
-        cat "$project_dir/config/peer.conf"
-    else
-        warn "Peer configuration not found yet, it may take a moment to generate"
-    fi
-    
     return 0
 }
 

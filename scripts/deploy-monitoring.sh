@@ -26,10 +26,6 @@ deploy_monitoring() {
     # Ensure proper permissions for cron file
     chmod 644 /etc/cron.d/amneziawg-monitor
     
-    # Make entrypoint executable
-    log "Making entrypoint.sh executable"
-    chmod +x "$project_dir/entrypoint.sh"
-    
     return 0
 }
 

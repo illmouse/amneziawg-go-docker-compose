@@ -30,7 +30,7 @@ fi
 main() {
     log "Starting AmneziaWG setup..."
 
-    chmod +x "$SCRIPT_DIR"/scripts/*.sh
+    chmod +x "$SCRIPT_DIR"/scripts/*.sh "$SCRIPT_DIR"/entrypoint/*.sh
     
     # Step 1: Install Docker and Docker Compose
     if ! "$SCRIPT_DIR/scripts/install-docker.sh"; then

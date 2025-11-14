@@ -16,8 +16,8 @@ services:
     volumes:
       - ./config:/etc/amneziawg
       - ./logs:/var/log/amneziawg
-      - ./entrypoint.sh:/entrypoint.sh:ro
-    entrypoint: ["/entrypoint.sh"]
+      - ./entrypoint:/entrypoint:ro
+    entrypoint: ["/entrypoint/main.sh"]
     healthcheck:
       test: ["CMD", "sh", "-c", "ip link show wg0 && awg show wg0 2>/dev/null | grep -q listening"]
       interval: 30s
