@@ -160,7 +160,6 @@ awg setconf "$WG_IFACE" "$CONF_PATH" >>"$WG_LOGFILE" 2>&1 || log "[WARN] awg set
 log "Bringing interface up..."
 ip link set up dev "$WG_IFACE" >>"$WG_LOGFILE" 2>&1
 
-
 log "Adding iptables rules..."
 DEF_IFACE=$(ip route | awk '/default/ {print $5; exit}')
 
@@ -170,4 +169,4 @@ iptables -A FORWARD -i "$WG_IFACE" -j ACCEPT 2>>"$WG_LOGFILE" || true
 iptables -A INPUT -i "$WG_IFACE" -j ACCEPT 2>>"$WG_LOGFILE" || true
 
 log "Setup complete. Interface $WG_IFACE is up and peer.conf available."
-tail -F "$WG_LOGFILE"
+sleep infinity
