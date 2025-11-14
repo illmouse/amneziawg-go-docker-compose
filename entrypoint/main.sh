@@ -21,7 +21,7 @@ error() {
 }
 
 # Trap to catch any exits
-trap 'log "TRAP: Script exiting with code: $?"' EXIT
+trap 'log "Script exiting with code: $?"' EXIT
 
 log "Starting container from modular entrypoint..."
 

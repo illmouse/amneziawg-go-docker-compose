@@ -2,8 +2,6 @@
 
 . /entrypoint/functions.sh
 
-log "DEBUG: peers.sh - Starting execution"
-
 current_peer_count=$(jq '.peers | keys | length' "$CONFIG_DB" 2>/dev/null || echo "0")
 desired_peer_count=${WG_PEER_COUNT:-1}
 
@@ -53,7 +51,7 @@ if [ "$desired_peer_count" -gt "$current_peer_count" ]; then
         fi
     done
 else
-    log "No new peers to add (current: $current_peer_count, desired: $desired_peer_count)"
+    log "No new peers to add"
 fi
 
-log "DEBUG: peers.sh - Completed successfully"
+log "Peer management completed"

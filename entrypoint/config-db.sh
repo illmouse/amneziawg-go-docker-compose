@@ -16,12 +16,8 @@ error() {
     exit 1
 }
 
-log "DEBUG: config-db.sh - START"
-
 # JSON database functions
 init_config_db() {
-    log "DEBUG: init_config_db() started"
-    
     # Set more variables needed for the function
     : "${WG_IFACE:=wg0}"
     : "${WG_ADDRESS:=10.100.0.1/24}"
@@ -69,9 +65,9 @@ init_config_db() {
   }
 }
 EOF
-        log "DEBUG: Database initialized"
+        log "Configuration database initialized"
     else
-        log "DEBUG: Database already exists"
+        log "Using existing configuration database"
     fi
 }
 
@@ -142,10 +138,7 @@ update_server_config() {
 }
 
 # Main execution
-log "DEBUG: Calling init_config_db"
 init_config_db
-
-log "DEBUG: Calling update_server_config"
 update_server_config
 
-log "DEBUG: config-db.sh - COMPLETED SUCCESSFULLY"
+log "Configuration database setup completed"

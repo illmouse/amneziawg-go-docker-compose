@@ -2,7 +2,7 @@
 
 . /entrypoint/functions.sh
 
-log "DEBUG: start-wireguard.sh - Starting execution"
+log "Starting WireGuard interface $WG_IFACE..."
 
 log "Starting amneziawg-go on $WG_IFACE..."
 amneziawg-go "$WG_IFACE" >>"$WG_LOGFILE" 2>&1 &
@@ -25,8 +25,6 @@ iptables -t nat -A POSTROUTING -o "$DEF_IFACE" -j MASQUERADE 2>>"$WG_LOGFILE" ||
 iptables -A FORWARD -i "$WG_IFACE" -j ACCEPT 2>>"$WG_LOGFILE" || true
 iptables -A INPUT -i "$WG_IFACE" -j ACCEPT 2>>"$WG_LOGFILE" || true
 
-log "WireGuard setup complete. Interface $WG_IFACE is up with $WG_PEER_COUNT peer(s)."
+log "WireGuard setup complete. Interface $WG_IFACE is up."
 log "Configuration database: $CONFIG_DB"
 log "Peer configurations available in: $PEERS_DIR/"
-
-log "DEBUG: start-wireguard.sh - Completed successfully"

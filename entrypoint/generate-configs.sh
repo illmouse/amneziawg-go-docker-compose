@@ -2,9 +2,6 @@
 
 . /entrypoint/functions.sh
 
-log "DEBUG: generate-configs.sh - Starting execution"
-
-# Generate server config
 log "Generating server configuration..."
 
 server_priv_key=$(get_db_value '.server.keys.private_key')
@@ -112,4 +109,4 @@ EOF
     done
 fi
 
-log "DEBUG: generate-configs.sh - Completed successfully"
+log "Configuration generation completed"
