@@ -133,8 +133,6 @@ update_server_config() {
         needs_update=1
     fi
     
-    # ... rest of the update logic (shortened for brevity)
-    
     if [ "$needs_update" -eq 1 ]; then
         set_db_value '.meta.last_updated' "\"$(date -u +'%Y-%m-%dT%H:%M:%SZ')\""
         info "Server configuration updated in database"
