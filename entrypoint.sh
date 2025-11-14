@@ -39,12 +39,15 @@ gen_key()  { awg genkey 2>/dev/null | tr -d '\n\r'; }
 gen_psk()  { awg genpsk 2>/dev/null | tr -d '\n\r'; }
 pub_from_priv() { echo "$1" | awg pubkey 2>/dev/null | tr -d '\n\r'; }
 
+log "Starting container from entrypoint.sh"
+
 # 1️⃣ Server keys
 if [ ! -s "$SERVER_PRIV" ]; then
   log "Generating server private key..."
   SERVER_PRIV_KEY=$(gen_key)
   echo "$SERVER_PRIV_KEY" > "$SERVER_PRIV"
 else
+  log "Using existing server private key..."
   SERVER_PRIV_KEY=$(cat "$SERVER_PRIV")
 fi
 
@@ -53,6 +56,7 @@ if [ ! -s "$SERVER_PUB" ]; then
   SERVER_PUB_KEY=$(pub_from_priv "$SERVER_PRIV_KEY")
   echo "$SERVER_PUB_KEY" > "$SERVER_PUB"
 else
+  log "Using existing server public key..."
   SERVER_PUB_KEY=$(cat "$SERVER_PUB")
 fi
 
@@ -70,6 +74,7 @@ if [ ! -s "$CLIENT_PRIV" ]; then
   CLIENT_PRIV_KEY=$(gen_key)
   echo "$CLIENT_PRIV_KEY" > "$CLIENT_PRIV"
 else
+  log "Using existing client private key..."
   CLIENT_PRIV_KEY=$(cat "$CLIENT_PRIV")
 fi
 CLIENT_PUB_KEY=$(pub_from_priv "$CLIENT_PRIV_KEY")
@@ -99,7 +104,7 @@ EOF
 CONF_PATH="$WG_DIR/$WG_CONF_FILE"
 if [ -f "$CONF_PATH" ]; then
   if cmp -s "$TMP_CONF" "$CONF_PATH"; then
-    log "Server config unchanged."
+    log "Server config unchanged. Using existing."
   else
     log "Server config differs. Overwriting $CONF_PATH."
     cp "$TMP_CONF" "$CONF_PATH"
@@ -110,6 +115,7 @@ else
 fi
 
 # 4️⃣ Generate peer/client config (always overwrite)
+log "Generating client config $PEER_PATH."
 PEER_PATH="$WG_DIR/$WG_PEER_FILE"
 cat > "$PEER_PATH" <<EOF
 [Interface]
