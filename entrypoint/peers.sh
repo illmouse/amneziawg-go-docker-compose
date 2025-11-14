@@ -1,58 +1,59 @@
 #!/bin/sh
-set -eu
 
 . /entrypoint/functions.sh
 
-manage_peers() {
-    local current_peer_count=$(jq '.peers | keys | length' "$CONFIG_DB")
-    local desired_peer_count=$WG_PEER_COUNT
-    
-    log "Managing peers: current=$current_peer_count, desired=$desired_peer_count"
-    
-    # Add new peers if needed
-    if [ "$desired_peer_count" -gt "$current_peer_count" ]; then
-        for i in $(seq $((current_peer_count + 1)) "$desired_peer_count"); do
-            add_peer "$i"
-        done
-    fi
-    # Note: We don't remove peers if count decreases (as requested)
-}
+log "DEBUG: peers.sh - Starting execution"
 
-add_peer() {
-    local peer_id="$1"
-    local peer_ip=$(get_peer_ip "$peer_id")
-    local peer_name="peer$peer_id"
-    
-    log "Adding new peer: $peer_name ($peer_ip)"
-    
-    # Generate keys
-    local peer_priv_key=$(gen_key)
-    local peer_pub_key=$(pub_from_priv "$peer_priv_key")
-    local psk=$(gen_psk)
-    
-    # Save keys to files
-    echo "$peer_priv_key" > "$KEYS_DIR/${peer_name}_privatekey"
-    echo "$peer_pub_key" > "$KEYS_DIR/${peer_name}_publickey"
-    echo "$psk" > "$KEYS_DIR/${peer_name}_presharedkey"
-    
-    # Add to database
-    local peer_json=$(jq -n \
-        --arg name "$peer_name" \
-        --arg ip "$peer_ip" \
-        --arg priv_key "$peer_priv_key" \
-        --arg pub_key "$peer_pub_key" \
-        --arg psk "$psk" \
-        '{
-            name: $name,
-            ip: $ip,
-            private_key: $priv_key,
-            public_key: $pub_key,
-            preshared_key: $psk,
-            created: now | todate
-        }')
-    
-    set_db_value ".peers.\"$peer_name\"" "$peer_json"
-    log "Peer $peer_name added to database"
-}
+current_peer_count=$(jq '.peers | keys | length' "$CONFIG_DB" 2>/dev/null || echo "0")
+desired_peer_count=${WG_PEER_COUNT:-1}
 
-manage_peers
+log "Managing peers: current=$current_peer_count, desired=$desired_peer_count"
+
+# Add new peers if needed
+if [ "$desired_peer_count" -gt "$current_peer_count" ]; then
+    log "Adding $((desired_peer_count - current_peer_count)) new peer(s)..."
+    for i in $(seq $((current_peer_count + 1)) "$desired_peer_count"); do
+        peer_ip=$(get_peer_ip "$i")
+        peer_name="peer$i"
+        
+        log "Adding new peer: $peer_name ($peer_ip)"
+        
+        # Check if peer already exists
+        existing_peer=$(get_db_value ".peers.\"$peer_name\"")
+        if [ -n "$existing_peer" ] && [ "$existing_peer" != "null" ]; then
+            log "Peer $peer_name already exists, skipping"
+            continue
+        fi
+        
+        # Generate keys
+        peer_priv_key=$(gen_key)
+        peer_pub_key=$(pub_from_priv "$peer_priv_key")
+        psk=$(gen_psk)
+        
+        # Add to database
+        peer_json=$(jq -n \
+            --arg name "$peer_name" \
+            --arg ip "$peer_ip" \
+            --arg priv_key "$peer_priv_key" \
+            --arg pub_key "$peer_pub_key" \
+            --arg psk "$psk" \
+            '{
+                name: $name,
+                ip: $ip,
+                private_key: $priv_key,
+                public_key: $pub_key,
+                preshared_key: $psk,
+                created: now | todate
+            }')
+        
+        if set_db_value ".peers.\"$peer_name\"" "$peer_json"; then
+            log "Peer $peer_name added to database successfully"
+        else
+            error "Failed to add peer $peer_name to database"
+        fi
+    done
+else
+    log "No new peers to add (current: $current_peer_count, desired: $desired_peer_count)"
+fi
+
+log "DEBUG: peers.sh - Completed successfully"
