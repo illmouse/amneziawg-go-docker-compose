@@ -100,7 +100,7 @@ H4=1515483925
 
 1. **When decreasing `WG_PEER_COUNT`:**
    - Peers are **removed from the active configuration** (`wg0.conf`)
-   - But **configurations are preserved** for potential future use in `./config/peers/`
+   - But **configurations are preserved** for potential future use in `./config/peers/peerN.conf.removed.20251114`
    - Only the first N peers in alphanumeric order are kept (peer1, peer2, peer3...)
 
 2. **When increasing `WG_PEER_COUNT`:**

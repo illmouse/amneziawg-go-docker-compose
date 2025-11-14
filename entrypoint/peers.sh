@@ -13,12 +13,19 @@ info "Current peers in DB: $current_peer_count, desired: $desired_peer_count"
 # Create a backup of the original database
 cp "$CONFIG_DB" "$CONFIG_DB.backup" 2>/dev/null || true
 
+# Get current date for archival
+archive_date=$(date -u +'%Y%m%d')
+
 # Remove peers beyond desired count from active configuration
 if [ "$current_peer_count" -gt "$desired_peer_count" ]; then
     info "Removing ${CYAN}$((current_peer_count - desired_peer_count))${NC} peer(s) from active configuration..."
     
     # Get the list of peers to keep (first N peers sorted numerically)
     peers_to_keep=$(jq -r '.peers | keys | sort_by(.[4:] | tonumber) | .[0:'"$desired_peer_count"'] | .[]' "$CONFIG_DB")
+    
+    # Get the list of peers that will be removed
+    all_peers=$(jq -r '.peers | keys | sort_by(.[4:] | tonumber) | .[]' "$CONFIG_DB")
+    peers_to_remove=$(echo "$all_peers" | tail -n +$((desired_peer_count + 1)))
     
     if [ -n "$peers_to_keep" ]; then
         # Create a new peers object with only the kept peers
@@ -33,6 +40,20 @@ if [ "$current_peer_count" -gt "$desired_peer_count" ]; then
             if [ -s "$CONFIG_DB.tmp" ] && jq empty "$CONFIG_DB.tmp" 2>/dev/null; then
                 mv "$CONFIG_DB.tmp" "$CONFIG_DB"
                 success "Removed peers beyond count $desired_peer_count from active configuration"
+                
+                # Archive configuration files for removed peers instead of deleting
+                for peer in $peers_to_remove; do
+                    peer_conf_file="$PEERS_DIR/${peer}.conf"
+                    if [ -f "$peer_conf_file" ]; then
+                        archive_file="$PEERS_DIR/${peer}.conf.removed.${archive_date}"
+                        # If archive already exists for today, add timestamp
+                        if [ -f "$archive_file" ]; then
+                            archive_file="$PEERS_DIR/${peer}.conf.removed.${archive_date}.$(date -u +'%H%M%S')"
+                        fi
+                        mv "$peer_conf_file" "$archive_file"
+                        info "Archived peer configuration: $peer_conf_file → $archive_file"
+                    fi
+                done
                 
                 # Verify the removal worked
                 new_count=$(jq '.peers | keys | length' "$CONFIG_DB")
@@ -54,6 +75,19 @@ if [ "$current_peer_count" -gt "$desired_peer_count" ]; then
         warn "No peers to keep - resetting peers object"
         if jq '.peers = {}' "$CONFIG_DB" > "$CONFIG_DB.tmp" 2>/dev/null; then
             mv "$CONFIG_DB.tmp" "$CONFIG_DB"
+            # Archive all peer configuration files
+            for peer_conf in "$PEERS_DIR"/*.conf; do
+                if [ -f "$peer_conf" ]; then
+                    peer_name=$(basename "$peer_conf" .conf)
+                    archive_file="$PEERS_DIR/${peer_name}.conf.removed.${archive_date}"
+                    # If archive already exists for today, add timestamp
+                    if [ -f "$archive_file" ]; then
+                        archive_file="$PEERS_DIR/${peer_name}.conf.removed.${archive_date}.$(date -u +'%H%M%S')"
+                    fi
+                    mv "$peer_conf" "$archive_file"
+                    info "Archived peer configuration: $peer_conf → $archive_file"
+                fi
+            done
             success "Reset peers object to empty"
         else
             warn "Failed to reset peers object, restoring backup"
@@ -74,6 +108,7 @@ if [ "$desired_peer_count" -gt "$current_peer_count" ]; then
     
     peers_added=0
     peers_needed=$((desired_peer_count - current_peer_count))
+    newly_added_peers=""
     
     # First pass: fill gaps in numbering from 1 to desired count
     for i in $(seq 1 "$desired_peer_count"); do
@@ -95,6 +130,18 @@ if [ "$desired_peer_count" -gt "$current_peer_count" ]; then
             peer_pub_key=$(pub_from_priv "$peer_priv_key")
             psk=$(gen_psk)
             
+            # Archive existing configuration file if it exists (from previous incarnation)
+            peer_conf_file="$PEERS_DIR/${peer_name}.conf"
+            if [ -f "$peer_conf_file" ]; then
+                archive_file="$PEERS_DIR/${peer_name}.conf.archived.${archive_date}"
+                # If archive already exists for today, add timestamp
+                if [ -f "$archive_file" ]; then
+                    archive_file="$PEERS_DIR/${peer_name}.conf.archived.${archive_date}.$(date -u +'%H%M%S')"
+                fi
+                mv "$peer_conf_file" "$archive_file"
+                info "Archived previous peer configuration: $peer_conf_file → $archive_file"
+            fi
+            
             # Add to database
             peer_json=$(jq -n \
                 --arg name "$peer_name" \
@@ -114,6 +161,7 @@ if [ "$desired_peer_count" -gt "$current_peer_count" ]; then
             if set_db_value ".peers.\"$peer_name\"" "$peer_json"; then
                 success "Peer $peer_name added to database"
                 peers_added=$((peers_added + 1))
+                newly_added_peers="$newly_added_peers $peer_name"
             else
                 error "Failed to add peer $peer_name to database"
             fi
@@ -144,6 +192,18 @@ if [ "$desired_peer_count" -gt "$current_peer_count" ]; then
             peer_pub_key=$(pub_from_priv "$peer_priv_key")
             psk=$(gen_psk)
             
+            # Archive existing configuration file if it exists
+            peer_conf_file="$PEERS_DIR/${peer_name}.conf"
+            if [ -f "$peer_conf_file" ]; then
+                archive_file="$PEERS_DIR/${peer_name}.conf.archived.${archive_date}"
+                # If archive already exists for today, add timestamp
+                if [ -f "$archive_file" ]; then
+                    archive_file="$PEERS_DIR/${peer_name}.conf.archived.${archive_date}.$(date -u +'%H%M%S')"
+                fi
+                mv "$peer_conf_file" "$archive_file"
+                info "Archived previous peer configuration: $peer_conf_file → $archive_file"
+            fi
+            
             # Add to database
             peer_json=$(jq -n \
                 --arg name "$peer_name" \
@@ -162,10 +222,16 @@ if [ "$desired_peer_count" -gt "$current_peer_count" ]; then
             
             if set_db_value ".peers.\"$peer_name\"" "$peer_json"; then
                 success "Peer $peer_name added to database"
+                newly_added_peers="$newly_added_peers $peer_name"
             else
                 error "Failed to add peer $peer_name to database"
             fi
         done
+    fi
+    
+    # Log which peers were newly added
+    if [ -n "$newly_added_peers" ]; then
+        info "Newly added peers that will get fresh configurations: $newly_added_peers"
     fi
 else
     success "No peer changes needed"
