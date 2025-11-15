@@ -43,40 +43,41 @@ if [ "$WG_MODE" = "server" ]; then
 else
     # CLIENT MODE
     info "CLIENT MODE: Loading client configuration into $WG_IFACE..."
+    
+    # Debug: Show the configuration we're trying to load
+    debug "Client configuration to be loaded:"
+    cat "$WG_DIR/$WG_CONF_FILE" | while read line; do
+        debug "  $line"
+    done
+    
     if ! awg setconf "$WG_IFACE" "$WG_DIR/$WG_CONF_FILE" >>"$WG_LOGFILE" 2>&1; then
-        warn "awg setconf failed for client mode"
-        if [ -f "$WG_DIR/$WG_CONF_FILE" ]; then
-            debug "Client configuration file contents:"
-            cat "$WG_DIR/$WG_CONF_FILE" >>"$WG_LOGFILE"
-        fi
-        error "Failed to load client WireGuard configuration"
+        error "Failed to load client WireGuard configuration with awg setconf"
     fi
 
     info "Bringing client interface up..."
     ip link set up dev "$WG_IFACE" >>"$WG_LOGFILE" 2>&1
 
-    # For client mode, we might want to set up routing
-    # This is optional and depends on the peer configuration
-    info "Client interface $WG_IFACE is up and configured"
+    # For client mode, set up the interface address if specified
+    if [ -n "$WG_ADDRESS" ]; then
+        info "Assigning client address $WG_ADDRESS to $WG_IFACE..."
+        ip address add dev "$WG_IFACE" "$WG_ADDRESS" 2>>"$WG_LOGFILE" || true
+    fi
 
     success "${NETWORK_EMOJI} Client setup complete. Interface $WG_IFACE is connected to peers."
     info "Using configuration from: $WG_DIR/$WG_CONF_FILE"
-    info "Additional peer configs in: $PEERS_DIR/"
 fi
 
 # Verify the configuration was applied correctly
 info "Verifying WireGuard configuration..."
-sleep 2
+sleep 3
 if awg show "$WG_IFACE" >>"$WG_LOGFILE" 2>&1; then
     success "WireGuard configuration verified"
     
     # Show connection status
-    if [ "$WG_MODE" = "client" ]; then
-        info "Client connection status:"
-        awg show "$WG_IFACE" | grep -E "(interface|peer|endpoint|allowed ips)" | while read line; do
-            info "  $line"
-        done
-    fi
+    info "Connection status:"
+    awg show "$WG_IFACE" | while read line; do
+        info "  $line"
+    done
 else
     warn "Could not verify configuration with 'awg show'"
 fi
