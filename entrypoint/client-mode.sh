@@ -4,7 +4,69 @@
 
 info "🔍 Setting up AmneziaWG client mode..."
 
-# [All the previous setup code remains exactly the same until the config creation...]
+# Validate client mode requirements
+if [ ! -d "$PEERS_DIR" ]; then
+    error "Client mode requires peer configurations in $PEERS_DIR"
+fi
+
+# Find peer configuration files
+peer_configs=$(find "$PEERS_DIR" -name "*.conf" -type f | sort)
+if [ -z "$peer_configs" ]; then
+    error "No peer configuration files found in $PEERS_DIR"
+fi
+
+info "Found $(echo "$peer_configs" | wc -l) peer configuration file(s)"
+
+# Use the first peer configuration as the main interface config
+main_peer_config=$(echo "$peer_configs" | head -1)
+info "Using main peer configuration: $(basename "$main_peer_config")"
+
+if [ ! -f "$main_peer_config" ]; then
+    error "Main peer configuration file not found: $main_peer_config"
+fi
+
+# Check if Squid should be enabled
+SQUID_ENABLE=${SQUID_ENABLE:-false}
+SQUID_PORT=${SQUID_PORT:-3128}
+
+if [ "$SQUID_ENABLE" = "true" ]; then
+    info "🦑 Squid proxy enabled on port $SQUID_PORT"
+    export SQUID_ENABLED=true
+    export SQUID_PORT=$SQUID_PORT
+else
+    info "Squid proxy disabled"
+    export SQUID_ENABLED=false
+fi
+
+# Extract DNS servers from peer config
+dns_servers=$(grep "^DNS" "$main_peer_config" | head -1 | sed 's/^DNS[[:space:]]*=[[:space:]]*//' | tr -d '\r\n')
+if [ -n "$dns_servers" ]; then
+    info "DNS servers from peer config: $dns_servers"
+    export PEER_DNS_SERVERS="$dns_servers"
+else
+    info "No DNS servers specified in peer configuration"
+fi
+
+# Extract junk parameters from peer config
+extract_junk_param() {
+    local param="$1"
+    local default="$2"
+    local value=$(grep -E "^${param}[[:space:]]*=" "$main_peer_config" | head -1 | sed "s/^${param}[[:space:]]*=[[:space:]]*//" | tr -d '\r\n')
+    echo "${value:-$default}"
+}
+
+# Extract junk parameters from peer config
+Jc=$(extract_junk_param "Jc" "3")
+Jmin=$(extract_junk_param "Jmin" "1") 
+Jmax=$(extract_junk_param "Jmax" "50")
+S1=$(extract_junk_param "S1" "25")
+S2=$(extract_junk_param "S2" "72")
+H1=$(extract_junk_param "H1" "1411927821")
+H2=$(extract_junk_param "H2" "1212681123")
+H3=$(extract_junk_param "H3" "1327217326")
+H4=$(extract_junk_param "H4" "1515483925")
+
+info "Using junk parameters from peer configuration"
 
 # Create a temporary file for processing
 cp "$main_peer_config" "$WG_DIR/$WG_CONF_FILE.temp"
@@ -63,11 +125,6 @@ else
     error "WireGuard configuration test failed:"
     echo "$awg_output" >&2
     exit 1
-fi
-
-if [ -n "$interface_address" ]; then
-    export WG_ADDRESS="$interface_address"
-    info "Client interface address: $interface_address"
 fi
 
 if [ -n "$interface_address" ]; then
