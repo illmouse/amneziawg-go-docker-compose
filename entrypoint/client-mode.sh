@@ -114,15 +114,34 @@ if [ -n "$peer_buffer" ]; then
     echo "$peer_buffer" >> "$WG_DIR/$WG_CONF_FILE"
 fi
 
-# Test the final configuration
+# Test the configuration with a temporary interface
 info "Testing WireGuard configuration..."
+
+# Create test interface first
+info "Creating test interface..."
+if ! amneziawg-go test-interface; then
+    error "Failed to create test interface"
+    exit 1
+fi
+
+# Test the configuration
+info "Testing configuration with awg setconf..."
 if awg_output=$(awg setconf "test-interface" "$WG_DIR/$WG_CONF_FILE" 2>&1); then
-    success "Client configuration created successfully"
+    success "WireGuard configuration test passed"
 else
     error "WireGuard configuration test failed:"
     echo "$awg_output" >&2
+    # Clean up test interface
+    info "Cleaning up test interface..."
+    ip link delete "test-interface" || true
     exit 1
 fi
+
+# Remove test interface
+info "Cleaning up test interface..."
+ip link delete "test-interface" || true
+
+success "Client configuration created successfully"
 
 if [ -n "${extracted_params[Address]}" ]; then
     export WG_ADDRESS="${extracted_params[Address]}"
