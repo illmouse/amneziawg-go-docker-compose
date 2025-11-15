@@ -114,62 +114,18 @@ rm -f "$junk_temp"
 # Extract interface address for later assignment
 interface_address=$(grep "^Address" "$main_peer_config" | head -1 | sed 's/^Address[[:space:]]*=[[:space:]]*//' | tr -d '\r\n')
 
-# Test and use the configuration
-if awg setconf "test-interface" "$WG_DIR/$WG_CONF_FILE.orig" 2>/dev/null; then
+# Test the processed configuration and show errors if any
+info "Testing WireGuard configuration..."
+if awg_output=$(awg setconf "test-interface" "$WG_DIR/$WG_CONF_FILE.orig" 2>&1); then
+    # Configuration is valid - use it as the final config
     mv "$WG_DIR/$WG_CONF_FILE.orig" "$WG_DIR/$WG_CONF_FILE"
     success "Client configuration created successfully"
 else
-    # Fallback: create minimal config
-    warn "Using fallback configuration method"
+    # Configuration failed - show the actual error
+    error "WireGuard configuration test failed:"
+    echo "$awg_output" >&2
     rm -f "$WG_DIR/$WG_CONF_FILE.orig"
-    
-    interface_private_key=$(grep "^PrivateKey" "$main_peer_config" | head -1 | sed 's/^PrivateKey[[:space:]]*=[[:space:]]*//' | tr -d '\r\n')
-    
-    cat > "$WG_DIR/$WG_CONF_FILE" << EOF
-[Interface]
-PrivateKey = $interface_private_key
-ListenPort = 0
-Jc = $Jc
-Jmin = $Jmin
-Jmax = $Jmax
-S1 = $S1
-S2 = $S2
-H1 = $H1
-H2 = $H2
-H3 = $H3
-H4 = $H4
-
-EOF
-    
-    # Add peer sections
-    in_peer_section=false
-    peer_buffer=""
-    
-    while IFS= read -r line || [ -n "$line" ]; do
-        line=$(printf "%s" "$line" | tr -d '\r')
-        
-        if [ "$line" = "[Peer]" ]; then
-            if [ "$in_peer_section" = true ] && [ -n "$peer_buffer" ]; then
-                echo "$peer_buffer" >> "$WG_DIR/$WG_CONF_FILE"
-            fi
-            peer_buffer="[Peer]"
-            in_peer_section=true
-        elif [ "$in_peer_section" = true ]; then
-            if [ -n "$line" ] && echo "$line" | grep -qE '^\[[a-zA-Z]+\]'; then
-                echo "$peer_buffer" >> "$WG_DIR/$WG_CONF_FILE"
-                peer_buffer=""
-                in_peer_section=false
-            elif [ -n "$line" ] && ! echo "$line" | grep -qE '^(Jc|Jmin|Jmax|S1|S2|H1|H2|H3|H4)'; then
-                key=$(echo "$line" | cut -d'=' -f1 | sed 's/[[:space:]]*$//')
-                value=$(echo "$line" | cut -d'=' -f2- | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
-                peer_buffer="$peer_buffer"$'\n'"$key = $value"
-            fi
-        fi
-    done < "$main_peer_config"
-    
-    if [ -n "$peer_buffer" ]; then
-        echo "$peer_buffer" >> "$WG_DIR/$WG_CONF_FILE"
-    fi
+    exit 1
 fi
 
 if [ -n "$interface_address" ]; then
