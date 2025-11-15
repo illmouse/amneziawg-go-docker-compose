@@ -13,6 +13,7 @@ services:
       - /dev/net/tun:/dev/net/tun
     ports:
       - ${WG_PORT}:${WG_PORT}/udp
+      - ${SQUID_PORT}:${SQUID_PORT}/tcp
     volumes:
       - ./config:/etc/amneziawg
       - ./logs:/var/log/amneziawg
