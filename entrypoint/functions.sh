@@ -173,32 +173,22 @@ setup_squid() {
     # Simple Squid config using SQUID_PORT variable
     cat > "$SQUID_CONF_DIR/squid.conf" << SQUID_CONFIG
 # Squid proxy configuration
-# All traffic automatically routed through WireGuard via default route
 http_port ${SQUID_PORT}
 
-# Access control - allow all
-acl all src all
+# Allow all traffic
 http_access allow all
 
-# Cache settings
-cache_dir ufs /var/cache/squid 100 16 256
-maximum_object_size 256 MB
+# Cache settings for mixed file sizes
+cache_dir ufs /var/cache/squid 5000 16 256
+cache_mem 512 MB
+maximum_object_size 20 GB
 
-# Logging
-access_log stdio:/var/log/amneziawg/squid/access.log
-cache_log /var/log/amneziawg/squid/cache.log
-
-# Timeouts
-forward_timeout 30 seconds
-connect_timeout 30 seconds
-read_timeout 300 seconds
-
-# Security
-via off
-forwarded_for off
-
-# Refresh patterns
-refresh_pattern . 0 20% 4320
+# Performance settings
+via on
+forwarded_for delete
+pipeline_prefetch 2
+connect_timeout 45 seconds
+read_timeout 1800 seconds
 SQUID_CONFIG
     
     # Initialize Squid cache
@@ -250,7 +240,6 @@ start_squid() {
     fi
 }
 
-# Simple and reliable approach
 setup_wireguard_routing() {
     if [ "$WG_MODE" = "client" ]; then
         info "🌐 Setting up routing for WireGuard tunnel..."
