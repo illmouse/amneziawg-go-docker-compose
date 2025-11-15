@@ -246,3 +246,53 @@ active_peers=$(jq -r '.peers | keys | sort_by(.[4:] | tonumber) | join(", ")' "$
 
 success "${PEER_EMOJI} Peer management completed: $final_peer_count peer(s) active"
 info "Active peers: $active_peers"
+
+# UNCONDITIONALLY UPDATE ALL PEER CONFIG FILES FROM DATABASE
+info "Updating all peer configuration files from database..."
+peers_updated=0
+
+# Get all active peers from database
+active_peers_list=$(jq -r '.peers | keys | sort_by(.[4:] | tonumber) | .[]' "$CONFIG_DB" 2>/dev/null)
+
+if [ -n "$active_peers_list" ]; then
+    for peer in $active_peers_list; do
+        peer_data=$(jq -r --arg peer "$peer" '.peers[$peer]' "$CONFIG_DB")
+        
+        if [ -n "$peer_data" ] && [ "$peer_data" != "null" ]; then
+            peer_name=$(echo "$peer_data" | jq -r '.name')
+            peer_ip=$(echo "$peer_data" | jq -r '.ip')
+            peer_private_key=$(echo "$peer_data" | jq -r '.private_key')
+            peer_public_key=$(echo "$peer_data" | jq -r '.public_key')
+            peer_preshared_key=$(echo "$peer_data" | jq -r '.preshared_key')
+            
+            # Generate the peer configuration file
+            peer_conf_file="$PEERS_DIR/${peer_name}.conf"
+            
+            cat > "$peer_conf_file" << EOF
+[Interface]
+PrivateKey = $peer_private_key
+Address = $peer_ip
+DNS = 8.8.8.8
+
+[Peer]
+PublicKey = $(get_db_value '.server.public_key')
+PresharedKey = $peer_preshared_key
+Endpoint = $(get_db_value '.server.endpoint'):$(get_db_value '.server.port')
+AllowedIPs = 0.0.0.0/0
+EOF
+            
+            if [ -f "$peer_conf_file" ]; then
+                peers_updated=$((peers_updated + 1))
+                info "Updated configuration for peer: $peer_name"
+            else
+                warn "Failed to create configuration file for peer: $peer_name"
+            fi
+        else
+            warn "No data found for peer: $peer"
+        fi
+    done
+    
+    success "Updated configuration files for $peers_updated peer(s)"
+else
+    info "No active peers found to update"
+fi
