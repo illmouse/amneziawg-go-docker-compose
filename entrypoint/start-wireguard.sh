@@ -46,9 +46,12 @@ else
     fi
 
     success "${NETWORK_EMOJI} Client setup complete. Interface $WG_IFACE is connected to peers."
+    
+    # Setup routing to force all traffic through WireGuard
+    setup_wireguard_routing
 fi
 
-# Verify configuration
+# Verify the configuration was applied correctly
 info "Verifying WireGuard configuration..."
 sleep 2
 if awg show "$WG_IFACE" >>"$WG_LOGFILE" 2>&1; then

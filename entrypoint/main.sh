@@ -62,6 +62,9 @@ elif [ "$WG_MODE" = "client" ]; then
     info "4. ${NETWORK_EMOJI} Starting WireGuard client..."
     . /entrypoint/start-wireguard.sh
 
+    info "5. 🦑 Starting Squid proxy (if enabled)..."
+    start_squid
+
     success "🎉 === Client setup completed successfully ==="
     
 else
