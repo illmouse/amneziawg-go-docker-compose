@@ -1,0 +1,181 @@
+[2025-11-14T19:22:44Z] [0;32m✅ 🚀 Starting container from modular entrypoint...[0m
+[2025-11-14T19:22:44Z] [0;34m🔵 🌈 === Starting setup process ===[0m
+[2025-11-14T19:22:44Z] [0;34m🔵 1. 📁 Initializing environment...[0m
+[2025-11-14T19:22:44Z] [0;34m🔵 📁 Initializing container environment...[0m
+[2025-11-14T19:22:44Z] [0;32m✅ Required directories created[0m
+[2025-11-14T19:22:44Z] [0;34m🔵 Environment initialized with:[0m
+[2025-11-14T19:22:44Z] [0;36m⚙️    WG_IFACE=wg0, WG_ADDRESS=10.100.0.1/24, WG_PORT=13440[0m
+[2025-11-14T19:22:44Z] [0;36m⚙️    WG_PEER_COUNT=1, WG_ENDPOINT=[0m
+[2025-11-14T19:22:44Z] [0;36m⚙️    Jc=3, Jmin=1, Jmax=50[0m
+[2025-11-14T19:22:44Z] [0;36m⚙️    S1=25, S2=72[0m
+[2025-11-14T19:22:44Z] [0;36m⚙️    H1=1411927821, H2=1212681123, H3=1327217326, H4=1515483925[0m
+[2025-11-14T19:22:44Z] [0;34m🔵 2. 🗃️ Initializing configuration database...[0m
+[2025-11-14T19:22:44Z] [0;34m🔵 Initializing configuration database...[0m
+[2025-11-14T19:22:44Z] [0;32m✅ Configuration database initialized[0m
+[2025-11-14T19:22:44Z] [0;32m✅ 🗃️ Configuration database setup completed[0m
+[2025-11-14T19:22:44Z] [0;34m🔵 3. 🔑 Generating server keys...[0m
+[2025-11-14T19:22:44Z] [0;34m🔵 🔑 Generating server keys...[0m
+[2025-11-14T19:22:44Z] [0;34m🔵 Getting private key from database[0m
+[2025-11-14T19:22:44Z] [0;34m🔵 Generating new server private key...[0m
+[2025-11-14T19:22:44Z] [0;34m🔵 Storing private key in database...[0m
+[2025-11-14T19:22:44Z] [0;32m✅ 🔑 Server private key stored in database[0m
+[2025-11-14T19:22:44Z] [0;34m🔵 Getting public key from database[0m
+[2025-11-14T19:22:44Z] [0;34m🔵 Deriving server public key from private key...[0m
+[2025-11-14T19:22:44Z] [0;34m🔵 Storing public key in database...[0m
+[2025-11-14T19:22:44Z] [0;32m✅ 🔑 Server public key stored in database[0m
+[2025-11-14T19:22:44Z] [0;32m✅ 🔑 Server keys setup completed[0m
+[2025-11-14T19:22:44Z] [0;34m🔵 4. 👤 Managing peers...[0m
+[2025-11-14T19:22:44Z] [0;34m🔵 👤 Managing peers...[0m
+[2025-11-14T19:22:44Z] [0;34m🔵 Current peers in DB: 0, desired: 1[0m
+[2025-11-14T19:22:44Z] [0;34m🔵 Adding [0;32m1[0m new peer(s)...[0m
+[2025-11-14T19:22:44Z] [0;34m🔵 Adding missing peer: peer1 (10.100.0.2/24)[0m
+[2025-11-14T19:22:44Z] [0;32m✅ Peer peer1 added to database[0m
+[2025-11-14T19:22:44Z] [0;34m🔵 Newly added peers that will get fresh configurations:  peer1[0m
+[2025-11-14T19:22:44Z] [0;32m✅ 👤 Peer management completed: 1 peer(s) active[0m
+[2025-11-14T19:22:44Z] [0;34m🔵 Active peers: peer1[0m
+[2025-11-14T19:22:44Z] [0;34m🔵 5. ⚙️  Generating configurations...[0m
+[2025-11-14T19:22:44Z] [0;34m🔵 ⚙️  Generating server configuration...[0m
+[2025-11-14T19:22:44Z] [0;34m🔵 Adding 1 peer(s) to server config[0m
+[2025-11-14T19:22:44Z] [0;34m🔵 Server config updated[0m
+[2025-11-14T19:22:44Z] [0;32m✅ Server configuration file deployed: /etc/amneziawg/wg0.conf[0m
+[2025-11-14T19:22:44Z] [0;34m🔵 ⚙️  Generating peer configurations...[0m
+[2025-11-14T19:22:44Z] [0;34m🔵 Generating 1 peer configuration file(s)...[0m
+[2025-11-14T19:22:44Z] [0;32m✅ Peer config generated: /etc/amneziawg/peers/peer1.conf[0m
+[2025-11-14T19:22:44Z] [0;32m✅ ⚙️  Configuration generation completed[0m
+[2025-11-14T19:22:44Z] [0;34m🔵 6. 🔒 Fixing permissions...[0m
+[2025-11-14T19:22:44Z] [0;34m🔵 🔒 Fixing permissions in /etc/amneziawg...[0m
+[2025-11-14T19:22:44Z] [0;32m✅ Directory permissions set to 700[0m
+[2025-11-14T19:22:44Z] [0;32m✅ File permissions set to 600[0m
+[2025-11-14T19:22:44Z] [0;34m🔵 Current permissions in /etc/amneziawg:[0m
+[2025-11-14T19:22:44Z] [0;34m🔵   total 20[0m
+[2025-11-14T19:22:44Z] [0;34m🔵   drwx------    3 root     root          4096 Nov 14 19:22 .[0m
+[2025-11-14T19:22:44Z] [0;34m🔵   drwxr-xr-x    1 root     root          4096 Nov 14 19:22 ..[0m
+[2025-11-14T19:22:44Z] [0;34m🔵   -rw-------    1 root     root           892 Nov 14 19:22 config.json[0m
+[2025-11-14T19:22:44Z] [0;34m🔵   drwx------    2 root     root          4096 Nov 14 19:22 peers[0m
+[2025-11-14T19:22:44Z] [0;34m🔵   -rw-------    1 root     root           348 Nov 14 19:22 wg0.conf[0m
+[2025-11-14T19:22:44Z] [0;34m🔵 7. 🌐 Starting WireGuard...[0m
+[2025-11-14T19:22:44Z] [0;34m🔵 🌐 Starting WireGuard interface wg0...[0m
+[2025-11-14T19:22:44Z] [0;34m🔵 Starting amneziawg-go on wg0...[0m
+┌──────────────────────────────────────────────────────────────┐
+│                                                              │
+│       Running amneziawg-go is not required because this      │
+│       kernel has first class support for AmneziaWG. For      │
+│       information on installing the kernel module,           │
+│       please visit:                                          │
+| https://github.com/amnezia-vpn/amneziawg-linux-kernel-module │
+│                                                              │
+└──────────────────────────────────────────────────────────────┘
+[2025-11-14T19:22:46Z] [0;34m🔵 Assigning address 10.100.0.1/24 to wg0...[0m
+[2025-11-14T19:22:46Z] [0;34m🔵 Loading config into wg0...[0m
+[2025-11-14T19:22:46Z] [0;34m🔵 Bringing interface up...[0m
+[2025-11-14T19:22:46Z] [0;34m🔵 Adding iptables rules...[0m
+[2025-11-14T19:22:46Z] [0;32m✅ 🌐 WireGuard setup complete. Interface wg0 is up.[0m
+[2025-11-14T19:22:46Z] [0;34m🔵 Configuration database: /etc/amneziawg/config.json[0m
+[2025-11-14T19:22:46Z] [0;34m🔵 Peer configurations available in: /etc/amneziawg/peers/[0m
+[2025-11-14T19:22:46Z] [0;34m🔵 Verifying WireGuard configuration...[0m
+interface: wg0
+  public key: 6hUYpst19m7PEYD3mBtwSlj5gmHeuSsURAc4+LT1bx0=
+  private key: (hidden)
+  listening port: 13440
+  jc: 3
+  jmin: 1
+  jmax: 50
+  s1: 25
+  s2: 72
+  h1: 1411927821
+  h2: 1212681123
+  h3: 1327217326
+  h4: 1515483925
+
+peer: e+BS8Ptm2Uxt/iGIMN3v6weKaXOHmNoGgQ0lh65ToxA=
+  preshared key: (hidden)
+  allowed ips: 10.100.0.2/32
+[2025-11-14T19:22:48Z] [0;32m✅ WireGuard configuration verified[0m
+[2025-11-14T19:22:48Z] [0;32m✅ 🎉 === All setup steps completed successfully ===[0m
+[2025-11-14T19:22:48Z] [0;32m✅ 🏁 Container startup complete. Entering sleep...[0m
+[2025-11-15T07:15:20Z] [0;32m✅ 🚀 Starting container from modular entrypoint...[0m
+[2025-11-15T07:15:20Z] [0;34m🔵 🌈 === Starting setup process ===[0m
+[2025-11-15T07:15:20Z] [0;34m🔵 1. 📁 Initializing environment...[0m
+[2025-11-15T07:15:20Z] [0;34m🔵 📁 Initializing container environment...[0m
+[2025-11-15T07:15:20Z] [0;32m✅ Required directories created[0m
+[2025-11-15T07:15:20Z] [0;34m🔵 Environment initialized with:[0m
+[2025-11-15T07:15:20Z] [0;36m⚙️    WG_IFACE=wg0, WG_ADDRESS=10.100.0.1/24, WG_PORT=13440[0m
+[2025-11-15T07:15:20Z] [0;36m⚙️    WG_PEER_COUNT=1, WG_ENDPOINT=[0m
+[2025-11-15T07:15:20Z] [0;36m⚙️    Jc=3, Jmin=1, Jmax=50[0m
+[2025-11-15T07:15:20Z] [0;36m⚙️    S1=25, S2=72[0m
+[2025-11-15T07:15:20Z] [0;36m⚙️    H1=1411927821, H2=1212681123, H3=1327217326, H4=1515483925[0m
+[2025-11-15T07:15:20Z] [0;34m🔵 2. 🗃️ Initializing configuration database...[0m
+[2025-11-15T07:15:20Z] [0;32m✅ Using existing configuration database[0m
+[2025-11-15T07:15:20Z] [0;32m✅ 🗃️ Configuration database setup completed[0m
+[2025-11-15T07:15:20Z] [0;34m🔵 3. 🔑 Generating server keys...[0m
+[2025-11-15T07:15:20Z] [0;34m🔵 🔑 Generating server keys...[0m
+[2025-11-15T07:15:20Z] [0;34m🔵 Getting private key from database[0m
+[2025-11-15T07:15:20Z] [0;32m✅ Using existing server private key from database[0m
+[2025-11-15T07:15:20Z] [0;34m🔵 Getting public key from database[0m
+[2025-11-15T07:15:20Z] [0;32m✅ Using existing server public key from database[0m
+[2025-11-15T07:15:20Z] [0;32m✅ 🔑 Server keys setup completed[0m
+[2025-11-15T07:15:20Z] [0;34m🔵 4. 👤 Managing peers...[0m
+[2025-11-15T07:15:20Z] [0;34m🔵 👤 Managing peers...[0m
+[2025-11-15T07:15:20Z] [0;34m🔵 Current peers in DB: 1, desired: 1[0m
+[2025-11-15T07:15:20Z] [0;32m✅ No peer changes needed[0m
+[2025-11-15T07:15:20Z] [0;32m✅ 👤 Peer management completed: 1 peer(s) active[0m
+[2025-11-15T07:15:20Z] [0;34m🔵 Active peers: peer1[0m
+[2025-11-15T07:15:20Z] [0;34m🔵 5. ⚙️  Generating configurations...[0m
+[2025-11-15T07:15:20Z] [0;34m🔵 ⚙️  Generating server configuration...[0m
+[2025-11-15T07:15:20Z] [0;34m🔵 Adding 1 peer(s) to server config[0m
+[2025-11-15T07:15:20Z] [0;32m✅ Server config unchanged[0m
+[2025-11-15T07:15:20Z] [0;34m🔵 ⚙️  Generating peer configurations...[0m
+[2025-11-15T07:15:20Z] [0;34m🔵 Generating 1 peer configuration file(s)...[0m
+[2025-11-15T07:15:20Z] [0;32m✅ Peer config generated: /etc/amneziawg/peers/peer1.conf[0m
+[2025-11-15T07:15:20Z] [0;32m✅ ⚙️  Configuration generation completed[0m
+[2025-11-15T07:15:20Z] [0;34m🔵 6. 🔒 Fixing permissions...[0m
+[2025-11-15T07:15:20Z] [0;34m🔵 🔒 Fixing permissions in /etc/amneziawg...[0m
+[2025-11-15T07:15:20Z] [0;32m✅ Directory permissions set to 700[0m
+[2025-11-15T07:15:20Z] [0;32m✅ File permissions set to 600[0m
+[2025-11-15T07:15:20Z] [0;34m🔵 Current permissions in /etc/amneziawg:[0m
+[2025-11-15T07:15:20Z] [0;34m🔵   total 20[0m
+[2025-11-15T07:15:20Z] [0;34m🔵   drwx------    3 root     root          4096 Nov 15 07:15 .[0m
+[2025-11-15T07:15:20Z] [0;34m🔵   drwxr-xr-x    1 root     root          4096 Nov 14 19:22 ..[0m
+[2025-11-15T07:15:20Z] [0;34m🔵   -rw-------    1 root     root           892 Nov 14 19:22 config.json[0m
+[2025-11-15T07:15:20Z] [0;34m🔵   drwx------    2 root     root          4096 Nov 14 19:22 peers[0m
+[2025-11-15T07:15:20Z] [0;34m🔵   -rw-------    1 root     root           348 Nov 14 19:22 wg0.conf[0m
+[2025-11-15T07:15:20Z] [0;34m🔵 7. 🌐 Starting WireGuard...[0m
+[2025-11-15T07:15:20Z] [0;34m🔵 🌐 Starting WireGuard interface wg0...[0m
+[2025-11-15T07:15:20Z] [0;34m🔵 Starting amneziawg-go on wg0...[0m
+┌──────────────────────────────────────────────────────────────┐
+│                                                              │
+│       Running amneziawg-go is not required because this      │
+│       kernel has first class support for AmneziaWG. For      │
+│       information on installing the kernel module,           │
+│       please visit:                                          │
+| https://github.com/amnezia-vpn/amneziawg-linux-kernel-module │
+│                                                              │
+└──────────────────────────────────────────────────────────────┘
+[2025-11-15T07:15:22Z] [0;34m🔵 Assigning address 10.100.0.1/24 to wg0...[0m
+[2025-11-15T07:15:22Z] [0;34m🔵 Loading config into wg0...[0m
+[2025-11-15T07:15:23Z] [0;34m🔵 Bringing interface up...[0m
+[2025-11-15T07:15:23Z] [0;34m🔵 Adding iptables rules...[0m
+[2025-11-15T07:15:23Z] [0;32m✅ 🌐 WireGuard setup complete. Interface wg0 is up.[0m
+[2025-11-15T07:15:23Z] [0;34m🔵 Configuration database: /etc/amneziawg/config.json[0m
+[2025-11-15T07:15:23Z] [0;34m🔵 Peer configurations available in: /etc/amneziawg/peers/[0m
+[2025-11-15T07:15:23Z] [0;34m🔵 Verifying WireGuard configuration...[0m
+interface: wg0
+  public key: 6hUYpst19m7PEYD3mBtwSlj5gmHeuSsURAc4+LT1bx0=
+  private key: (hidden)
+  listening port: 13440
+  jc: 3
+  jmin: 1
+  jmax: 50
+  s1: 25
+  s2: 72
+  h1: 1411927821
+  h2: 1212681123
+  h3: 1327217326
+  h4: 1515483925
+
+peer: e+BS8Ptm2Uxt/iGIMN3v6weKaXOHmNoGgQ0lh65ToxA=
+  preshared key: (hidden)
+  allowed ips: 10.100.0.2/32
+[2025-11-15T07:15:25Z] [0;32m✅ WireGuard configuration verified[0m
+[2025-11-15T07:15:25Z] [0;32m✅ 🎉 === All setup steps completed successfully ===[0m
+[2025-11-15T07:15:25Z] [0;32m✅ 🏁 Container startup complete. Entering sleep...[0m

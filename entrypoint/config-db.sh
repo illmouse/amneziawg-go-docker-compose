@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 set -eu
 
 # Set default environment variables if not already set
@@ -127,11 +127,33 @@ update_server_config() {
     : "${H3:=1327217326}"
     : "${H4:=1515483925}"
     
-    # Check if server config needs update
-    if [ "$(get_db_value '.server.interface')" != "$WG_IFACE" ]; then
-        set_db_value '.server.interface' "\"$WG_IFACE\""
-        needs_update=1
-    fi
+    # Define variable to database field mappings
+    local -A mappings=(
+        ["WG_IFACE"]=".server.interface"
+        ["WG_ADDRESS"]=".server.address"
+        ["WG_PORT"]=".server.port"
+        ["WG_ENDPOINT"]=".server.endpoint"
+        ["Jc"]=".server.Jc"
+        ["Jmin"]=".server.Jmin"
+        ["Jmax"]=".server.Jmax"
+        ["S1"]=".server.S1"
+        ["S2"]=".server.S2"
+        ["H1"]=".server.H1"
+        ["H2"]=".server.H2"
+        ["H3"]=".server.H3"
+        ["H4"]=".server.H4"
+    )
+    
+    # Check all variables
+    for var in "${!mappings[@]}"; do
+        local db_field="${mappings[$var]}"
+        local current_value="${!var}"
+        
+        if [ "$(get_db_value "$db_field")" != "$current_value" ]; then
+            set_db_value "$db_field" "\"$current_value\""
+            needs_update=1
+        fi
+    done
     
     if [ "$needs_update" -eq 1 ]; then
         set_db_value '.meta.last_updated' "\"$(date -u +'%Y-%m-%dT%H:%M:%SZ')\""
