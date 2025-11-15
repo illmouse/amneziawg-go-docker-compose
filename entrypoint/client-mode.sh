@@ -47,77 +47,74 @@ else
     info "No DNS servers specified in peer configuration"
 fi
 
-# Extract junk parameters from peer config
-extract_junk_param() {
+# Extract parameters we need
+extract_param() {
     local param="$1"
-    local default="$2"
     local value=$(grep -E "^${param}[[:space:]]*=" "$main_peer_config" | head -1 | sed "s/^${param}[[:space:]]*=[[:space:]]*//" | tr -d '\r\n')
-    echo "${value:-$default}"
+    echo "$value"
 }
 
-# Extract junk parameters from peer config
-Jc=$(extract_junk_param "Jc" "3")
-Jmin=$(extract_junk_param "Jmin" "1") 
-Jmax=$(extract_junk_param "Jmax" "50")
-S1=$(extract_junk_param "S1" "25")
-S2=$(extract_junk_param "S2" "72")
-H1=$(extract_junk_param "H1" "1411927821")
-H2=$(extract_junk_param "H2" "1212681123")
-H3=$(extract_junk_param "H3" "1327217326")
-H4=$(extract_junk_param "H4" "1515483925")
+# Extract all parameters in a loop
+params="PrivateKey Jc Jmin Jmax S1 S2 H1 H2 H3 H4 Address"
+declare -A extracted_params
 
-info "Using junk parameters from peer configuration"
+for param in $params; do
+    value=$(extract_param "$param")
+    if [ -n "$value" ]; then
+        extracted_params["$param"]="$value"
+        info "Extracted $param: $value"
+    fi
+done
 
-# Create a temporary file for processing
-cp "$main_peer_config" "$WG_DIR/$WG_CONF_FILE.temp"
+# Create the final configuration
+info "Creating AmneziaWG configuration..."
 
-# Modify to be awg-compatible: remove problematic parameters
-sed -i '/^Address[[:space:]]*=/d' "$WG_DIR/$WG_CONF_FILE.temp"
-sed -i '/^DNS[[:space:]]*=/d' "$WG_DIR/$WG_CONF_FILE.temp"
+cat > "$WG_DIR/$WG_CONF_FILE" << EOF
+[Interface]
+PrivateKey = ${extracted_params[PrivateKey]}
+ListenPort = 0
+EOF
 
-# Add ListenPort = 0 to Interface section
-if ! grep -q "^ListenPort" "$WG_DIR/$WG_CONF_FILE.temp"; then
-    sed -i '/^\[Interface\]/a ListenPort = 0' "$WG_DIR/$WG_CONF_FILE.temp"
+# Add junk parameters if they exist
+for param in Jc Jmin Jmax S1 S2 H1 H2 H3 H4; do
+    if [ -n "${extracted_params[$param]}" ]; then
+        echo "$param = ${extracted_params[$param]}" >> "$WG_DIR/$WG_CONF_FILE"
+    fi
+done
+
+echo "" >> "$WG_DIR/$WG_CONF_FILE"
+
+# Extract and add peer sections
+in_peer_section=false
+peer_buffer=""
+
+while IFS= read -r line || [ -n "$line" ]; do
+    line=$(printf "%s" "$line" | tr -d '\r')
+    
+    if [ "$line" = "[Peer]" ]; then
+        if [ "$in_peer_section" = true ] && [ -n "$peer_buffer" ]; then
+            echo "$peer_buffer" >> "$WG_DIR/$WG_CONF_FILE"
+            echo "" >> "$WG_DIR/$WG_CONF_FILE"
+        fi
+        peer_buffer="[Peer]"
+        in_peer_section=true
+    elif [ "$in_peer_section" = true ]; then
+        if [ -n "$line" ] && echo "$line" | grep -qE '^\[[a-zA-Z]+\]'; then
+            echo "$peer_buffer" >> "$WG_DIR/$WG_CONF_FILE"
+            echo "" >> "$WG_DIR/$WG_CONF_FILE"
+            peer_buffer=""
+            in_peer_section=false
+        elif [ -n "$line" ] && ! echo "$line" | grep -qE '^(Address|DNS)'; then
+            peer_buffer="$peer_buffer"$'\n'"$line"
+        fi
+    fi
+done < "$main_peer_config"
+
+if [ -n "$peer_buffer" ]; then
+    echo "$peer_buffer" >> "$WG_DIR/$WG_CONF_FILE"
 fi
 
-# Remove existing junk parameters
-sed -i '/^Jc[[:space:]]*=/d' "$WG_DIR/$WG_CONF_FILE.temp"
-sed -i '/^Jmin[[:space:]]*=/d' "$WG_DIR/$WG_CONF_FILE.temp"
-sed -i '/^Jmax[[:space:]]*=/d' "$WG_DIR/$WG_CONF_FILE.temp"
-sed -i '/^S1[[:space:]]*=/d' "$WG_DIR/$WG_CONF_FILE.temp"
-sed -i '/^S2[[:space:]]*=/d' "$WG_DIR/$WG_CONF_FILE.temp"
-sed -i '/^H1[[:space:]]*=/d' "$WG_DIR/$WG_CONF_FILE.temp"
-sed -i '/^H2[[:space:]]*=/d' "$WG_DIR/$WG_CONF_FILE.temp"
-sed -i '/^H3[[:space:]]*=/d' "$WG_DIR/$WG_CONF_FILE.temp"
-sed -i '/^H4[[:space:]]*=/d' "$WG_DIR/$WG_CONF_FILE.temp"
-
-# Remove junk parameters from Peer sections
-sed -i '/^\[Peer\]/,/^\[/ { /^Jc[[:space:]]*=/d; /^Jmin[[:space:]]*=/d; /^Jmax[[:space:]]*=/d; /^S1[[:space:]]*=/d; /^S2[[:space:]]*=/d; /^H1[[:space:]]*=/d; /^H2[[:space:]]*=/d; /^H3[[:space:]]*=/d; /^H4[[:space:]]*=/d }' "$WG_DIR/$WG_CONF_FILE.temp"
-
-# Add consistent junk parameters to Interface section
-junk_temp=$(mktemp)
-cat > "$junk_temp" << JUNK_PARAMS
-Jc = $Jc
-Jmin = $Jmin
-Jmax = $Jmax
-S1 = $S1
-S2 = $S2
-H1 = $H1
-H2 = $H2
-H3 = $H3
-H4 = $H4
-JUNK_PARAMS
-
-sed -i "/^\[Interface\]/r $junk_temp" "$WG_DIR/$WG_CONF_FILE.temp"
-rm -f "$junk_temp"
-
-# Extract interface address for later assignment
-interface_address=$(grep "^Address" "$main_peer_config" | head -1 | sed 's/^Address[[:space:]]*=[[:space:]]*//' | tr -d '\r\n')
-
-# Create the final config from the processed temp file
-mv "$WG_DIR/$WG_CONF_FILE.temp" "$WG_DIR/$WG_CONF_FILE"
-
-# Test the final configuration and show errors if any
+# Test the final configuration
 info "Testing WireGuard configuration..."
 if awg_output=$(awg setconf "test-interface" "$WG_DIR/$WG_CONF_FILE" 2>&1); then
     success "Client configuration created successfully"
@@ -127,9 +124,9 @@ else
     exit 1
 fi
 
-if [ -n "$interface_address" ]; then
-    export WG_ADDRESS="$interface_address"
-    info "Client interface address: $interface_address"
+if [ -n "${extracted_params[Address]}" ]; then
+    export WG_ADDRESS="${extracted_params[Address]}"
+    info "Client interface address: ${extracted_params[Address]}"
 fi
 
 # Configure DNS if specified in peer config
