@@ -8,7 +8,7 @@ install_docker() {
     log "Checking Docker installation..."
     
     # Check if Docker is already installed
-    if command -v docker >/dev/null 2>&1 && command -v docker-compose >/dev/null 2>&1; then
+    if command -v docker >/dev/null 2>&1 && command -v docker compose >/dev/null 2>&1; then
         log "Docker and Docker Compose are already installed"
         return 0
     fi
@@ -19,27 +19,34 @@ install_docker() {
     if [ -f /etc/os-release ]; then
         . /etc/os-release
         case $ID in
-            ubuntu|debian)
+            ubuntu|debian|linuxmint)
                 install_docker_debian
                 ;;
             centos|rhel|fedora)
                 install_docker_redhat
                 ;;
             *)
-                error "Unsupported distribution: $ID"
-                return 1
+                warn "Unsupported distribution: $ID - attempting to proceed with existing Docker installation"
                 ;;
         esac
     else
-        error "Cannot detect distribution"
-        return 1
+        warn "Cannot detect distribution - attempting to proceed with existing Docker installation"
     fi
     
     # Start and enable Docker service
     systemctl enable docker
     systemctl start docker
     
-    log "Docker installation completed successfully"
+    # Verify Docker installation worked
+    if command -v docker >/dev/null 2>&1 && command -v docker-compose >/dev/null 2>&1; then
+        log "Docker and Docker Compose are installed and working"
+    else
+        warn "Docker installation may have failed, but continuing as Docker might be installed manually"
+        # Try to start Docker service if it exists
+        if systemctl is-enabled docker >/dev/null 2>&1; then
+            systemctl start docker 2>/dev/null || true
+        fi
+    fi
 }
 
 install_docker_debian() {
@@ -57,7 +64,11 @@ install_docker_debian() {
     
     # Install Docker
     apt-get update
+    # Install Docker packages
     apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+    # Also install docker-compose standalone for compatibility
+    curl -SL "https://github.com/docker/compose/releases/download/v2.20.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+    chmod +x /usr/local/bin/docker-compose
     
     # Install Docker Compose standalone (for compatibility)
     curl -SL "https://github.com/docker/compose/releases/download/v2.20.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
@@ -72,7 +83,11 @@ install_docker_redhat() {
     yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
     
     # Install Docker
+    # Install Docker packages
     yum install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+    # Also install docker-compose standalone for compatibility
+    curl -SL "https://github.com/docker/compose/releases/download/v2.20.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+    chmod +x /usr/local/bin/docker-compose
     
     # Install Docker Compose standalone
     curl -SL "https://github.com/docker/compose/releases/download/v2.20.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
