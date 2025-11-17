@@ -193,17 +193,7 @@ EOF
         exit 1
     fi
     
-    # Step 4: Deploy monitoring (only for client mode)
-    if [ "$WG_MODE" = "client" ]; then
-        if ! "$SCRIPT_DIR/scripts/deploy-monitoring.sh"; then
-            error "Monitoring deployment failed"
-            exit 1
-        fi
-    else
-        log "Skipping monitoring deployment (only for client mode)"
-    fi
-    
-    # Step 5: Start services
+    # Step 4: Start services
     if ! "$SCRIPT_DIR/scripts/start-services.sh"; then
         error "Service startup failed"
         exit 1

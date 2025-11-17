@@ -19,12 +19,6 @@ services:
       - ./logs:/var/log/amneziawg
       - ./entrypoint:/entrypoint:ro
     entrypoint: ["/entrypoint/main.sh"]
-    healthcheck:
-      test: ["CMD", "sh", "-c", "ip link show wg0 && awg show wg0 2>/dev/null | grep -q listening"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
     restart: always
     networks:
       awg:
