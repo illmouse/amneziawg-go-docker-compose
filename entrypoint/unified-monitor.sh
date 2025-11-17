@@ -256,18 +256,18 @@ while true; do
             continue
         fi
         
-        # Get the first available peer config
-        current_peer_config=""
-        if [ ${#peer_files[@]} -gt 0 ] && [ -f "${peer_files[0]}" ]; then
-            current_peer_config="${peer_files[0]}"
-            log "🔌 Using initial peer config: $(basename "$current_peer_config")"
-        fi
-        
         # Check tunnel health
         if check_tunnel_health "$EXTERNAL_CHECK_TARGET" "$CHECK_TIMEOUT"; then
             # Tunnel is healthy, wait for next check
             sleep "$CHECK_INTERVAL"
         else
+            # Get the first available peer config
+            current_peer_config=""
+            if [ ${#peer_files[@]} -gt 0 ] && [ -f "${peer_files[0]}" ]; then
+                current_peer_config="${peer_files[0]}"
+                log "🔌 Using initial peer config: $(basename "$current_peer_config")"
+            fi
+
             # Tunnel is down, switch to next config
             log "⚠️ Tunnel is down, attempting to switch to next peer configuration..."
             
