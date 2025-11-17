@@ -186,7 +186,7 @@ switch_to_peer_config() {
 
 # Function to check tunnel health
 check_tunnel_health() {
-    local test_url="$1"
+    local test_target="$1"
     local timeout="$2"
     
     # Check if WireGuard interface is up
@@ -202,19 +202,20 @@ check_tunnel_health() {
         return 1
     fi
     
-    # Check if we can reach the external URL
-    if curl --connect-timeout "$timeout" --max-time "$timeout" --silent --fail "$test_url" >/dev/null 2>&1; then
-        log "✅ Tunnel health check passed: $test_url"
+    # Check if we can reach the external target with ping
+    # Use ping with timeout and count parameters
+    if ping -c 3 -W "$timeout" "$test_target" >/dev/null 2>&1; then
+        log "✅ Tunnel health check passed: $test_target"
         return 0
     else
-        log "❌ Tunnel health check failed: $test_url"
+        log "❌ Tunnel health check failed: $test_target"
         return 1
     fi
 }
 
 # Main monitoring loop
 log "🚀 Starting tunnel health monitor with interval $CHECK_INTERVAL seconds"
-log "🌐 Checking connectivity to: $EXTERNAL_CHECK_URL"
+log "🏓 Checking connectivity to: $EXTERNAL_CHECK_TARGET"
 
 # Get initial peer config
 peer_files=("$PEERS_DIR"/*.conf)
@@ -259,7 +260,7 @@ while true; do
     fi
     
     # Check tunnel health
-    if check_tunnel_health "$EXTERNAL_CHECK_URL" "$CHECK_TIMEOUT"; then
+    if check_tunnel_health "$EXTERNAL_CHECK_TARGET" "$CHECK_TIMEOUT"; then
         # Tunnel is healthy, wait for next check
         sleep "$CHECK_INTERVAL"
     else

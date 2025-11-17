@@ -84,13 +84,13 @@ main() {
                 SQUD_ENABLE="true"
                 log "Enabled Squid proxy"
                 ;;
-            n|N|no|No|NO|"")
+            n|N|no|No|NO)
                 SQUD_ENABLE="false"
                 log "Disabled Squid proxy"
                 ;;
             *)
                 SQUD_ENABLE="true"
-                log "Invalid choice, defaulting to enabled"
+                log "No input provided, defaulting to enabled"
                 ;;
         esac
         
