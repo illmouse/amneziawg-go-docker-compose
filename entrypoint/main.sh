@@ -71,13 +71,10 @@ else
     error "Unknown WG_MODE: $WG_MODE. Use 'server' or 'client'"
 fi
 
-# Start tunnel monitoring in background only in client mode
-if [ "$WG_MODE" = "client" ]; then
-    info "🚀 Starting tunnel health monitor..."
-    /entrypoint/monitor-tunnel.sh >>/var/log/amneziawg/tunnel-monitor.log 2>&1 &
-else
-    info "Skipping tunnel health monitor (only for client mode)"
-fi
+# Start unified monitoring in background
+info "🚀 Starting unified monitoring system..."
+chmod +x /entrypoint/unified-monitor.sh
+/entrypoint/unified-monitor.sh >>/var/log/amneziawg/unified-monitor.log 2>&1 &
 
 success "🏁 Container startup complete. Entering sleep..."
 

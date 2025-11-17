@@ -14,17 +14,8 @@ deploy_monitoring() {
         return 1
     fi
     
-    # Copy monitor script
-    log "Copying amneziawg-monitor.sh to /usr/local/bin/"
-    cp "$SCRIPT_DIR/amneziawg-monitor.sh" /usr/local/bin/amneziawg-monitor.sh
-    chmod +x /usr/local/bin/amneziawg-monitor.sh
-    
-    # Copy cron file
-    log "Copying amneziawg-monitor to /etc/cron.d/"
-    cp "$project_dir/cron/amneziawg-monitor" /etc/cron.d/
-    
-    # Ensure proper permissions for cron file
-    chmod 644 /etc/cron.d/amneziawg-monitor
+    # Skip deploying the old monitoring system since we're using the new tunnel monitor
+    log "Skipping deployment of old monitoring system (using new tunnel monitor in container)"
     
     return 0
 }

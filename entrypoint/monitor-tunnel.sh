@@ -101,7 +101,6 @@ reassemble_peer_config() {
         value=$(extract_param "$param")
         if [ -n "$value" ]; then
             extracted_params["$param"]="$value"
-            log "Extracted $param: $value"
         fi
     done
     
