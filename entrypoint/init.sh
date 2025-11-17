@@ -47,13 +47,6 @@ if ! command -v jq >/dev/null 2>&1; then
     success "jq installed successfully"
 fi
 
-# Install curl for tests
-if ! command -v jq >/dev/null 2>&1; then
-    info "Installing curl..."
-    apk add --no-cache curl >/dev/null 2>&1
-    success "curl installed successfully"
-fi
-
 # Check if awg command is available
 if ! command -v awg >/dev/null 2>&1; then
     error "awg command not found. Make sure amneziawg-go is properly installed."

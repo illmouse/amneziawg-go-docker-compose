@@ -10,7 +10,7 @@ PEERS_DIR="$WG_DIR/peers"
 WG_IFACE="wg0"
 CHECK_INTERVAL=30
 CHECK_TIMEOUT=10
-EXTERNAL_CHECK_URL="https://8.8.8.8"
+EXTERNAL_CHECK_TARGET="8.8.8.8"
 LOG_FILE="/var/log/amneziawg/tunnel-monitor.log"
 # Use the actual WireGuard configuration file created by client-mode.sh
 WG_CONF_FILE="wg0.conf"
