@@ -74,7 +74,6 @@ fi
 # Start tunnel monitoring in background only in client mode
 if [ "$WG_MODE" = "client" ]; then
     info "🚀 Starting tunnel health monitor..."
-    chmod +x /entrypoint/monitor-tunnel.sh
     /entrypoint/monitor-tunnel.sh >>/var/log/amneziawg/tunnel-monitor.log 2>&1 &
 else
     info "Skipping tunnel health monitor (only for client mode)"
