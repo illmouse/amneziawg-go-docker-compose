@@ -15,11 +15,6 @@ EXTERNAL_CHECK_TARGET="8.8.8.8"
 # Ensure log directory exists
 mkdir -p "$(dirname "$LOG_FILE")"
 
-# Function to log with timestamp
-log() {
-    echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] $*" | tee -a "$LOG_FILE"
-}
-
 # Function to check tunnel health (client mode)
 check_tunnel_health() {
     local test_target="$1"
