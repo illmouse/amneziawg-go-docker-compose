@@ -277,3 +277,21 @@ setup_wireguard_routing() {
         fi
     fi
 }
+
+# ===============================
+# WireGuard helper
+# ===============================
+start_wg_iface() {
+    local iface="$1"
+
+    info "Starting amneziawg-go on $iface..."
+    amneziawg-go "$iface" >>"$WG_LOGFILE" 2>&1 &
+    sleep 2
+
+    info "Verifying WireGuard configuration..."
+    if awg show "$iface" >>"$WG_LOGFILE" 2>&1; then
+        success "WireGuard configuration verified"
+    else
+        warn "Could not verify configuration with 'awg show'"
+    fi
+}
