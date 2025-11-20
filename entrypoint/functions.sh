@@ -203,22 +203,24 @@ SQUID_CONFIG
 }
 
 # Function to start Squid proxy
+# Function to start Squid proxy
 start_squid() {
     if [ "$SQUID_ENABLE" != "true" ]; then
         info "🦑 Squid proxy is disabled, skipping..."
         return
     fi
 
-    SQUID_LOG="/var/log/squid/access.log"
-    SQUID_CACHE="/var/cache/squid"
-
     info "🦑 Starting Squid proxy on port $SQUID_PORT..."
     
     # Ensure cache directory exists
-    mkdir -p "$SQUID_CACHE" "$SQUID_LOG"
+    mkdir -p "$SQUID_CACHE"
+
+    # Ensure log directory exists
+    mkdir -p "$(dirname "$SQUID_LOG")"
+
     chown -R squid:squid "$SQUID_CACHE"
 
-    # Initialize cache (suppress stdout)
+    # Initialize cache (suppress stdout/stderr)
     squid -z -f /etc/squid/squid.conf >>"$SQUID_LOG" 2>&1
 
     # Start Squid as a daemon, redirect stdout/stderr to its log
@@ -226,6 +228,7 @@ start_squid() {
 
     success "✅ Squid proxy started. Logs: $SQUID_LOG"
 }
+
 
 setup_wireguard_routing() {
     if [ "$WG_MODE" = "client" ]; then
