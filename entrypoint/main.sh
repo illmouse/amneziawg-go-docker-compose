@@ -1,10 +1,10 @@
 #!/bin/bash
 set -eu
 
-# Source environment variables
-. /entrypoint/env.sh
+# Load environment variables
+. /entrypoint/load_env.sh
 
-# Source functions for colors, emojis, logging, etc.
+# Source functions first to get colors and emojis
 . /entrypoint/functions.sh
 
 # Trap to catch any exits
@@ -12,18 +12,11 @@ trap 'log "Script exiting with code: $?"' EXIT
 
 success "🚀 Starting container in ${WG_MODE:-server} mode..."
 
-# ------------------------------
-# Helper functions for setup
-# ------------------------------
-
-setup_environment() {
+if [ "${WG_MODE:-server}" = "server" ]; then
+    info "🌈 === Starting SERVER setup process ==="
+    
     info "1. 📁 Initializing environment..."
     . /entrypoint/init.sh
-}
-
-setup_server() {
-    info "🌈 === Starting SERVER setup process ==="
-    setup_environment
 
     info "2. 🗃️ Initializing configuration database..."
     . /entrypoint/config-db.sh
@@ -44,11 +37,12 @@ setup_server() {
     . /entrypoint/start-wireguard.sh
 
     success "🎉 === Server setup completed successfully ==="
-}
-
-setup_client() {
+    
+elif [ "${WG_MODE:-server}" = "client" ]; then
     info "🌈 === Starting CLIENT setup process ==="
-    setup_environment
+    
+    info "1. 📁 Initializing environment..."
+    . /entrypoint/init.sh
 
     info "2. 🔍 Setting up client mode..."
     . /entrypoint/client-mode.sh
@@ -63,23 +57,10 @@ setup_client() {
     start_squid
 
     success "🎉 === Client setup completed successfully ==="
-}
-
-# ------------------------------
-# Main execution
-# ------------------------------
-
-case "${WG_MODE:-server}" in
-    server)
-        setup_server
-        ;;
-    client)
-        setup_client
-        ;;
-    *)
-        error "Unknown WG_MODE: $WG_MODE. Use 'server' or 'client'"
-        ;;
-esac
+    
+else
+    error "Unknown WG_MODE: $WG_MODE. Use 'server' or 'client'"
+fi
 
 # Start unified monitoring in background
 info "🚀 Starting unified monitoring system..."
