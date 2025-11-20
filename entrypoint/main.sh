@@ -1,10 +1,10 @@
 #!/bin/bash
 set -eu
 
-# Load environment variables
+# Source environment variables
 . /entrypoint/load_env.sh
 
-# Source functions first to get colors and emojis
+# Source functions for logging, colors, emojis
 . /entrypoint/functions.sh
 
 # Trap to catch any exits
@@ -14,7 +14,7 @@ success "🚀 Starting container in ${WG_MODE:-server} mode..."
 
 if [ "${WG_MODE:-server}" = "server" ]; then
     info "🌈 === Starting SERVER setup process ==="
-    
+
     info "1. 📁 Initializing environment..."
     . /entrypoint/init.sh
 
@@ -37,10 +37,10 @@ if [ "${WG_MODE:-server}" = "server" ]; then
     . /entrypoint/start-wireguard.sh
 
     success "🎉 === Server setup completed successfully ==="
-    
+
 elif [ "${WG_MODE:-server}" = "client" ]; then
     info "🌈 === Starting CLIENT setup process ==="
-    
+
     info "1. 📁 Initializing environment..."
     . /entrypoint/init.sh
 
@@ -57,7 +57,7 @@ elif [ "${WG_MODE:-server}" = "client" ]; then
     start_squid
 
     success "🎉 === Client setup completed successfully ==="
-    
+
 else
     error "Unknown WG_MODE: $WG_MODE. Use 'server' or 'client'"
 fi
