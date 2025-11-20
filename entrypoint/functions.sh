@@ -204,40 +204,27 @@ SQUID_CONFIG
 
 # Function to start Squid proxy
 start_squid() {
-    if [ "$SQUID_ENABLED" = "true" ]; then
-        info "${SQUID_EMOJI} Starting Squid proxy..."
-        
-        # Kill any existing Squid processes first
-        pkill squid 2>/dev/null || true
-        sleep 2
-        
-        # Start Squid in foreground and background it
-        info "Starting Squid process on port ${SQUID_PORT}..."
-        squid -f /etc/squid/squid.conf -N &
-        SQUID_PID=$!
-        
-        # Wait for Squid to start
-        sleep 3
-        
-        if kill -0 $SQUID_PID 2>/dev/null; then
-            success "Squid proxy running on port ${SQUID_PORT} (PID: $SQUID_PID)"
-            
-            # Check if it's listening
-            if netstat -tuln | grep -q ":${SQUID_PORT} "; then
-                success "Squid is listening on port ${SQUID_PORT}"
-                
-                # Show listening addresses
-                info "Squid listening addresses:"
-                netstat -tuln | grep ":${SQUID_PORT}" | while read -r line; do
-                    info "  $line"
-                done
-            else
-                error "Squid is not listening on port ${SQUID_PORT}"
-            fi
-        else
-            error "Squid failed to start on port ${SQUID_PORT}"
-        fi
+    if [ "$SQUID_ENABLE" != "true" ]; then
+        info "🦑 Squid proxy is disabled, skipping..."
+        return
     fi
+
+    SQUID_LOG="/var/log/squid/access.log"
+    SQUID_CACHE="/var/cache/squid"
+
+    info "🦑 Starting Squid proxy on port $SQUID_PORT..."
+    
+    # Ensure cache directory exists
+    mkdir -p "$SQUID_CACHE" "$SQUID_LOG"
+    chown -R squid:squid "$SQUID_CACHE"
+
+    # Initialize cache (suppress stdout)
+    squid -z -f /etc/squid/squid.conf >>"$SQUID_LOG" 2>&1
+
+    # Start Squid as a daemon, redirect stdout/stderr to its log
+    squid -f /etc/squid/squid.conf -N -d 1 >>"$SQUID_LOG" 2>&1 &
+
+    success "✅ Squid proxy started. Logs: $SQUID_LOG"
 }
 
 setup_wireguard_routing() {
