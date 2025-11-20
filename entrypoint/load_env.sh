@@ -36,6 +36,7 @@ fi
 : "${SQUID_PORT:=3128}"
 : "${SQUID_CACHE:=/var/cache/squid}"
 : "${SQUID_LOG:=/var/log/amneziawg/squid/access.log}"
+: "${SQUID_EMOJI:=🦑}"
 
 # Junk/obfuscation values
 : "${Jc:=3}"
@@ -51,5 +52,5 @@ fi
 # Export all variables for other scripts
 export WG_DIR TMP_DIR PEERS_DIR CONFIG_DB WG_CONF_FILE WG_LOGFILE KEYS_DIR
 export WG_IFACE WG_ADDRESS WG_PORT WG_ENDPOINT WG_PEER_COUNT
-export SQUID_ENABLE SQUID_PORT SQUID_CACHE SQUID_LOG
+export SQUID_ENABLE SQUID_PORT SQUID_CACHE SQUID_LOG SQUID_EMOJI
 export Jc Jmin Jmax S1 S2 H1 H2 H3 H4
