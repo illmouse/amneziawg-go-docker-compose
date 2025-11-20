@@ -4,7 +4,7 @@ set -eu
 # Source environment variables
 . /entrypoint/env.sh
 
-# Source functions first to get colors and emojis
+# Source functions for colors, emojis, logging, etc.
 . /entrypoint/functions.sh
 
 # Trap to catch any exits
@@ -12,11 +12,18 @@ trap 'log "Script exiting with code: $?"' EXIT
 
 success "🚀 Starting container in ${WG_MODE:-server} mode..."
 
-if [ "${WG_MODE:-server}" = "server" ]; then
-    info "🌈 === Starting SERVER setup process ==="
-    
+# ------------------------------
+# Helper functions for setup
+# ------------------------------
+
+setup_environment() {
     info "1. 📁 Initializing environment..."
     . /entrypoint/init.sh
+}
+
+setup_server() {
+    info "🌈 === Starting SERVER setup process ==="
+    setup_environment
 
     info "2. 🗃️ Initializing configuration database..."
     . /entrypoint/config-db.sh
@@ -37,12 +44,11 @@ if [ "${WG_MODE:-server}" = "server" ]; then
     . /entrypoint/start-wireguard.sh
 
     success "🎉 === Server setup completed successfully ==="
-    
-elif [ "${WG_MODE:-server}" = "client" ]; then
+}
+
+setup_client() {
     info "🌈 === Starting CLIENT setup process ==="
-    
-    info "1. 📁 Initializing environment..."
-    . /entrypoint/init.sh
+    setup_environment
 
     info "2. 🔍 Setting up client mode..."
     . /entrypoint/client-mode.sh
@@ -54,14 +60,26 @@ elif [ "${WG_MODE:-server}" = "client" ]; then
     . /entrypoint/start-wireguard.sh
 
     info "5. 🦑 Starting Squid proxy (if enabled)..."
-    . /entrypoint/start-squid.sh
     start_squid
 
     success "🎉 === Client setup completed successfully ==="
-    
-else
-    error "Unknown WG_MODE: $WG_MODE. Use 'server' or 'client'"
-fi
+}
+
+# ------------------------------
+# Main execution
+# ------------------------------
+
+case "${WG_MODE:-server}" in
+    server)
+        setup_server
+        ;;
+    client)
+        setup_client
+        ;;
+    *)
+        error "Unknown WG_MODE: $WG_MODE. Use 'server' or 'client'"
+        ;;
+esac
 
 # Start unified monitoring in background
 info "🚀 Starting unified monitoring system..."
