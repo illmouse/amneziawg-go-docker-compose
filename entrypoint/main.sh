@@ -1,17 +1,8 @@
 #!/bin/bash
 set -eu
 
-# Global variables
-export WG_DIR="/etc/amneziawg"
-export TMP_DIR="/tmp/amneziawg"
-export KEYS_DIR="$WG_DIR/keys"
-export PEERS_DIR="$WG_DIR/peers"
-export CONFIG_DB="$WG_DIR/config.json"
-export WG_CONF_FILE="wg0.conf"
-export WG_LOGFILE="/var/log/amneziawg/amneziawg.log"
-
-# Default mode
-export WG_MODE=${WG_MODE:-"server"}
+# Source environment variables
+. /entrypoint/env.sh
 
 # Source functions first to get colors and emojis
 . /entrypoint/functions.sh
@@ -19,9 +10,9 @@ export WG_MODE=${WG_MODE:-"server"}
 # Trap to catch any exits
 trap 'log "Script exiting with code: $?"' EXIT
 
-success "🚀 Starting container in ${WG_MODE} mode..."
+success "🚀 Starting container in ${WG_MODE:-server} mode..."
 
-if [ "$WG_MODE" = "server" ]; then
+if [ "${WG_MODE:-server}" = "server" ]; then
     info "🌈 === Starting SERVER setup process ==="
     
     info "1. 📁 Initializing environment..."
@@ -47,7 +38,7 @@ if [ "$WG_MODE" = "server" ]; then
 
     success "🎉 === Server setup completed successfully ==="
     
-elif [ "$WG_MODE" = "client" ]; then
+elif [ "${WG_MODE:-server}" = "client" ]; then
     info "🌈 === Starting CLIENT setup process ==="
     
     info "1. 📁 Initializing environment..."

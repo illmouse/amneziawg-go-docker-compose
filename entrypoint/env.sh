@@ -2,17 +2,7 @@
 set -eu
 
 # ===============================
-# Load .env first
-# ===============================
-ENV_FILE="/etc/amneziawg/.env"
-if [ -f "$ENV_FILE" ]; then
-    set -o allexport
-    . "$ENV_FILE"
-    set +o allexport
-fi
-
-# ===============================
-# Environment variables (defaults)
+# Environment variables
 # ===============================
 
 # Logging and directories
@@ -31,10 +21,6 @@ fi
 : "${WG_ENDPOINT:=}"
 : "${WG_PEER_COUNT:=1}"
 
-# Squid settings (corrected)
-: "${SQUID_ENABLE:=true}"
-: "${SQUID_PORT:=3128}"
-
 # Junk/obfuscation values
 : "${Jc:=3}"
 : "${Jmin:=1}"
@@ -49,5 +35,4 @@ fi
 # Export all variables for other scripts
 export WG_DIR TMP_DIR PEERS_DIR CONFIG_DB WG_CONF_FILE WG_LOGFILE KEYS_DIR
 export WG_IFACE WG_ADDRESS WG_PORT WG_ENDPOINT WG_PEER_COUNT
-export SQUID_ENABLE SQUID_PORT
 export Jc Jmin Jmax S1 S2 H1 H2 H3 H4
