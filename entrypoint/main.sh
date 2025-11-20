@@ -34,7 +34,7 @@ if [ "${WG_MODE:-server}" = "server" ]; then
     fix_permissions
 
     info "7. ${NETWORK_EMOJI} Starting WireGuard..."
-    . /entrypoint/start-wireguard.sh
+    . /entrypoint/start-wireguard-server.sh
 
     success "🎉 === Server setup completed successfully ==="
 
@@ -51,7 +51,7 @@ elif [ "${WG_MODE:-server}" = "client" ]; then
     fix_permissions
 
     info "4. ${NETWORK_EMOJI} Starting WireGuard client..."
-    . /entrypoint/start-wireguard.sh
+    . /entrypoint/start-wireguard-client.sh
 
     info "5. 🦑 Starting Squid proxy (if enabled)..."
     start_squid
