@@ -1,19 +1,36 @@
-#!/bin/bash
-set -eu
+#!/bin/sh
 
 . /entrypoint/functions.sh
-. /entrypoint/load_env.sh
 
-CLIENT_CONF="$WG_DIR/$WG_CONF_FILE"
+info "${NETWORK_EMOJI} Starting WireGuard interface $WG_IFACE in CLIENT mode..."
 
-if [ ! -f "$CLIENT_CONF" ]; then
-    error "Client configuration not found: $CLIENT_CONF. Did client-mode.sh run?"
+info "Starting amneziawg-go on $WG_IFACE..."
+amneziawg-go "$WG_IFACE" >>"$WG_LOGFILE" 2>&1 &
+sleep 2
+
+info "CLIENT MODE: Loading client configuration into $WG_IFACE..."
+if ! awg setconf "$WG_IFACE" "$WG_DIR/$WG_CONF_FILE" >>"$WG_LOGFILE" 2>&1; then
+    error "Failed to load client WireGuard configuration"
 fi
 
-info "🌐 Starting WireGuard interface $WG_IFACE in CLIENT mode..."
-wg-quick up "$CLIENT_CONF"
+info "Bringing client interface up..."
+ip link set up dev "$WG_IFACE" >>"$WG_LOGFILE" 2>&1
 
-info "🔵 Setting up client routing..."
-setup_client_routing
+if [ -n "$WG_ADDRESS" ]; then
+    info "Assigning client address $WG_ADDRESS to $WG_IFACE..."
+    ip address add dev "$WG_IFACE" "$WG_ADDRESS" 2>>"$WG_LOGFILE" || true
+fi
 
-success "✅ Client WireGuard interface $WG_IFACE is up and routing configured"
+success "${NETWORK_EMOJI} Client setup complete. Interface $WG_IFACE is connected to peers."
+
+# Setup routing to force all traffic through WireGuard
+setup_wireguard_routing
+
+# Verify the configuration was applied correctly
+info "Verifying WireGuard configuration..."
+sleep 2
+if awg show "$WG_IFACE" >>"$WG_LOGFILE" 2>&1; then
+    success "WireGuard configuration verified"
+else
+    warn "Could not verify configuration with 'awg show'"
+fi
