@@ -49,7 +49,7 @@ get_public_endpoint() {
 prompt_user() {
     log "Starting AmneziaWG setup..."
     
-    # Set default values for SQUID_ENABLED and SQUID_PORT based on .env.example
+    # Set default values for SQUID_ENABLED and SQUID_PORT
     SQUID_ENABLED=${SQUID_ENABLED:-"true"}
     SQUID_PORT=${SQUID_PORT:-"3128"}
     
@@ -132,4 +132,18 @@ fix_permissions() {
     local script_dir="$1"
     log "Fixing permissions for $script_dir/*.sh"
     chmod +x "$script_dir"/*.sh
+}
+
+start_services() {
+    log "Starting services..."
+    
+    # Start Docker Compose
+    log "Starting Docker Compose from current directory"
+    cd "$SCRIPT_DIR" && docker compose up -d
+    
+    # Show status
+    log "Checking container status..."
+    docker ps --filter "name=amneziawg"
+    
+    return 0
 }

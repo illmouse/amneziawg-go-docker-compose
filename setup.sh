@@ -10,6 +10,7 @@ NC='\033[0m' # No Color
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 export SCRIPT_DIR
 
+source "$SCRIPT_DIR/scripts/env.sh"
 source "$SCRIPT_DIR/scripts/functions.sh"
 
 # Check if running as root
@@ -51,24 +52,13 @@ if ! "$SCRIPT_DIR/scripts/configure-system.sh"; then
     exit 1
 fi
 
-# Step 3: Setup environment
-if ! "$SCRIPT_DIR/scripts/setup-env.sh"; then
+# Step 3: Create .env file
+if ! "$SCRIPT_DIR/scripts/create-env-file.sh"; then
     error "Environment setup failed"
     exit 1
 fi
 
 # Step 4: Start services
-if ! "$SCRIPT_DIR/scripts/start-services.sh"; then
-    error "Service startup failed"
-    exit 1
-fi
+start-services.sh
 
 log "Setup complete!"
-log "- IP forwarding configured in /etc/sysctl.conf"
-log "- Container logs: docker logs amneziawg"
-log "- .env file configured with WG_ENDPOINT and obfuscation values"
-if [ "$WG_MODE" = "client" ]; then
-    log "- Tunnel monitoring enabled (client mode)"
-else
-    log "- Tunnel monitoring disabled (server mode)"
-fi
