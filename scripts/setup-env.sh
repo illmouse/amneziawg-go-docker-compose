@@ -28,16 +28,16 @@ setup_env() {
             # Use env.example as template
             cp "$project_dir/.env.example" "$project_dir/.env"
             
-            # Update the generated values in the new .env file
-            sed -i "s/^Jc=.*/Jc=$Jc/" "$project_dir/.env"
-            sed -i "s/^Jmin=.*/Jmin=$Jmin/" "$project_dir/.env"
-            sed -i "s/^Jmax=.*/Jmax=$Jmax/" "$project_dir/.env"
-            sed -i "s/^S1=.*/S1=$S1/" "$project_dir/.env"
-            sed -i "s/^S2=.*/S2=$S2/" "$project_dir/.env"
-            sed -i "s/^H1=.*/H1=$H1/" "$project_dir/.env"
-            sed -i "s/^H2=.*/H2=$H2/" "$project_dir/.env"
-            sed -i "s/^H3=.*/H3=$H3/" "$project_dir/.env"
-            sed -i "s/^H4=.*/H4=$H4/" "$project_dir/.env"
+            # Update the generated values in the new .env file using | as delimiter to avoid conflicts with / in values
+            sed -i "s|^Jc=.*|Jc=$Jc|" "$project_dir/.env"
+            sed -i "s|^Jmin=.*|Jmin=$Jmin|" "$project_dir/.env"
+            sed -i "s|^Jmax=.*|Jmax=$Jmax|" "$project_dir/.env"
+            sed -i "s|^S1=.*|S1=$S1|" "$project_dir/.env"
+            sed -i "s|^S2=.*|S2=$S2|" "$project_dir/.env"
+            sed -i "s|^H1=.*|H1=$H1|" "$project_dir/.env"
+            sed -i "s|^H2=.*|H2=$H2|" "$project_dir/.env"
+            sed -i "s|^H3=.*|H3=$H3|" "$project_dir/.env"
+            sed -i "s|^H4=.*|H4=$H4|" "$project_dir/.env"
             
         else
             warn ".env.example not found, creating basic .env file with generated values"
