@@ -2,7 +2,7 @@
 set -e
 
 # SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/functions.sh"
+source "$SCRIPT_DIR/scripts/functions.sh"
 
 WG_ENDPOINT=${WG_ENDPOINT:-}
 WG_MODE=${WG_MODE:-server}
