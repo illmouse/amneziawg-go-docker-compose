@@ -92,7 +92,7 @@ EOF
     fi
     
     # Source the .env file to make variables available in this script
-    source "$project_dir/.env"
+    # source "$project_dir/.env"
     
     # Ensure all required variables are set
     if [ -z "$WG_ENDPOINT" ]; then
