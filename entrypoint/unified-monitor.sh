@@ -195,6 +195,15 @@ switch_to_peer_config() {
                 log "➕ Adding new IP $new_ip to $WG_IFACE"
                 if ip addr add "$new_ip" dev "$WG_IFACE" 2>/dev/null; then
                     log "✅ Successfully added IP $new_ip to $WG_IFACE"
+                    
+                    # Add default route via wg0 interface
+                    log "🛣️ Adding default route via $WG_IFACE"
+                    if ip route add default dev "$WG_IFACE" 2>/dev/null; then
+                        log "✅ Successfully added default route via $WG_IFACE"
+                    else
+                        log "⚠️ Failed to add default route via $WG_IFACE"
+                        # Don't fail the entire operation, as the interface may still work
+                    fi
                 else
                     log "❌ Failed to add IP $new_ip to $WG_IFACE"
                     return 1

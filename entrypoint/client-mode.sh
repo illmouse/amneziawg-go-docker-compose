@@ -17,9 +17,27 @@ fi
 
 info "Found $(echo "$peer_configs" | wc -l) peer configuration file(s)"
 
-# Use the first peer configuration as the main interface config
-main_peer_config=$(echo "$peer_configs" | head -1)
-info "Using main peer configuration: $(basename "$main_peer_config")"
+# Get master peer if specified
+MASTER_PEER=${MASTER_PEER:-}
+master_peer_config=""
+if [ -n "$MASTER_PEER" ]; then
+    master_peer_config="$PEERS_DIR/$MASTER_PEER"
+    if [ ! -f "$master_peer_config" ]; then
+        log "⚠️ MASTER_PEER $MASTER_PEER specified but file not found"
+        master_peer_config=""
+    else
+        info "✅ Using master peer configuration: $MASTER_PEER"
+    fi
+fi
+
+# Use master peer if available, otherwise use first peer
+if [ -n "$master_peer_config" ]; then
+    main_peer_config="$master_peer_config"
+    info "Using master peer configuration: $(basename "$main_peer_config")"
+else
+    main_peer_config=$(echo "$peer_configs" | head -1)
+    info "Using main peer configuration: $(basename "$main_peer_config")"
+fi
 
 if [ ! -f "$main_peer_config" ]; then
     error "Main peer configuration file not found: $main_peer_config"
