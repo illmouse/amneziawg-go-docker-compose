@@ -19,6 +19,9 @@ if [ "$EUID" -ne 0 ]; then
     exit 1
 fi
 
+fix_permissions "$SCRIPT_DIR"/scripts
+fix_permissions "$SCRIPT_DIR"/entrypoint
+
 # Check if .env exists and ask for overwrite
 if [ -f ".env" ]; then
     echo ""
@@ -39,9 +42,6 @@ if [ -f ".env" ]; then
             ;;
     esac
 fi
-
-fix_permissions "$SCRIPT_DIR"/scripts
-fix_permissions "$SCRIPT_DIR"/entrypoint
 
 # Step 1: Install Docker and Docker Compose
 if ! "$SCRIPT_DIR/scripts/install-docker.sh"; then
