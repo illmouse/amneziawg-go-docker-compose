@@ -13,17 +13,17 @@ start_services() {
     log "Starting Docker Compose from current directory"
     cd "$project_dir" && docker compose up -d
     
-    # Wait a moment for container to start
-    log "Waiting for container to initialize..."
-    sleep 10
+    # # Wait a moment for container to start
+    # log "Waiting for container to initialize..."
+    # sleep 10
     
-    # Test the monitor script
-    log "Testing monitor script..."
-    if /usr/local/bin/amneziawg-monitor.sh; then
-        log "Monitor script executed successfully"
-    else
-        warn "Monitor script had issues (this might be normal if container is still starting)"
-    fi
+    # # Test the monitor script
+    # log "Testing monitor script..."
+    # if /usr/local/bin/amneziawg-monitor.sh; then
+    #     log "Monitor script executed successfully"
+    # else
+    #     warn "Monitor script had issues (this might be normal if container is still starting)"
+    # fi
     
     # Show status
     log "Checking container status..."

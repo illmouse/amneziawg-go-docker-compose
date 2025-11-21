@@ -23,3 +23,4 @@ install_required_packages() {
     done
 }
 
+install_required_packages
