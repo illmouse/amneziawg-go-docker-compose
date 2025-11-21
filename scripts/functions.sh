@@ -49,8 +49,8 @@ get_public_endpoint() {
 prompt_user() {
     log "Starting AmneziaWG setup..."
     
-    # Set default values for SQUID_ENABLE and SQUID_PORT based on .env.example
-    SQUD_ENABLE=${SQUD_ENABLE:-"true"}
+    # Set default values for SQUID_ENABLED and SQUID_PORT based on .env.example
+    SQUID_ENABLED=${SQUID_ENABLED:-"true"}
     SQUID_PORT=${SQUID_PORT:-"3128"}
     
     # Interactive setup for WG_MODE
@@ -91,7 +91,7 @@ prompt_user() {
         fi
     fi
     
-    # Interactive setup for SQUD_ENABLE and SQUID_PORT (only for client mode)
+    # Interactive setup for SQUID_ENABLED and SQUID_PORT (only for client mode)
     if [ "$WG_MODE" = "client" ]; then
         echo ""
         log "Configure Squid proxy settings:"
@@ -100,20 +100,20 @@ prompt_user() {
         read -r squid_enable_choice
         case "$squid_enable_choice" in
             y|Y|yes|Yes|YES)
-                SQUD_ENABLE="true"
+                SQUID_ENABLED="true"
                 log "Enabled Squid proxy"
                 ;;
             n|N|no|No|NO)
-                SQUD_ENABLE="false"
+                SQUID_ENABLED="false"
                 log "Disabled Squid proxy"
                 ;;
             *)
-                SQUD_ENABLE="true"
+                SQUID_ENABLED="true"
                 log "No input provided, defaulting to enabled"
                 ;;
         esac
         
-        if [ "$SQUD_ENABLE" = "true" ]; then
+        if [ "$SQUID_ENABLED" = "true" ]; then
             echo ""
             echo -n "Enter Squid port (default 3128): "
             read -r squid_port
@@ -126,6 +126,16 @@ prompt_user() {
             fi
         fi
     fi
+    
+    # Export all variables so they're available to child scripts
+    export WG_ENDPOINT
+    export WG_MODE
+    export WG_PEER_COUNT
+    export SQUID_ENABLED
+    export SQUID_PORT
+    export WG_PORT
+    export WG_IFACE
+    export WG_ADDRESS
 }
 
 fix_permissions() {

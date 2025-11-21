@@ -17,7 +17,7 @@ setup_env() {
         WG_ENDPOINT=${WG_ENDPOINT:-}
         WG_MODE=${WG_MODE:-server}
         WG_PEER_COUNT=${WG_PEER_COUNT:-1}
-        SQUD_ENABLE=${SQUD_ENABLE:-true}
+        SQUID_ENABLED=${SQUID_ENABLED:-true}
         SQUID_PORT=${SQUID_PORT:-3128}
         WG_PORT=${WG_PORT:-13440}
         WG_IFACE=${WG_IFACE:-wg0}
@@ -45,7 +45,7 @@ WG_ENDPOINT=$WG_ENDPOINT
 # Optional default params
 
 # Squid config
-SQUD_ENABLE=$SQUD_ENABLE
+SQUID_ENABLED=$SQUID_ENABLED
 SQUID_PORT=$SQUID_PORT
 
 # Name of the VPN interface inside the container

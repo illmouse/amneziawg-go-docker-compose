@@ -44,7 +44,7 @@ prompt_user
 export WG_ENDPOINT
 export WG_MODE
 export WG_PEER_COUNT
-export SQUD_ENABLE
+export SQUID_ENABLED
 export SQUID_PORT
 export WG_PORT
 export WG_IFACE
