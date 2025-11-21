@@ -114,6 +114,21 @@ update_config_db() {
     success "Configuration database updated"
 }
 
+# Get a value from the JSON DB
+get_db_value() {
+    local jq_path="$1"
+    jq -r "$jq_path // empty" "$CONFIG_DB"
+}
+
+# Set a value in the JSON DB
+set_db_value() {
+    local jq_path="$1"
+    local value="$2"
+    # Create temp file to safely update
+    tmp=$(mktemp)
+    jq "$jq_path = $value" "$CONFIG_DB" > "$tmp" && mv "$tmp" "$CONFIG_DB"
+}
+
 #############################################
 # MAIN EXECUTION
 #############################################
