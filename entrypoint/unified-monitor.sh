@@ -123,7 +123,7 @@ EOF
 # Function to get next peer config
 get_next_peer_config() {
     local current_config="$1"
-    local peer_files=("$WG_DIR/$CLIENT_PEERS_DIR"/*.conf)
+    local peer_files=("$CLIENT_PEERS_DIR"/*.conf)
     local peer_count=${#peer_files[@]}
     
     # If no peer configs exist, return empty
@@ -297,7 +297,7 @@ find_current_peer_config() {
     fi
     
     # Search for the peer config file containing this IP
-    peer_files=("$WG_DIR/$CLIENT_PEERS_DIR"/*.conf)
+    peer_files=("$CLIENT_PEERS_DIR"/*.conf)
     for peer_file in "${peer_files[@]}"; do
         if [ -f "$peer_file" ]; then
             # Extract IP from peer config file
@@ -338,16 +338,16 @@ log "✅ Assembled WireGuard configuration found: $WG_DIR/$WG_IFACE.conf"
 while true; do
     if [ "$WG_MODE" = "client" ]; then
         # Client mode monitoring
-        if [ ! -d "$WG_DIR/$CLIENT_PEERS_DIR" ]; then
-            log "⚠️ No peer configuration directory found in $WG_DIR/$CLIENT_PEERS_DIR"
+        if [ ! -d "$CLIENT_PEERS_DIR" ]; then
+            log "⚠️ No peer configuration directory found in $CLIENT_PEERS_DIR"
             sleep "$CHECK_INTERVAL"
             continue
         fi
         
         # Get all peer configs
-        peer_files=("$WG_DIR/$CLIENT_PEERS_DIR"/*.conf)
+        peer_files=("$CLIENT_PEERS_DIR"/*.conf)
         if [ ${#peer_files[@]} -eq 0 ] || [ ! -f "${peer_files[0]}" ]; then
-            log "⚠️ No peer configuration files found in $WG_DIR/$CLIENT_PEERS_DIR"
+            log "⚠️ No peer configuration files found in $CLIENT_PEERS_DIR"
             sleep "$CHECK_INTERVAL"
             continue
         fi
@@ -360,7 +360,7 @@ while true; do
         MASTER_PEER=${MASTER_PEER:-}
         master_peer_config=""
         if [ -n "$MASTER_PEER" ]; then
-            master_peer_config="$WG_DIR/$CLIENT_PEERS_DIR/$MASTER_PEER"
+            master_peer_config="$CLIENT_PEERS_DIR/$MASTER_PEER"
             if [ ! -f "$master_peer_config" ]; then
                 log "⚠️ MASTER_PEER $MASTER_PEER specified but file not found"
                 master_peer_config=""
