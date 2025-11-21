@@ -9,6 +9,27 @@ NC='\033[0m' # No Color
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# Check if .env exists and ask for overwrite
+if [ -f ".env" ]; then
+    echo ""
+    warn ".env file already exists!"
+    echo -n "Overwrite .env with new configuration? (y/n, default n): "
+    read -r overwrite_choice
+    case "$overwrite_choice" in
+        y|Y|yes|Yes|YES)
+            log "Overwriting existing .env file"
+            ;;
+        n|N|no|No|NO|"")
+            log "Exiting without overwriting .env"
+            exit 0
+            ;;
+        *)
+            log "Invalid choice, defaulting to no overwrite"
+            exit 0
+            ;;
+    esac
+fi
+
 log() {
     echo -e "${GREEN}[SETUP]${NC} $*"
 }
