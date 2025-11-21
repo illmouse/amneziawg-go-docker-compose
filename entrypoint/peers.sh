@@ -103,8 +103,8 @@ cp "$CONFIG_DB" "$CONFIG_DB.backup" 2>/dev/null || true
 if [ "$current_peer_count" -gt "$desired_peer_count" ]; then
     info "Removing $((current_peer_count - desired_peer_count)) excess peer(s)..."
     local peers_to_keep peers_to_remove
-    peers_to_keep=$(jq -r '.peers | keys | sort_by(.[4:] | tonumber) | .[0:'"$desired_peer_count"'] | .[]' "$CONFIG_DB")
-    peers_to_remove=$(jq -r '.peers | keys | sort_by(.[4:] | tonumber) | .['"$desired_peer_count"":] | .[]' "$CONFIG_DB")
+    peers_to_keep=$(jq -r '.peers | keys | sort_by(sub("peer";"") | tonumber) | .[0:'"$desired_peer_count"'] | .[]' "$CONFIG_DB")
+    peers_to_remove=$(jq -r '.peers | keys | sort_by(sub("peer";"") | tonumber) | .['"$desired_peer_count"":] | .[]' "$CONFIG_DB")
 
     # Remove from DB and archive configs
     for peer in $peers_to_remove; do
@@ -121,7 +121,7 @@ peers_needed=$((desired_peer_count - current_peer_count))
 # Add missing peers
 if [ "$peers_needed" -gt 0 ]; then
     info "Adding $peers_needed new peer(s)..."
-    existing_numbers=$(jq -r '.peers | keys | map(.[4:] | tonumber) | sort | .[]' "$CONFIG_DB" 2>/dev/null || echo "")
+    existing_numbers=$(jq -r '.peers | keys | map(sub("peer";"") | tonumber) | sort | .[]' "$CONFIG_DB" 2>/dev/null || echo "")
     peers_added=0
 
     # Fill gaps first
@@ -137,7 +137,7 @@ if [ "$peers_needed" -gt 0 ]; then
 
     # Add sequential peers if still needed
     if [ "$peers_added" -lt "$peers_needed" ]; then
-        highest_existing=${existing_numbers##*$'\n'}
+        highest_existing=$(echo "$existing_numbers" | tail -n1 || echo 0)
         for i in $(seq 1 $((peers_needed - peers_added))); do
             peer_num=$((highest_existing + i))
             peer_ip=$(get_peer_ip "$peer_num")
@@ -148,11 +148,11 @@ fi
 
 # Update all peer configs unconditionally
 info "Updating all peer configuration files from database..."
-for peer in $(jq -r '.peers | keys | sort_by(.[4:] | tonumber) | .[]' "$CONFIG_DB"); do
+for peer in $(jq -r '.peers | keys | sort_by(sub("peer";"") | tonumber) | .[]' "$CONFIG_DB"); do
     update_peer_conf "$peer"
 done
 
 final_count=$(jq '.peers | keys | length' "$CONFIG_DB")
-active_peers=$(jq -r '.peers | keys | sort_by(.[4:] | tonumber) | join(", ")' "$CONFIG_DB" 2>/dev/null || echo "none")
+active_peers=$(jq -r '.peers | keys | sort_by(sub("peer";"") | tonumber) | join(", ")' "$CONFIG_DB" 2>/dev/null || echo "none")
 success "${PEER_EMOJI} Peer management completed: $final_count peer(s) active"
 info "Active peers: $active_peers"
