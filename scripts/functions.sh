@@ -152,6 +152,6 @@ prompt_user() {
 
 fix_permissions() {
     local script_dir="$1"
-
+    log "Fixing permissions for $script_dir"/scripts/*.sh and $script_dir"/entrypoint/*.sh"
     chmod +x "$script_dir"/scripts/*.sh "$script_dir"/entrypoint/*.sh
 }
