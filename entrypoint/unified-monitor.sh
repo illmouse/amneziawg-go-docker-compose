@@ -22,16 +22,11 @@ check_tunnel_health() {
     local test_target="$1"
     local timeout="$2"
     
-    # Check if WireGuard interface is up
-    if ! ip link show "$WG_IFACE" >/dev/null 2>&1; then
-        log "❌ WireGuard interface $WG_IFACE is down"
+    if ! is_wg_interface_up; then
         return 1
     fi
     
-    # Check if we have a valid configuration (use the assembled wg0.conf)
-    local current_config="$WG_DIR/wg0.conf"
-    if [ ! -f "$current_config" ]; then
-        log "❌ No WireGuard configuration found at $current_config"
+    if ! has_valid_wg_config "$WG_DIR/wg0.conf"; then
         return 1
     fi
     
@@ -218,24 +213,56 @@ switch_to_peer_config() {
     fi
 }
 
-# Function to check container health (server mode)
-check_container_health() {
-    # Check if WireGuard interface is up
+# Function to check if WireGuard interface is up
+is_wg_interface_up() {
     if ! ip link show "$WG_IFACE" >/dev/null 2>&1; then
         log "❌ WireGuard interface $WG_IFACE is down"
         return 1
     fi
+    return 0
+}
+
+# Function to get the IP address assigned to the WireGuard interface
+get_wg_interface_ip() {
+    if ! is_wg_interface_up; then
+        echo ""
+        return
+    fi
     
-    # Check if we have a valid configuration
-    local current_config="$WG_DIR/wg0.conf"
-    if [ ! -f "$current_config" ]; then
-        log "❌ No WireGuard configuration found at $current_config"
+    local ip=$(ip addr show "$WG_IFACE" | grep "inet " | head -1 | awk '{print $2}' | cut -d/ -f1)
+    echo "$ip"
+}
+
+# Function to check if we have a valid WireGuard configuration
+has_valid_wg_config() {
+    local config_file="$1"
+    if [ ! -f "$config_file" ]; then
+        log "❌ No WireGuard configuration found at $config_file"
+        return 1
+    fi
+    return 0
+}
+
+# Function to check if WireGuard is listening
+is_wg_listening() {
+    if ! awg show "$WG_IFACE" 2>/dev/null | grep -q "listening"; then
+        log "❌ WireGuard is not listening on $WG_IFACE"
+        return 1
+    fi
+    return 0
+}
+
+# Function to check container health (server mode)
+check_container_health() {
+    if ! is_wg_interface_up; then
         return 1
     fi
     
-    # Check if WireGuard is listening
-    if ! awg show "$WG_IFACE" 2>/dev/null | grep -q "listening"; then
-        log "❌ WireGuard is not listening on $WG_IFACE"
+    if ! has_valid_wg_config "$WG_DIR/wg0.conf"; then
+        return 1
+    fi
+    
+    if ! is_wg_listening; then
         return 1
     fi
     
@@ -247,6 +274,36 @@ check_container_health() {
         log "❌ Server health check failed: $EXTERNAL_CHECK_TARGET"
         return 1
     fi
+}
+
+# Function to find current peer configuration by matching interface IP
+find_current_peer_config() {
+    # Get the IP address assigned to the interface
+    local current_ip=$(get_wg_interface_ip)
+    
+    # If no IP assigned, return empty
+    if [ -z "$current_ip" ]; then
+        echo ""
+        return
+    fi
+    
+    # Search for the peer config file containing this IP
+    peer_files=("$WG_DIR/peers"/*.conf)
+    for peer_file in "${peer_files[@]}"; do
+        if [ -f "$peer_file" ]; then
+            # Extract IP from peer config file
+            peer_ip=$(grep -E "^Address[[:space:]]*=" "$peer_file" | head -1 | sed "s/^Address[[:space:]]*=[[:space:]]*//" | tr -d '\r\n')
+            if [ -n "$peer_ip" ] && [ "$peer_ip" = "$current_ip" ]; then
+                log "🔍 Found current peer config: $(basename "$peer_file")"
+                echo "$peer_file"
+                return
+            fi
+        fi
+    done
+    
+    # If no matching peer config found
+    log "⚠️ No peer configuration found matching IP $current_ip"
+    echo ""
 }
 
 # Main monitoring loop
@@ -302,10 +359,11 @@ while true; do
             fi
         fi
         
-        # Initialize current_peer_config to empty string
-        current_peer_config=""
-
+        # Get current peer config by matching interface IP
+        current_peer_config=$(find_current_peer_config)
+        
         debug "Master peer config $master_peer_config"
+        debug "Current peer config: $current_peer_config"
         
         # Check tunnel health
         if check_tunnel_health "$EXTERNAL_CHECK_TARGET" "$CHECK_TIMEOUT"; then
