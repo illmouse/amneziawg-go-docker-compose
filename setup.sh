@@ -9,6 +9,14 @@ NC='\033[0m' # No Color
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+source "$SCRIPT_DIR/functions.sh"
+
+# Check if running as root
+if [ "$EUID" -ne 0 ]; then
+    error "Please run as root or with sudo"
+    exit 1
+fi
+
 # Check if .env exists and ask for overwrite
 if [ -f ".env" ]; then
     echo ""
@@ -28,24 +36,6 @@ if [ -f ".env" ]; then
             exit 0
             ;;
     esac
-fi
-
-log() {
-    echo -e "${GREEN}[SETUP]${NC} $*"
-}
-
-warn() {
-    echo -e "${YELLOW}[WARNING]${NC} $*"
-}
-
-error() {
-    echo -e "${RED}[ERROR]${NC} $*"
-}
-
-# Check if running as root
-if [ "$EUID" -ne 0 ]; then
-    error "Please run as root or with sudo"
-    exit 1
 fi
 
 main() {
