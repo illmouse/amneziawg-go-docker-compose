@@ -4,6 +4,15 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/functions.sh"
 
+WG_ENDPOINT=${WG_ENDPOINT:-}
+WG_MODE=${WG_MODE:-server}
+WG_PEER_COUNT=${WG_PEER_COUNT:-1}
+SQUID_ENABLED=${SQUID_ENABLED:-true}
+SQUID_PORT=${SQUID_PORT:-3128}
+WG_PORT=${WG_PORT:-13440}
+WG_IFACE=${WG_IFACE:-wg0}
+WG_ADDRESS=${WG_ADDRESS:-10.100.0.1/24}
+
 setup_env() {
     log "Setting up environment..."
     
@@ -14,14 +23,7 @@ setup_env() {
         log "Creating .env file with generated obfuscation values"
         
         # Set default values as fallback if variables aren't exported from setup.sh
-        WG_ENDPOINT=${WG_ENDPOINT:-}
-        WG_MODE=${WG_MODE:-server}
-        WG_PEER_COUNT=${WG_PEER_COUNT:-1}
-        SQUID_ENABLED=${SQUID_ENABLED:-true}
-        SQUID_PORT=${SQUID_PORT:-3128}
-        WG_PORT=${WG_PORT:-13440}
-        WG_IFACE=${WG_IFACE:-wg0}
-        WG_ADDRESS=${WG_ADDRESS:-10.100.0.1/24}
+        
         
         # Generate random values for obfuscation parameters
         Jc=$(get_random_int 3 10)
@@ -92,4 +94,6 @@ EOF
     log "Environment setup complete"
 }
 
+fix_permissions "$SCRIPT_DIR"
+prompt_user
 setup_env

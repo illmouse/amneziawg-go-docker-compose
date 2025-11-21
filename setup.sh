@@ -38,20 +38,6 @@ if [ -f ".env" ]; then
     esac
 fi
 
-prompt_user
-
-# Export all variables set by prompt_user so they're available to child scripts
-export WG_ENDPOINT
-export WG_MODE
-export WG_PEER_COUNT
-export SQUID_ENABLED
-export SQUID_PORT
-export WG_PORT
-export WG_IFACE
-export WG_ADDRESS
-
-fix_permissions "$SCRIPT_DIR"
-
 # Step 1: Install Docker and Docker Compose
 if ! "$SCRIPT_DIR/scripts/install-docker.sh"; then
     error "Docker installation failed"
