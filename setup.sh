@@ -62,6 +62,6 @@ if ! "$SCRIPT_DIR/scripts/create-env-file.sh"; then
 fi
 
 # Step 4: Start services
-start-services
+start_services
 
 log "Setup complete!"
