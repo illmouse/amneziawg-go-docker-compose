@@ -3,6 +3,8 @@
 . /entrypoint/functions.sh
 . /entrypoint/load_env.sh
 
+CONFIG_DB="/etc/amneziawg/config.json"
+
 #############################################
 # Initialize a fresh clean configuration DB
 #############################################
@@ -19,15 +21,15 @@ init_config_db() {
     "port": $WG_PORT,
     "endpoint": "$WG_ENDPOINT",
     "junk": {
-      "jc": $AWG_JC,
-      "jmin": $AWG_JMIN,
-      "jmax": $AWG_JMAX,
-      "s1": $AWG_S1,
-      "s2": $AWG_S2,
-      "h1": $AWG_H1,
-      "h2": $AWG_H2,
-      "h3": $AWG_H3,
-      "h4": $AWG_H4
+      "jc": $Jc,
+      "jmin": $Jmin,
+      "jmax": $Jmax,
+      "s1": $S1,
+      "s2": $S2,
+      "h1": $H1,
+      "h2": $H2,
+      "h3": $H3,
+      "h4": $H4
     },
     "keys": {
       "private_key": "",
@@ -46,7 +48,7 @@ EOF
 }
 
 #############################################
-# Validate or repair existing DB (original logic)
+# Validate or repair existing DB
 #############################################
 validate_or_repair_db() {
 
@@ -80,15 +82,15 @@ update_config_db() {
         --arg addr "$WG_ADDRESS" \
         --argjson port "$WG_PORT" \
         --arg endpoint "$WG_ENDPOINT" \
-        --argjson jc "$AWG_JC" \
-        --argjson jmin "$AWG_JMIN" \
-        --argjson jmax "$AWG_JMAX" \
-        --argjson s1 "$AWG_S1" \
-        --argjson s2 "$AWG_S2" \
-        --argjson h1 "$AWG_H1" \
-        --argjson h2 "$AWG_H2" \
-        --argjson h3 "$AWG_H3" \
-        --argjson h4 "$AWG_H4" \
+        --argjson jc "$Jc" \
+        --argjson jmin "$Jmin" \
+        --argjson jmax "$Jmax" \
+        --argjson s1 "$S1" \
+        --argjson s2 "$S2" \
+        --argjson h1 "$H1" \
+        --argjson h2 "$H2" \
+        --argjson h3 "$H3" \
+        --argjson h4 "$H4" \
         --arg timestamp "$(date -Iseconds)" \
     '
     .server.interface = $iface |
@@ -113,7 +115,7 @@ update_config_db() {
 }
 
 #############################################
-# MAIN EXECUTION LOGIC
+# MAIN EXECUTION
 #############################################
 
 validate_or_repair_db
