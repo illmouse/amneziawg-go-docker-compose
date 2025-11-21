@@ -5,12 +5,10 @@ set -e
 source "$SCRIPT_DIR/scripts/functions.sh"
 
 setup_env() {
-    log "Setting up environment..."
-    
-    local project_dir="$(dirname "$SCRIPT_DIR")"
+    log "Creating .env file..."
     
     # Step 1: Handle .env file
-    if [ ! -f "$project_dir/.env" ]; then
+    if [ ! -f "$SCRIPT_DIR/.env" ]; then
         log "Creating .env file with generated obfuscation values"
         
         # Set default values as fallback if variables aren't exported from setup.sh
@@ -28,7 +26,7 @@ setup_env() {
         H4=$(get_random_header)
         
         # Create .env file directly from template inside script with all values
-        cat > "$project_dir/.env" << EOF
+        cat > "$SCRIPT_DIR/.env" << EOF
 # .env
 # Mandatory params
 
