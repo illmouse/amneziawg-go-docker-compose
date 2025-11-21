@@ -70,6 +70,21 @@ get_peer_ip() {
     echo "${base_octets}.$((octet4 + peer_num))/${prefix}"
 }
 
+# Get a value from the JSON DB
+get_db_value() {
+    local jq_path="$1"
+    jq -r "$jq_path // empty" "$CONFIG_DB"
+}
+
+# Set a value in the JSON DB
+set_db_value() {
+    local jq_path="$1"
+    local value="$2"
+    # Create temp file to safely update
+    tmp=$(mktemp)
+    jq "$jq_path = $value" "$CONFIG_DB" > "$tmp" && mv "$tmp" "$CONFIG_DB"
+}
+
 # Function to fix permissions
 fix_permissions() {
     info "${SECURITY_EMOJI} Fixing permissions in $WG_DIR..."
