@@ -73,26 +73,41 @@ validate_or_repair_db() {
 update_config_db() {
     info "Updating configuration database from environment..."
 
-    # Server config
-    set_db_field "server.iface" "$WG_IFACE"
-    set_db_field "server.address" "$WG_ADDRESS"
-    set_db_field "server.port" "$WG_PORT"
-    set_db_field "server.endpoint" "$WG_ENDPOINT"
+    TMP_FILE=$(mktemp)
 
-    # Keys — only update if provided by env
-    set_db_field "server.keys.private_key" "$WG_PRIVATE_KEY"
-    set_db_field "server.keys.public_key" "$WG_PUBLIC_KEY"
+    jq \
+        --arg iface "$WG_IFACE" \
+        --arg addr "$WG_ADDRESS" \
+        --argjson port "$WG_PORT" \
+        --arg endpoint "$WG_ENDPOINT" \
+        --argjson jc "$AWG_JC" \
+        --argjson jmin "$AWG_JMIN" \
+        --argjson jmax "$AWG_JMAX" \
+        --argjson s1 "$AWG_S1" \
+        --argjson s2 "$AWG_S2" \
+        --argjson h1 "$AWG_H1" \
+        --argjson h2 "$AWG_H2" \
+        --argjson h3 "$AWG_H3" \
+        --argjson h4 "$AWG_H4" \
+        --arg timestamp "$(date -Iseconds)" \
+    '
+    .server.interface = $iface |
+    .server.address = $addr |
+    .server.port = $port |
+    .server.endpoint = $endpoint |
+    .server.junk.jc = $jc |
+    .server.junk.jmin = $jmin |
+    .server.junk.jmax = $jmax |
+    .server.junk.s1 = $s1 |
+    .server.junk.s2 = $s2 |
+    .server.junk.h1 = $h1 |
+    .server.junk.h2 = $h2 |
+    .server.junk.h3 = $h3 |
+    .server.junk.h4 = $h4 |
+    .meta.last_updated = $timestamp
+    ' "$CONFIG_DB" > "$TMP_FILE"
 
-    # Junk parameters
-    set_db_field "junk.Jc" "$Jc"
-    set_db_field "junk.Jmin" "$Jmin"
-    set_db_field "junk.Jmax" "$Jmax"
-    set_db_field "junk.S1" "$S1"
-    set_db_field "junk.S2" "$S2"
-    set_db_field "junk.H1" "$H1"
-    set_db_field "junk.H2" "$H2"
-    set_db_field "junk.H3" "$H3"
-    set_db_field "junk.H4" "$H4"
+    mv "$TMP_FILE" "$CONFIG_DB"
 
     success "Configuration database updated"
 }
