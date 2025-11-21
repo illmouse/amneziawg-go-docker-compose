@@ -3,112 +3,110 @@
 . /entrypoint/functions.sh
 . /entrypoint/load_env.sh
 
-# ===========================================================
-# 1. Initialize DB if missing or corrupted
-# ===========================================================
-
+#############################################
+# Initialize a fresh clean configuration DB
+#############################################
 init_config_db() {
-    info "Initializing new configuration database: $CONFIG_DB"
+    info "Initializing new configuration database..."
 
-    cat <<EOF > "$CONFIG_DB"
+    mkdir -p /etc/amneziawg
+
+    cat > "$CONFIG_DB" <<EOF
 {
   "server": {
-    "iface": "",
-    "address": "",
-    "port": "",
-    "endpoint": "",
+    "interface": "$WG_IFACE",
+    "address": "$WG_ADDRESS",
+    "port": $WG_PORT,
+    "endpoint": "$WG_ENDPOINT",
+    "junk": {
+      "jc": $AWG_JC,
+      "jmin": $AWG_JMIN,
+      "jmax": $AWG_JMAX,
+      "s1": $AWG_S1,
+      "s2": $AWG_S2,
+      "h1": $AWG_H1,
+      "h2": $AWG_H2,
+      "h3": $AWG_H3,
+      "h4": $AWG_H4
+    },
     "keys": {
       "private_key": "",
       "public_key": ""
     }
   },
-  "junk": {
-    "Jc": "",
-    "Jmin": "",
-    "Jmax": "",
-    "S1": "",
-    "S2": "",
-    "H1": "",
-    "H2": "",
-    "H3": "",
-    "H4": ""
+  "peers": {},
+  "meta": {
+    "version": "1.0",
+    "last_updated": "$(date -Iseconds)"
   }
 }
 EOF
 
-    success "Created fresh configuration database"
+    success "New configuration database created at $CONFIG_DB"
 }
 
-# 1. File must not be empty
-if [ ! -s "$CONFIG_DB" ]; then
-    error "Config DB is empty — recreating"
-    init_config_db
-fi
+#############################################
+# Validate or repair existing DB (original logic)
+#############################################
+validate_or_repair_db() {
 
-# 2. Basic structure must contain '{'
-if ! grep -q "{" "$CONFIG_DB"; then
-    error "Config DB missing JSON structure — recreating"
-    init_config_db
-fi
-
-# 3. jq must parse it, but allow a retry
-if ! jq empty "$CONFIG_DB" >/dev/null 2>&1; then
-    warn "Config DB parsed invalid once — retrying in 0.2s"
-    sleep 0.2
-
-    if ! jq empty "$CONFIG_DB" >/dev/null 2>&1; then
-        error "Config DB confirmed corrupted — recreating"
+    # DB missing
+    if [ ! -f "$CONFIG_DB" ]; then
+        error "Configuration database missing: $CONFIG_DB"
         init_config_db
-    else
-        success "Config DB OK on second attempt"
+        return
     fi
-fi
 
-info "Configuration database loaded successfully"
-
-# ===========================================================
-# 2. DB Update helper — Update only fields with non-empty env
-# ===========================================================
-
-set_db_field() {
-    key="$1"
-    value="$2"
-
-    [ -z "$value" ] && return 0  # skip empty env vars
-
-    tmp=$(mktemp)
-
-    # Numbers vs strings
-    if printf '%s' "$value" | grep -Eq '^[0-9]+$'; then
-        jq ".$key = $value" "$CONFIG_DB" > "$tmp" && mv "$tmp" "$CONFIG_DB"
-    else
-        jq ".$key = \"$value\"" "$CONFIG_DB" > "$tmp" && mv "$tmp" "$CONFIG_DB"
+    # DB empty
+    if [ ! -s "$CONFIG_DB" ]; then
+        error "Configuration database is empty: $CONFIG_DB"
+        init_config_db
+        return
     fi
+
+    # DB invalid JSON
+    if ! jq . "$CONFIG_DB" >/dev/null 2>&1; then
+        error "Configuration database contains invalid JSON: $CONFIG_DB"
+        init_config_db
+        return
+    fi
+
+    success "Configuration database valid"
 }
 
-# ===========================================================
-# 3. Apply updates (ONLY if env vars are non-empty)
-# ===========================================================
+#############################################
+# Update DB with current env values
+#############################################
+update_config_db() {
+    info "Updating configuration database from environment..."
 
-# Server config
-set_db_field "server.iface" "$WG_IFACE"
-set_db_field "server.address" "$WG_ADDRESS"
-set_db_field "server.port" "$WG_PORT"
-set_db_field "server.endpoint" "$WG_ENDPOINT"
+    # Server config
+    set_db_field "server.iface" "$WG_IFACE"
+    set_db_field "server.address" "$WG_ADDRESS"
+    set_db_field "server.port" "$WG_PORT"
+    set_db_field "server.endpoint" "$WG_ENDPOINT"
 
-# Keys — only update if provided by env
-set_db_field "server.keys.private_key" "$WG_PRIVATE_KEY"
-set_db_field "server.keys.public_key" "$WG_PUBLIC_KEY"
+    # Keys — only update if provided by env
+    set_db_field "server.keys.private_key" "$WG_PRIVATE_KEY"
+    set_db_field "server.keys.public_key" "$WG_PUBLIC_KEY"
 
-# Junk parameters
-set_db_field "junk.Jc" "$Jc"
-set_db_field "junk.Jmin" "$Jmin"
-set_db_field "junk.Jmax" "$Jmax"
-set_db_field "junk.S1" "$S1"
-set_db_field "junk.S2" "$S2"
-set_db_field "junk.H1" "$H1"
-set_db_field "junk.H2" "$H2"
-set_db_field "junk.H3" "$H3"
-set_db_field "junk.H4" "$H4"
+    # Junk parameters
+    set_db_field "junk.Jc" "$Jc"
+    set_db_field "junk.Jmin" "$Jmin"
+    set_db_field "junk.Jmax" "$Jmax"
+    set_db_field "junk.S1" "$S1"
+    set_db_field "junk.S2" "$S2"
+    set_db_field "junk.H1" "$H1"
+    set_db_field "junk.H2" "$H2"
+    set_db_field "junk.H3" "$H3"
+    set_db_field "junk.H4" "$H4"
 
-success "Configuration DB updated from environment"
+    success "Configuration database updated"
+}
+
+#############################################
+# MAIN EXECUTION LOGIC
+#############################################
+
+validate_or_repair_db
+update_config_db
