@@ -63,7 +63,7 @@ pub_from_priv() {
 
 get_peer_ip() {
     local base_ip="${WG_ADDRESS%/*}"
-    local prefix="${WG_ADDRESS#*/}"
+    local prefix="32"
     local octet4="${base_ip##*.}"
     local base_octets="${base_ip%.*}"
     local peer_num="$1"

@@ -180,10 +180,10 @@ switch_to_peer_config() {
     if reassemble_peer_config "$new_config"; then
         # Remove current IP address from interface
         if ip addr show "$WG_IFACE" | grep -q "inet "; then
-            current_ip=$(ip addr show "$WG_IFACE" | grep "inet " | head -1 | awk '{print $2}' | cut -d/ -f1)
+            current_ip=$(ip addr show "$WG_IFACE" | grep "inet " | head -1 | awk '{print $2}')
             if [ -n "$current_ip" ]; then
                 log "🧹 Removing current IP $current_ip from $WG_IFACE"
-                if ip addr del "$current_ip/32" dev "$WG_IFACE" 2>/dev/null; then
+                if ip addr del "$current_ip" dev "$WG_IFACE" 2>/dev/null; then
                     log "✅ Successfully removed IP $current_ip from $WG_IFACE"
                 else
                     log "⚠️ Failed to remove IP $current_ip from $WG_IFACE"
