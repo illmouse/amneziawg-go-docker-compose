@@ -69,7 +69,7 @@ server_port=$(get_db_value '.server.port')
 
 for peer in $(jq -r '.peers | keys | sort_by(.[4:] | tonumber) | .[]' "$CONFIG_DB"); do
     peer_data=$(jq -r --arg peer "$peer" '.peers[$peer]' "$CONFIG_DB")
-    PEER_CONF_FILE="$PEERS_DIR/${peer}.conf"
+    PEER_CONF_FILE="$SERVER_PEERS_DIR/${peer}.conf"
 
     cat > "$PEER_CONF_FILE" <<EOF
 [Interface]

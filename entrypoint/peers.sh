@@ -10,9 +10,9 @@ archive_peer_conf() {
     local suffix="$2"
     local archive_date
     archive_date=$(date -u +'%Y%m%d')
-    local peer_conf_file="$PEERS_DIR/${peer_name}.conf"
+    local peer_conf_file="$SERVER_PEERS_DIR/${peer_name}.conf"
     if [ -f "$peer_conf_file" ]; then
-        local archive_file="$PEERS_DIR/${peer_name}.conf.${suffix}.${archive_date}"
+        local archive_file="$SERVER_PEERS_DIR/${peer_name}.conf.${suffix}.${archive_date}"
         if [ -f "$archive_file" ]; then
             archive_file="$archive_file.$(date -u +'%H%M%S')"
         fi

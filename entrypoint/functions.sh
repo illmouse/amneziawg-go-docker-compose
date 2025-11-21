@@ -98,7 +98,8 @@ fix_permissions() {
     find "$WG_DIR" -type f -name "*.json" -exec chmod 600 {} \; 2>/dev/null || true
     find "$WG_DIR" -type f -name "*.key" -exec chmod 600 {} \; 2>/dev/null || true
     find "$KEYS_DIR" -type f -exec chmod 600 {} \; 2>/dev/null || true
-    find "$PEERS_DIR" -type f -exec chmod 600 {} \; 2>/dev/null || true
+    find "$CLIENT_PEERS_DIR" -type f -exec chmod 600 {} \; 2>/dev/null || true
+    find "$SERVER_PEERS_DIR" -type f -exec chmod 600 {} \; 2>/dev/null || true
     
     # Specific files
     [ -f "$CONFIG_DB" ] && chmod 600 "$CONFIG_DB"

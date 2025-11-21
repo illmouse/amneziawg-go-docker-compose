@@ -5,14 +5,14 @@
 info "🔍 Setting up AmneziaWG client mode..."
 
 # Validate client mode requirements
-if [ ! -d "$PEERS_DIR" ]; then
-    error "Client mode requires peer configurations in $PEERS_DIR"
+if [ ! -d "$CLIENT_PEERS_DIR" ]; then
+    error "Client mode requires peer configurations in $CLIENT_PEERS_DIR"
 fi
 
 # Find peer configuration files
-peer_configs=$(find "$PEERS_DIR" -name "*.conf" -type f | sort)
+peer_configs=$(find "$CLIENT_PEERS_DIR" -name "*.conf" -type f | sort)
 if [ -z "$peer_configs" ]; then
-    error "No peer configuration files found in $PEERS_DIR"
+    error "No peer configuration files found in $CLIENT_PEERS_DIR"
 fi
 
 info "Found $(echo "$peer_configs" | wc -l) peer configuration file(s)"
@@ -21,7 +21,7 @@ info "Found $(echo "$peer_configs" | wc -l) peer configuration file(s)"
 MASTER_PEER=${MASTER_PEER:-}
 master_peer_config=""
 if [ -n "$MASTER_PEER" ]; then
-    master_peer_config="$PEERS_DIR/$MASTER_PEER"
+    master_peer_config="$CLIENT_PEERS_DIR/$MASTER_PEER"
     if [ ! -f "$master_peer_config" ]; then
         log "⚠️ MASTER_PEER $MASTER_PEER specified but file not found"
         master_peer_config=""

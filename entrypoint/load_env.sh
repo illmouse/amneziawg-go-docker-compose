@@ -19,7 +19,8 @@ fi
 : "${WG_LOGFILE:=/var/log/amneziawg/amneziawg.log}"
 : "${WG_DIR:=/etc/amneziawg}"
 : "${TMP_DIR:=/tmp/amneziawg}"
-: "${PEERS_DIR:=$WG_DIR/peers}"
+: "${CLIENT_PEERS_DIR:=$WG_DIR/client_peers}"
+: "${SERVER_PEERS_DIR:=$WG_DIR/server_peers}"
 : "${CONFIG_DB:=$WG_DIR/config.json}"
 : "${WG_CONF_FILE:=wg0.conf}"
 : "${KEYS_DIR:=$WG_DIR/keys}"
@@ -53,7 +54,7 @@ fi
 : "${REQUIRED_PKGS:=jq squid nc}" 
 
 # Export all variables for other scripts
-export WG_DIR TMP_DIR PEERS_DIR CONFIG_DB WG_CONF_FILE WG_LOGFILE KEYS_DIR
+export WG_DIR TMP_DIR CLIENT_PEERS_DIR SERVER_PEERS_DIR CONFIG_DB WG_CONF_FILE WG_LOGFILE KEYS_DIR
 export WG_IFACE WG_ADDRESS WG_PORT WG_ENDPOINT WG_PEER_COUNT
 export SQUID_ENABLE SQUID_PORT SQUID_CACHE SQUID_LOG SQUID_EMOJI
 export Jc Jmin Jmax S1 S2 H1 H2 H3 H4
