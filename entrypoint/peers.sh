@@ -22,6 +22,7 @@ archive_peer_conf() {
 }
 
 # Helper: Add peer to DB and generate keys
+# Helper: Add peer to DB and generate keys, preserving junk defaults
 add_peer_to_db() {
     local peer_name="$1"
     local peer_ip="$2"
@@ -31,6 +32,17 @@ add_peer_to_db() {
     peer_pub_key=$(pub_from_priv "$peer_priv_key")
     psk=$(gen_psk)
 
+    # Default junk values
+    local jc=${JUNK_JC:-3}
+    local jmin=${JUNK_JMIN:-1}
+    local jmax=${JUNK_JMAX:-50}
+    local s1=${JUNK_S1:-25}
+    local s2=${JUNK_S2:-72}
+    local h1=${JUNK_H1:-$(date +%s)}
+    local h2=${JUNK_H2:-$(date +%s)}
+    local h3=${JUNK_H3:-$(date +%s)}
+    local h4=${JUNK_H4:-$(date +%s)}
+
     local peer_json
     peer_json=$(jq -n \
         --arg name "$peer_name" \
@@ -38,12 +50,26 @@ add_peer_to_db() {
         --arg priv_key "$peer_priv_key" \
         --arg pub_key "$peer_pub_key" \
         --arg psk "$psk" \
+        --argjson jc "$jc" --argjson jmin "$jmin" --argjson jmax "$jmax" \
+        --argjson s1 "$s1" --argjson s2 "$s2" --argjson h1 "$h1" --argjson h2 "$h2" \
+        --argjson h3 "$h3" --argjson h4 "$h4" \
         '{
             name: $name,
             ip: $ip,
             private_key: $priv_key,
             public_key: $pub_key,
             preshared_key: $psk,
+            junk: {
+                jc: $jc,
+                jmin: $jmin,
+                jmax: $jmax,
+                s1: $s1,
+                s2: $s2,
+                h1: $h1,
+                h2: $h2,
+                h3: $h3,
+                h4: $h4
+            },
             created: now | todate
         }')
 
