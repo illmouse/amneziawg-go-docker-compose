@@ -64,13 +64,6 @@ validate_or_repair_db() {
         return
     fi
 
-    # DB invalid JSON
-    if ! jq . "$CONFIG_DB" >/dev/null 2>&1; then
-        error "Configuration database contains invalid JSON: $CONFIG_DB"
-        init_config_db
-        return
-    fi
-
     success "Configuration database valid"
 }
 
