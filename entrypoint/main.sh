@@ -64,6 +64,8 @@ fi
 
 # Start unified monitoring in background
 info "🚀 Starting unified monitoring system..."
+# Ensure unified-monitor.sh has execute permissions
+chmod +x /entrypoint/unified-monitor.sh
 /entrypoint/unified-monitor.sh >>/var/log/amneziawg/unified-monitor.log 2>&1 &
 
 success "🏁 Container startup complete. Entering sleep..."

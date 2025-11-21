@@ -173,10 +173,39 @@ switch_to_peer_config() {
     
     log "🔄 Switching from $(basename "$current_config") to $(basename "$new_config")"
     
+    # Extract IP address from the new peer config
+    new_ip=$(grep -E "^Address[[:space:]]*=" "$new_config" | head -1 | sed "s/^Address[[:space:]]*=[[:space:]]*//" | tr -d '\r\n')
+    
     # Reassemble the new peer config using client-mode.sh logic
     if reassemble_peer_config "$new_config"; then
+        # Remove current IP address from interface
+        if ip addr show "$WG_IFACE" | grep -q "inet "; then
+            current_ip=$(ip addr show "$WG_IFACE" | grep "inet " | head -1 | awk '{print $2}' | cut -d/ -f1)
+            if [ -n "$current_ip" ]; then
+                log "🧹 Removing current IP $current_ip from $WG_IFACE"
+                if ip addr del "$current_ip/32" dev "$WG_IFACE" 2>/dev/null; then
+                    log "✅ Successfully removed IP $current_ip from $WG_IFACE"
+                else
+                    log "⚠️ Failed to remove IP $current_ip from $WG_IFACE"
+                fi
+            fi
+        fi
+        
         # Apply the reassembled configuration
         if awg setconf "$WG_IFACE" "$WG_DIR/wg0.conf" >>"$LOG_FILE" 2>&1; then
+            log "✅ Successfully applied WireGuard configuration"
+            
+            # Add new IP address to interface
+            if [ -n "$new_ip" ]; then
+                log "➕ Adding new IP $new_ip to $WG_IFACE"
+                if ip addr add "$new_ip" dev "$WG_IFACE" 2>/dev/null; then
+                    log "✅ Successfully added IP $new_ip to $WG_IFACE"
+                else
+                    log "❌ Failed to add IP $new_ip to $WG_IFACE"
+                    return 1
+                fi
+            fi
+            
             log "✅ Successfully switched to $(basename "$new_config")"
             return 0
         else
@@ -272,6 +301,9 @@ while true; do
                 master_peer_config=""
             fi
         fi
+        
+        # Initialize current_peer_config to empty string
+        current_peer_config=""
         
         # Check tunnel health
         if check_tunnel_health "$EXTERNAL_CHECK_TARGET" "$CHECK_TIMEOUT"; then
