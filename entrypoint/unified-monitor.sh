@@ -304,16 +304,21 @@ while true; do
         
         # Initialize current_peer_config to empty string
         current_peer_config=""
+
+        debug "Master peer config $master_peer_config"
         
         # Check tunnel health
         if check_tunnel_health "$EXTERNAL_CHECK_TARGET" "$CHECK_TIMEOUT"; then
             # Tunnel is healthy, check if we should switch to master peer
+            debug "Tunnel is healthy, check if we should switch to master peer"
             if [ -n "$master_peer_config" ] && [ -n "$current_peer_config" ] && [ "$current_peer_config" != "$master_peer_config" ]; then
                 # Check if master peer is reachable (using nc to check port)
+                debug "Check if master peer is reachable (using nc to check port)"
                 # Extract endpoint from master peer config
                 master_endpoint=$(grep -E "^Endpoint[[:space:]]*=" "$master_peer_config" | head -1 | sed "s/^Endpoint[[:space:]]*=[[:space:]]*//" | tr -d '\r\n')
                 if [ -n "$master_endpoint" ]; then
                     # Extract host and port from endpoint (format: host:port)
+                    debug "Extract host and port from endpoint (format: host:port)"
                     master_host=$(echo "$master_endpoint" | cut -d: -f1)
                     master_port=$(echo "$master_endpoint" | cut -d: -f2)
                     if [ -n "$master_host" ] && [ -n "$master_port" ]; then
