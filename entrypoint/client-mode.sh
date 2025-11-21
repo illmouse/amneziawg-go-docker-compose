@@ -62,7 +62,6 @@ for param in $params; do
     value=$(extract_param "$param")
     if [ -n "$value" ]; then
         extracted_params["$param"]="$value"
-        info "Extracted $param: $value"
     fi
 done
 
