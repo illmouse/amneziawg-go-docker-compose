@@ -67,6 +67,7 @@ cp "$CONFIG_DB" "$CONFIG_DB.backup" 2>/dev/null || true
 # Remove excess peers
 if [ "$current_peer_count" -gt "$desired_peer_count" ]; then
     info "Removing $((current_peer_count - desired_peer_count)) excess peer(s)..."
+    
     peers_to_keep=$(jq -r '.peers | keys | sort_by(.[4:] | tonumber) | .[0:'"$desired_peer_count"'] | .[]' "$CONFIG_DB")
     peers_to_remove=$(jq -r '.peers | keys | sort_by(.[4:] | tonumber) | .['"$desired_peer_count"":] | .[]' "$CONFIG_DB")
 
@@ -76,6 +77,7 @@ if [ "$current_peer_count" -gt "$desired_peer_count" ]; then
     done
     success "Removed excess peers"
 fi
+
 
 # Add missing peers
 current_peer_count=$(jq '.peers | keys | length' "$CONFIG_DB" 2>/dev/null || echo "0")
