@@ -40,7 +40,7 @@ fi
 
 prompt_user
 
-fix_permissions("$SCRIPT_DIR")
+fix_permissions "$SCRIPT_DIR"
 
 # Step 1: Install Docker and Docker Compose
 if ! "$SCRIPT_DIR/scripts/install-docker.sh"; then

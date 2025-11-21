@@ -34,17 +34,6 @@ get_random_header() {
     get_random_int 1 2147483647
 }
 
-check_required_files() {
-    local script_dir="$1"
-    
-    if [ ! -f "$script_dir/../docker-compose.yaml" ]; then
-        error "docker-compose.yaml not found in current directory"
-        return 1
-    fi
-    
-    return 0
-}
-
 get_public_endpoint() {
     # Try to get public IP using ifconfig.me
     local endpoint=$(curl -s --connect-timeout 10 --max-time 10 https://ifconfig.me)
