@@ -50,7 +50,7 @@ fi
 : "${H4:=1515483925}"
 
 # Packages
-: "${REQUIRED_PKGS:=jq squid}" 
+: "${REQUIRED_PKGS:=jq squid nc}" 
 
 # Export all variables for other scripts
 export WG_DIR TMP_DIR PEERS_DIR CONFIG_DB WG_CONF_FILE WG_LOGFILE KEYS_DIR

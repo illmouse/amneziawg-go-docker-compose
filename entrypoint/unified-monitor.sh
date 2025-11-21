@@ -248,7 +248,7 @@ while true; do
             continue
         fi
         
-        # Get initial peer config
+        # Get all peer configs
         peer_files=("$WG_DIR/peers"/*.conf)
         if [ ${#peer_files[@]} -eq 0 ] || [ ! -f "${peer_files[0]}" ]; then
             log "⚠️ No peer configuration files found in $WG_DIR/peers"
@@ -256,34 +256,91 @@ while true; do
             continue
         fi
         
+        # Sort files to ensure consistent order
+        IFS=$'\n' sorted_files=($(sort <<<"${peer_files[*]}"))
+        unset IFS
+        
+        # Get master peer if specified
+        MASTER_PEER=${MASTER_PEER:-}
+        master_peer_config=""
+        if [ -n "$MASTER_PEER" ]; then
+            master_peer_config="$WG_DIR/peers/$MASTER_PEER"
+            if [ ! -f "$master_peer_config" ]; then
+                log "⚠️ MASTER_PEER $MASTER_PEER specified but file not found"
+                master_peer_config=""
+            fi
+        fi
+        
         # Check tunnel health
         if check_tunnel_health "$EXTERNAL_CHECK_TARGET" "$CHECK_TIMEOUT"; then
+            # Tunnel is healthy, check if we should switch to master peer
+            if [ -n "$master_peer_config" ] && [ -n "$current_peer_config" ] && [ "$current_peer_config" != "$master_peer_config" ]; then
+                # Check if master peer is reachable (using nc to check port)
+                # Extract endpoint from master peer config
+                master_endpoint=$(grep -E "^Endpoint[[:space:]]*=" "$master_peer_config" | head -1 | sed "s/^Endpoint[[:space:]]*=[[:space:]]*//" | tr -d '\r\n')
+                if [ -n "$master_endpoint" ]; then
+                    # Extract host and port from endpoint (format: host:port)
+                    master_host=$(echo "$master_endpoint" | cut -d: -f1)
+                    master_port=$(echo "$master_endpoint" | cut -d: -f2)
+                    if [ -n "$master_host" ] && [ -n "$master_port" ]; then
+                        # Check if master peer is reachable
+                        if nc -zvu "$master_host" "$master_port" >/dev/null 2>&1; then
+                            log "✅ Master peer $MASTER_PEER is reachable, switching back to it"
+                            if switch_to_peer_config "$master_peer_config" "$current_peer_config"; then
+                                current_peer_config="$master_peer_config"
+                            fi
+                        fi
+                    fi
+                fi
+            fi
             # Tunnel is healthy, wait for next check
             sleep "$CHECK_INTERVAL"
         else
-            # Get the first available peer config
-            current_peer_config=""
-            if [ ${#peer_files[@]} -gt 0 ] && [ -f "${peer_files[0]}" ]; then
-                current_peer_config="${peer_files[0]}"
-                log "🔌 Using initial peer config: $(basename "$current_peer_config")"
-            fi
-
-            # Tunnel is down, switch to next config
+            # Tunnel is down, determine which peer to switch to
             log "⚠️ Tunnel is down, attempting to switch to next peer configuration..."
             
-            # Get next peer config
-            next_peer_config=$(get_next_peer_config "$current_peer_config")
-            
-            # Switch to next config
-            if [ -n "$next_peer_config" ] && [ -f "$next_peer_config" ]; then
-                # Switch to next config using the reassemble logic
-                if switch_to_peer_config "$next_peer_config" "$current_peer_config"; then
-                    current_peer_config="$next_peer_config"
+            # If we have a master peer and it's not the current one, try master first
+            if [ -n "$master_peer_config" ] && [ -n "$current_peer_config" ] && [ "$current_peer_config" != "$master_peer_config" ]; then
+                # Try master peer first
+                if switch_to_peer_config "$master_peer_config" "$current_peer_config"; then
+                    current_peer_config="$master_peer_config"
+                    log "✅ Switched to master peer $MASTER_PEER"
                 else
-                    log "❌ Failed to switch to next peer configuration, will retry in $CHECK_INTERVAL seconds"
+                    log "❌ Failed to switch to master peer $MASTER_PEER, trying next available peer"
+                    # Get next peer config from sorted list
+                    next_peer_config=$(get_next_peer_config "$current_peer_config")
+                    if [ -n "$next_peer_config" ] && [ -f "$next_peer_config" ]; then
+                        if switch_to_peer_config "$next_peer_config" "$current_peer_config"; then
+                            current_peer_config="$next_peer_config"
+                        else
+                            log "❌ Failed to switch to next peer configuration, will retry in $CHECK_INTERVAL seconds"
+                        fi
+                    else
+                        log "❌ No valid next peer configuration found, will retry in $CHECK_INTERVAL seconds"
+                    fi
                 fi
             else
-                log "❌ No valid next peer configuration found, will retry in $CHECK_INTERVAL seconds"
+                # No master peer or already on master peer, use normal circular switching
+                if [ -z "$current_peer_config" ]; then
+                    # Initialize with first peer if not set
+                    current_peer_config="${sorted_files[0]}"
+                    log "🔌 Using initial peer config: $(basename "$current_peer_config")"
+                fi
+                
+                # Get next peer config
+                next_peer_config=$(get_next_peer_config "$current_peer_config")
+                
+                # Switch to next config
+                if [ -n "$next_peer_config" ] && [ -f "$next_peer_config" ]; then
+                    # Switch to next config using the reassemble logic
+                    if switch_to_peer_config "$next_peer_config" "$current_peer_config"; then
+                        current_peer_config="$next_peer_config"
+                    else
+                        log "❌ Failed to switch to next peer configuration, will retry in $CHECK_INTERVAL seconds"
+                    fi
+                else
+                    log "❌ No valid next peer configuration found, will retry in $CHECK_INTERVAL seconds"
+                fi
             fi
             
             # Wait a bit before next check after a switch
