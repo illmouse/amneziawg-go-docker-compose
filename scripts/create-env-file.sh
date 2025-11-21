@@ -7,26 +7,25 @@ source "$SCRIPT_DIR/scripts/functions.sh"
 setup_env() {
     log "Creating .env file..."
     
-    # Step 1: Handle .env file
-    if [ ! -f "$SCRIPT_DIR/.env" ]; then
-        log "Creating .env file with generated obfuscation values"
-        
-        # Set default values as fallback if variables aren't exported from setup.sh
-        
-        
-        # Generate random values for obfuscation parameters
-        Jc=$(get_random_int 3 10)
-        Jmin=$(get_random_int 1 10)
-        Jmax=$(get_random_int 50 1000)
-        S1=$(get_random_junk_size)
-        S2=$(get_random_junk_size)
-        H1=$(get_random_header)
-        H2=$(get_random_header)
-        H3=$(get_random_header)
-        H4=$(get_random_header)
-        
-        # Create .env file directly from template inside script with all values
-        cat > "$SCRIPT_DIR/.env" << EOF
+
+    log "Creating .env file with generated obfuscation values"
+    
+    # Set default values as fallback if variables aren't exported from setup.sh
+    
+    
+    # Generate random values for obfuscation parameters
+    Jc=$(get_random_int 3 10)
+    Jmin=$(get_random_int 1 10)
+    Jmax=$(get_random_int 50 1000)
+    S1=$(get_random_junk_size)
+    S2=$(get_random_junk_size)
+    H1=$(get_random_header)
+    H2=$(get_random_header)
+    H3=$(get_random_header)
+    H4=$(get_random_header)
+    
+    # Create .env file directly from template inside script with all values
+    cat > "$SCRIPT_DIR/.env" << EOF
 # .env
 # Mandatory params
 
@@ -62,23 +61,11 @@ H3=$H3
 H4=$H4
 EOF
         
-        log "Generated obfuscation values:"
-        log "  Jc=$Jc, Jmin=$Jmin, Jmax=$Jmax"
-        log "  S1=$S1, S2=$S2"
-        log "  H1=$H1, H2=$H2, H3=$H3, H4=$H4"
-        log "WG_ENDPOINT set to: $WG_ENDPOINT"
-    else
-        log ".env file already exists, using existing values"
-    fi
-    
-    # Source the .env file to make variables available in this script
-    # source "$project_dir/.env"
-    
-    # Ensure all required variables are set
-    if [ -z "$WG_ENDPOINT" ]; then
-        error "WG_ENDPOINT is not set in .env file"
-        exit 1
-    fi
+    log "Generated obfuscation values:"
+    log "  Jc=$Jc, Jmin=$Jmin, Jmax=$Jmax"
+    log "  S1=$S1, S2=$S2"
+    log "  H1=$H1, H2=$H2, H3=$H3, H4=$H4"
+    log "WG_ENDPOINT set to: $WG_ENDPOINT"
     
     log "Environment setup complete"
 }

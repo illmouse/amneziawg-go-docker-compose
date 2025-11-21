@@ -10,8 +10,8 @@ NC='\033[0m' # No Color
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 export SCRIPT_DIR
 
-source "$SCRIPT_DIR/scripts/env.sh"
 source "$SCRIPT_DIR/scripts/functions.sh"
+source "$SCRIPT_DIR/scripts/env.sh"
 
 # Check if running as root
 if [ "$EUID" -ne 0 ]; then
