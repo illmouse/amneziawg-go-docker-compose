@@ -4,6 +4,7 @@
 
 info "${CONFIG_EMOJI} Generating server configuration..."
 
+# Get server junk values
 server_priv_key=$(get_db_value '.server.keys.private_key')
 server_jc=$(get_db_value '.server.junk.jc')
 server_jmin=$(get_db_value '.server.junk.jmin')
@@ -36,7 +37,7 @@ H4 = $server_h4
 
 EOF
 
-# Add peers
+# Add peers to server config
 peers_count=$(jq '.peers | keys | length' "$CONFIG_DB")
 if [ "$peers_count" -gt 0 ]; then
     info "Adding $peers_count peer(s) to server config"
@@ -57,7 +58,7 @@ else
     success "Server configuration deployed: $CONF_PATH"
 fi
 
-# Generate peer configs using helper
+# Generate peer configs
 info "${CONFIG_EMOJI} Generating peer configurations..."
 server_pub_key=$(get_db_value '.server.keys.public_key')
 server_endpoint=$(get_db_value '.server.endpoint')
@@ -66,7 +67,7 @@ server_port=$(get_db_value '.server.port')
 for peer in $(jq -r '.peers | keys | sort_by(.[4:] | tonumber) | .[]' "$CONFIG_DB"); do
     peer_data=$(jq -r --arg peer "$peer" '.peers[$peer]' "$CONFIG_DB")
     PEER_CONF_FILE="$PEERS_DIR/${peer}.conf"
-    
+
     cat > "$PEER_CONF_FILE" <<EOF
 [Interface]
 PrivateKey = $(echo "$peer_data" | jq -r '.private_key')
