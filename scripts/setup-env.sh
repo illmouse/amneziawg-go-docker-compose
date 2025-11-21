@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/functions.sh"
 
 WG_ENDPOINT=${WG_ENDPOINT:-}
@@ -94,6 +94,9 @@ EOF
     log "Environment setup complete"
 }
 
-fix_permissions "../$SCRIPT_DIR"
+fix_permissions "$SCRIPT_DIR/scripts"
+fix_permissions "$SCRIPT_DIR/entrypoint"
+
 prompt_user
+
 setup_env
