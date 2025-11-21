@@ -90,5 +90,50 @@ EOF
     
     return 0
 }
+# New function to create .env file with user-selected values
+create_env_file() {
+    log "Creating .env file with user configuration..."
+    
+    local project_dir="$(dirname "$SCRIPT_DIR")"
+    
+    cat > "$project_dir/.env" << EOF
+# .env
+# Mandatory params
+
+# Public endpoint
+WG_ENDPOINT=$WG_ENDPOINT
+
+# Optional default params
+
+# Squid config
+SQUD_ENABLE=$SQUD_ENABLE
+SQUID_PORT=$SQUID_PORT
+
+# Name of the VPN interface inside the container
+WG_IFACE=wg0
+# Server IP and subnet
+WG_ADDRESS=10.100.0.1/24
+# VPN port to accept connections
+WG_PORT=13440
+# Number of peers to create
+WG_PEER_COUNT=$WG_PEER_COUNT
+# Client mode: Connects to peers using configs from config/peers/
+WG_MODE=$WG_MODE
+
+# AmneziaWG tunable parameters
+Jc=3
+Jmin=1
+Jmax=50
+S1=25
+S2=72
+H1=1411927821
+H2=1212681123
+H3=1327217326
+H4=1515483925
+EOF
+
+    log ".env file created with user configuration"
+}
 
 setup_env
+create_env_file
