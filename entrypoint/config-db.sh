@@ -39,16 +39,29 @@ EOF
     success "Created fresh configuration database"
 }
 
-# If missing → initialize
-if [ ! -f "$CONFIG_DB" ]; then
-    warn "Configuration database missing: $CONFIG_DB"
+# 1. File must not be empty
+if [ ! -s "$CONFIG_DB" ]; then
+    error "Config DB is empty — recreating"
     init_config_db
 fi
 
-# If corrupted → reinitialize
-if ! jq empty "$CONFIG_DB" 2>/dev/null; then
-    error "Configuration DB is corrupted — recreating"
+# 2. Basic structure must contain '{'
+if ! grep -q "{" "$CONFIG_DB"; then
+    error "Config DB missing JSON structure — recreating"
     init_config_db
+fi
+
+# 3. jq must parse it, but allow a retry
+if ! jq empty "$CONFIG_DB" >/dev/null 2>&1; then
+    warn "Config DB parsed invalid once — retrying in 0.2s"
+    sleep 0.2
+
+    if ! jq empty "$CONFIG_DB" >/dev/null 2>&1; then
+        error "Config DB confirmed corrupted — recreating"
+        init_config_db
+    else
+        success "Config DB OK on second attempt"
+    fi
 fi
 
 info "Configuration database loaded successfully"
