@@ -94,6 +94,6 @@ EOF
     log "Environment setup complete"
 }
 
-fix_permissions "$SCRIPT_DIR"
+fix_permissions "../$SCRIPT_DIR"
 prompt_user
 setup_env
