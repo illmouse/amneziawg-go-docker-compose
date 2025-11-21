@@ -304,7 +304,8 @@ find_current_peer_config() {
             peer_ip=$(grep -E "^Address[[:space:]]*=" "$peer_file" | head -1 | sed "s/^Address[[:space:]]*=[[:space:]]*//" | tr -d '\r\n' | cut -d/ -f1)
             if [ -n "$peer_ip" ] && [ "$peer_ip" = "$current_ip" ]; then
                 log "🔍 Found current peer config: $(basename "$peer_file")"
-                return "$peer_file"
+                echo "$peer_file"
+                return 0
             fi
         fi
     done
