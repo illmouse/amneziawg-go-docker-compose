@@ -16,3 +16,4 @@ export SQUID_PORT
 export WG_PORT
 export WG_IFACE
 export WG_ADDRESS
+export MASTER_PEER

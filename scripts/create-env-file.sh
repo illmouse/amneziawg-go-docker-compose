@@ -48,6 +48,9 @@ WG_PORT=$WG_PORT
 WG_PEER_COUNT=$WG_PEER_COUNT
 # Client mode: Connects to peers using configs from config/peers/
 WG_MODE=$WG_MODE
+# Master peer - peer config filename that will be main peer
+# if set - once become available tunnel will always be switched to this peer
+MASTER_PEER=
 
 # AmneziaWG tunable parameters
 Jc=$Jc
