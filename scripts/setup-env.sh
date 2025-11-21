@@ -13,6 +13,15 @@ WG_PORT=${WG_PORT:-13440}
 WG_IFACE=${WG_IFACE:-wg0}
 WG_ADDRESS=${WG_ADDRESS:-10.100.0.1/24}
 
+export WG_ENDPOINT
+export WG_MODE
+export WG_PEER_COUNT
+export SQUID_ENABLED
+export SQUID_PORT
+export WG_PORT
+export WG_IFACE
+export WG_ADDRESS
+
 setup_env() {
     log "Setting up environment..."
     

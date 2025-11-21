@@ -126,16 +126,6 @@ prompt_user() {
             fi
         fi
     fi
-    
-    # Export all variables so they're available to child scripts
-    export WG_ENDPOINT
-    export WG_MODE
-    export WG_PEER_COUNT
-    export SQUID_ENABLED
-    export SQUID_PORT
-    export WG_PORT
-    export WG_IFACE
-    export WG_ADDRESS
 }
 
 fix_permissions() {
