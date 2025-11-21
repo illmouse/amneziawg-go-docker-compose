@@ -13,7 +13,17 @@ setup_env() {
     if [ ! -f "$project_dir/.env" ]; then
         log "Creating .env file with generated obfuscation values"
         
-        # Generate random values
+        # Set default values as fallback if variables aren't exported from setup.sh
+        WG_ENDPOINT=${WG_ENDPOINT:-}
+        WG_MODE=${WG_MODE:-server}
+        WG_PEER_COUNT=${WG_PEER_COUNT:-1}
+        SQUD_ENABLE=${SQUD_ENABLE:-true}
+        SQUID_PORT=${SQUID_PORT:-3128}
+        WG_PORT=${WG_PORT:-13440}
+        WG_IFACE=${WG_IFACE:-wg0}
+        WG_ADDRESS=${WG_ADDRESS:-10.100.0.1/24}
+        
+        # Generate random values for obfuscation parameters
         Jc=$(get_random_int 3 10)
         Jmin=$(get_random_int 1 10)
         Jmax=$(get_random_int 50 1000)
@@ -23,18 +33,6 @@ setup_env() {
         H2=$(get_random_header)
         H3=$(get_random_header)
         H4=$(get_random_header)
-        
-        # Use get_public_endpoint function from functions.sh to get public IP
-        WG_ENDPOINT=$(get_public_endpoint)
-        
-        # Set defaults from environment or use defaults
-        WG_PORT=${WG_PORT:-13440}
-        WG_IFACE=${WG_IFACE:-wg0}
-        WG_ADDRESS=${WG_ADDRESS:-10.100.0.1/24}
-        WG_PEER_COUNT=${WG_PEER_COUNT:-1}
-        WG_MODE=${WG_MODE:-server}
-        SQUD_ENABLE=${SQUD_ENABLE:-true}
-        SQUID_PORT=${SQUID_PORT:-3128}
         
         # Create .env file directly from template inside script with all values
         cat > "$project_dir/.env" << EOF
