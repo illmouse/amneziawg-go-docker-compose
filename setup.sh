@@ -40,10 +40,7 @@ fi
 
 prompt_user
 
-# Source setup-env.sh to create .env file with user configuration
-source "$SCRIPT_DIR/scripts/setup-env.sh"
-
-chmod +x "$SCRIPT_DIR"/scripts/*.sh "$SCRIPT_DIR"/entrypoint/*.sh
+fix_permissions("$SCRIPT_DIR")
 
 # Step 1: Install Docker and Docker Compose
 if ! "$SCRIPT_DIR/scripts/install-docker.sh"; then

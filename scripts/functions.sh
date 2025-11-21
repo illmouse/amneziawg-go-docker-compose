@@ -160,3 +160,9 @@ prompt_user() {
         log "Detected public endpoint: $WG_ENDPOINT"
     fi
 }
+
+fix_permissions() {
+    local script_dir="$1"
+
+    chmod +x "$script_dir"/scripts/*.sh "$script_dir"/entrypoint/*.sh
+}
