@@ -141,5 +141,5 @@ prompt_user() {
 fix_permissions() {
     local script_dir="$1"
     log "Fixing permissions for $script_dir/*.sh"
-    chmod +x "$script_dir/*.sh"
+    chmod +x "$script_dir"/*.sh
 }
