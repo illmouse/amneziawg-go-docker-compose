@@ -28,16 +28,37 @@ setup_env() {
             # Use env.example as template
             cp "$project_dir/.env.example" "$project_dir/.env"
             
-            # Update the generated values in the new .env file using | as delimiter to avoid conflicts with / in values
-            sed -i "s|^Jc=.*|Jc=$Jc|" "$project_dir/.env"
-            sed -i "s|^Jmin=.*|Jmin=$Jmin|" "$project_dir/.env"
-            sed -i "s|^Jmax=.*|Jmax=$Jmax|" "$project_dir/.env"
-            sed -i "s|^S1=.*|S1=$S1|" "$project_dir/.env"
-            sed -i "s|^S2=.*|S2=$S2|" "$project_dir/.env"
-            sed -i "s|^H1=.*|H1=$H1|" "$project_dir/.env"
-            sed -i "s|^H2=.*|H2=$H2|" "$project_dir/.env"
-            sed -i "s|^H3=.*|H3=$H3|" "$project_dir/.env"
-            sed -i "s|^H4=.*|H4=$H4|" "$project_dir/.env"
+            # Function to safely replace a line in .env file
+            safe_replace() {
+                local key="$1"
+                local value="$2"
+                local file="$3"
+                
+                # Escape special characters in value for sed
+                # Escape backslash, forward slash, pipe, ampersand, and newline
+                local escaped_value=$(printf '%s' "$value" | sed -e 's/[\/&]/\\&/g' -e ':a;N;$!ba;s/\n/\\n/g')
+                
+                # Check if the key exists in the file
+                if grep -q "^$key=" "$file"; then
+                    # Use sed with | delimiter and escaped value
+                    sed -i "s|^$key=.*|$key=$escaped_value|" "$file"
+                    log "Updated $key=$escaped_value"
+                else
+                    warn "Key $key not found in .env file, appending..."
+                    echo "$key=$escaped_value" >> "$file"
+                fi
+            }
+            
+            # Use safe_replace for each parameter
+            safe_replace "Jc" "$Jc" "$project_dir/.env"
+            safe_replace "Jmin" "$Jmin" "$project_dir/.env"
+            safe_replace "Jmax" "$Jmax" "$project_dir/.env"
+            safe_replace "S1" "$S1" "$project_dir/.env"
+            safe_replace "S2" "$S2" "$project_dir/.env"
+            safe_replace "H1" "$H1" "$project_dir/.env"
+            safe_replace "H2" "$H2" "$project_dir/.env"
+            safe_replace "H3" "$H3" "$project_dir/.env"
+            safe_replace "H4" "$H4" "$project_dir/.env"
             
         else
             warn ".env.example not found, creating basic .env file with generated values"
