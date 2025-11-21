@@ -158,14 +158,4 @@ if [ "$SQUID_ENABLED" = "true" ]; then
     setup_squid
 fi
 
-# Create health check
-cat > "$WG_DIR/client-healthcheck.sh" << 'EOF'
-#!/bin/sh
-if ip link show wg0 >/dev/null 2>&1 && awg show wg0 2>/dev/null | grep -q "peer:"; then
-    exit 0
-fi
-exit 1
-EOF
-chmod +x "$WG_DIR/client-healthcheck.sh"
-
 success "🔍 Client mode setup completed"
