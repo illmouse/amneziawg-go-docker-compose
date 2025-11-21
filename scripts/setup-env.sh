@@ -94,8 +94,8 @@ EOF
     log "Environment setup complete"
 }
 
-fix_permissions "$SCRIPT_DIR/scripts"
-fix_permissions "$SCRIPT_DIR/entrypoint"
+fix_permissions "$SCRIPT_DIR"/scripts
+fix_permissions "$SCRIPT_DIR"/entrypoint
 
 prompt_user
 
