@@ -126,28 +126,6 @@ prompt_user() {
             fi
         fi
     fi
-    
-    # Automatically determine public endpoint using ifconfig.me
-    echo ""
-    log "Determining public endpoint automatically..."
-    
-    # Get public endpoint using the dedicated function
-    WG_ENDPOINT=$(get_public_endpoint)
-    
-    if [ -z "$WG_ENDPOINT" ] || ! [[ "$WG_ENDPOINT" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-        warn "Could not determine public IP automatically. Please provide one manually."
-        echo "This is the public IP or domain name that clients will use to connect to your server"
-        echo "Example: 192.168.1.100 or yourdomain.com"
-        echo -n "Enter public endpoint: "
-        read -r wg_endpoint
-        if [ -z "$wg_endpoint" ]; then
-            error "WG_ENDPOINT is mandatory. Please provide a valid public IP or domain name."
-            exit 1
-        fi
-        WG_ENDPOINT="$wg_endpoint"
-    else
-        log "Detected public endpoint: $WG_ENDPOINT"
-    fi
 }
 
 fix_permissions() {

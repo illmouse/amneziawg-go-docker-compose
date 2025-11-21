@@ -24,67 +24,42 @@ setup_env() {
         H3=$(get_random_header)
         H4=$(get_random_header)
         
-        if [ -f "$project_dir/.env.example" ]; then
-            # Use env.example as template
-            cp "$project_dir/.env.example" "$project_dir/.env"
-            
-            # Function to safely replace a line in .env file
-            safe_replace() {
-                local key="$1"
-                local value="$2"
-                local file="$3"
-                
-                # Escape special characters in value for sed
-                # Escape backslash, forward slash, pipe, ampersand, and newline
-                local escaped_value=$(printf '%s' "$value" | sed -e 's/[\/&]/\\&/g' -e ':a;N;$!ba;s/\n/\\n/g')
-                
-                # Check if the key exists in the file
-                if grep -q "^$key=" "$file"; then
-                    # Use sed with | delimiter and escaped value
-                    sed -i "s|^$key=.*|$key=$escaped_value|" "$file"
-                    log "Updated $key=$escaped_value"
-                else
-                    warn "Key $key not found in .env file, appending..."
-                    echo "$key=$escaped_value" >> "$file"
-                fi
-            }
-            
-            # Use safe_replace for each parameter
-            safe_replace "Jc" "$Jc" "$project_dir/.env"
-            safe_replace "Jmin" "$Jmin" "$project_dir/.env"
-            safe_replace "Jmax" "$Jmax" "$project_dir/.env"
-            safe_replace "S1" "$S1" "$project_dir/.env"
-            safe_replace "S2" "$S2" "$project_dir/.env"
-            safe_replace "H1" "$H1" "$project_dir/.env"
-            safe_replace "H2" "$H2" "$project_dir/.env"
-            safe_replace "H3" "$H3" "$project_dir/.env"
-            safe_replace "H4" "$H4" "$project_dir/.env"
-            
-        else
-            warn ".env.example not found, creating basic .env file with generated values"
-            cat > "$project_dir/.env" << EOF
+        # Use get_public_endpoint function from functions.sh to get public IP
+        WG_ENDPOINT=$(get_public_endpoint)
+        
+        # Set defaults from environment or use defaults
+        WG_PORT=${WG_PORT:-13440}
+        WG_IFACE=${WG_IFACE:-wg0}
+        WG_ADDRESS=${WG_ADDRESS:-10.100.0.1/24}
+        WG_PEER_COUNT=${WG_PEER_COUNT:-1}
+        WG_MODE=${WG_MODE:-server}
+        SQUD_ENABLE=${SQUD_ENABLE:-true}
+        SQUID_PORT=${SQUID_PORT:-3128}
+        
+        # Create .env file directly from template inside script with all values
+        cat > "$project_dir/.env" << EOF
 # .env
 # Mandatory params
 
 # Public endpoint
-WG_ENDPOINT=
+WG_ENDPOINT=$WG_ENDPOINT
 
 # Optional default params
 
 # Squid config
-SQUD_ENABLE=true
-SQUID_PORT=3128
+SQUD_ENABLE=$SQUD_ENABLE
+SQUID_PORT=$SQUID_PORT
 
 # Name of the VPN interface inside the container
-WG_IFACE=wg0
+WG_IFACE=$WG_IFACE
 # Server IP and subnet
-WG_ADDRESS=10.100.0.1/24
+WG_ADDRESS=$WG_ADDRESS
 # VPN port to accept connections
-WG_PORT=13440
+WG_PORT=$WG_PORT
 # Number of peers to create
-WG_PEER_COUNT=1
+WG_PEER_COUNT=$WG_PEER_COUNT
 # Client mode: Connects to peers using configs from config/peers/
-WG_MODE=server
+WG_MODE=$WG_MODE
 
 # AmneziaWG tunable parameters
 Jc=$Jc
@@ -97,38 +72,14 @@ H2=$H2
 H3=$H3
 H4=$H4
 EOF
-        fi
         
         log "Generated obfuscation values:"
         log "  Jc=$Jc, Jmin=$Jmin, Jmax=$Jmax"
         log "  S1=$S1, S2=$S2"
         log "  H1=$H1, H2=$H2, H3=$H3, H4=$H4"
+        log "WG_ENDPOINT set to: $WG_ENDPOINT"
     else
         log ".env file already exists, using existing values"
-    fi
-    
-    # Check if WG_ENDPOINT is empty or not set
-    if grep -q "WG_ENDPOINT=\"\"\|WG_ENDPOINT=''\|^WG_ENDPOINT=\$" "$project_dir/.env" || ! grep -q "^WG_ENDPOINT=" "$project_dir/.env"; then
-        warn "WG_ENDPOINT is not set or empty in .env file"
-        log "Detecting public IP address..."
-        
-        # Try to get public IP using ifconfig.me
-        if PUBLIC_IP=$(curl -s -m 10 ifconfig.me); then
-            log "Detected public IP: $PUBLIC_IP"
-            user_endpoint="$PUBLIC_IP"
-        else
-            error "Failed to detect public IP automatically"
-            echo "Please enter your server's public IP address or domain name:"
-            read -r user_endpoint
-        fi
-        
-        # Remove existing WG_ENDPOINT line if it exists
-        grep -v "^WG_ENDPOINT=" "$project_dir/.env" > "$project_dir/.env.tmp" || true
-        mv "$project_dir/.env.tmp" "$project_dir/.env"
-        
-        # Add the new WG_ENDPOINT
-        echo "WG_ENDPOINT=$user_endpoint" >> "$project_dir/.env"
-        log "WG_ENDPOINT has been set to: $user_endpoint"
     fi
     
     # Source the .env file to make variables available in this script
@@ -139,24 +90,6 @@ EOF
         error "WG_ENDPOINT is not set in .env file"
         exit 1
     fi
-    
-    # Set default values if not already set
-    WG_PORT=${WG_PORT:-13440}
-    WG_IFACE=${WG_IFACE:-wg0}
-    WG_ADDRESS=${WG_ADDRESS:-10.100.0.1/24}
-    WG_PEER_COUNT=${WG_PEER_COUNT:-1}
-    WG_MODE=${WG_MODE:-server}
-    SQUD_ENABLE=${SQUD_ENABLE:-true}
-    SQUID_PORT=${SQUID_PORT:-3128}
-    
-    # Update .env with any defaults that were missing
-    sed -i "s/^WG_PORT=.*/WG_PORT=$WG_PORT/" "$project_dir/.env"
-    sed -i "s/^WG_IFACE=.*/WG_IFACE=$WG_IFACE/" "$project_dir/.env"
-    sed -i "s/^WG_ADDRESS=.*/WG_ADDRESS=$WG_ADDRESS/" "$project_dir/.env"
-    sed -i "s/^WG_PEER_COUNT=.*/WG_PEER_COUNT=$WG_PEER_COUNT/" "$project_dir/.env"
-    sed -i "s/^WG_MODE=.*/WG_MODE=$WG_MODE/" "$project_dir/.env"
-    sed -i "s/^SQUD_ENABLE=.*/SQUD_ENABLE=$SQUD_ENABLE/" "$project_dir/.env"
-    sed -i "s/^SQUID_PORT=.*/SQUID_PORT=$SQUID_PORT/" "$project_dir/.env"
     
     log "Environment setup complete"
 }
