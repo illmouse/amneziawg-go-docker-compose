@@ -277,7 +277,7 @@ setup_wireguard_routing() {
         
         # Step 2: Change default route to WireGuard
         ip route del default
-        ip route add default dev wg0
+        ip route add default dev $WG_IFACE
         
         # Step 3: Add specific route for Docker network and local clients
         # ip route add 172.16.0.0/12 via $DEFAULT_GW dev $DEFAULT_IFACE

@@ -8,7 +8,7 @@ set -e
 
 # Configuration
 WG_DIR="/etc/amneziawg"
-WG_IFACE="wg0"
+# WG_IFACE=$WG_IFACE
 LOG_FILE="/var/log/amneziawg/unified-monitor.log"
 CHECK_INTERVAL=30
 CHECK_TIMEOUT=10
@@ -26,7 +26,7 @@ check_tunnel_health() {
         return 1
     fi
     
-    if ! has_valid_wg_config "$WG_DIR/wg0.conf"; then
+    if ! has_valid_wg_config "$WG_DIR/$WG_IFACE.conf"; then
         return 1
     fi
     
@@ -43,7 +43,7 @@ check_tunnel_health() {
 # Function to reassemble a peer configuration using client-mode.sh logic
 reassemble_peer_config() {
     local peer_config="$1"
-    local output_config="$WG_DIR/wg0.conf"
+    local output_config="$WG_DIR/$WG_IFACE.conf"
     
     if [ -z "$peer_config" ] || [ ! -f "$peer_config" ]; then
         error "Cannot reassemble invalid peer config: $peer_config"
@@ -187,7 +187,7 @@ switch_to_peer_config() {
         fi
         
         # Apply the reassembled configuration
-        if awg setconf "$WG_IFACE" "$WG_DIR/wg0.conf" >>"$LOG_FILE" 2>&1; then
+        if awg setconf "$WG_IFACE" "$WG_DIR/$WG_IFACE.conf" >>"$LOG_FILE" 2>&1; then
             log "✅ Successfully applied WireGuard configuration"
             
             # Add new IP address to interface
@@ -196,7 +196,7 @@ switch_to_peer_config() {
                 if ip addr add "$new_ip" dev "$WG_IFACE" 2>/dev/null; then
                     log "✅ Successfully added IP $new_ip to $WG_IFACE"
                     
-                    # Add default route via wg0 interface
+                    # Add default route via $WG_IFACE interface
                     log "🛣️ Adding default route via $WG_IFACE"
                     if ip route add default dev "$WG_IFACE" 2>/dev/null; then
                         log "✅ Successfully added default route via $WG_IFACE"
@@ -267,7 +267,7 @@ check_container_health() {
         return 1
     fi
     
-    if ! has_valid_wg_config "$WG_DIR/wg0.conf"; then
+    if ! has_valid_wg_config "$WG_DIR/$WG_IFACE.conf"; then
         return 1
     fi
     
@@ -301,7 +301,7 @@ find_current_peer_config() {
     for peer_file in "${peer_files[@]}"; do
         if [ -f "$peer_file" ]; then
             # Extract IP from peer config file
-            peer_ip=$(grep -E "^Address[[:space:]]*=" "$peer_file" | head -1 | sed "s/^Address[[:space:]]*=[[:space:]]*//" | tr -d '\r\n')
+            peer_ip=$(grep -E "^Address[[:space:]]*=" "$peer_file" | head -1 | sed "s/^Address[[:space:]]*=[[:space:]]*//" | tr -d '\r\n' | cut -d/ -f1)
             if [ -n "$peer_ip" ] && [ "$peer_ip" = "$current_ip" ]; then
                 log "🔍 Found current peer config: $(basename "$peer_file")"
                 echo "$peer_file"
@@ -322,18 +322,18 @@ log "🚀 Starting unified monitoring system in $WG_MODE mode"
 log "⏳ Waiting for assembled WireGuard configuration to be created..."
 max_wait=60
 waited=0
-while [ ! -f "$WG_DIR/wg0.conf" ] && [ $waited -lt $max_wait ]; do
+while [ ! -f "$WG_DIR/$WG_IFACE.conf" ] && [ $waited -lt $max_wait ]; do
     sleep 2
     waited=$((waited + 2))
-    log "⏳ Still waiting for $WG_DIR/wg0.conf... ($waited seconds elapsed)"
+    log "⏳ Still waiting for $WG_DIR/$WG_IFACE.conf... ($waited seconds elapsed)"
 done
 
-if [ ! -f "$WG_DIR/wg0.conf" ]; then
+if [ ! -f "$WG_DIR/$WG_IFACE.conf" ]; then
     error "Timed out waiting for assembled WireGuard configuration to be created"
     exit 1
 fi
 
-log "✅ Assembled WireGuard configuration found: $WG_DIR/wg0.conf"
+log "✅ Assembled WireGuard configuration found: $WG_DIR/$WG_IFACE.conf"
 
 # Main monitoring loop based on mode
 while true; do
