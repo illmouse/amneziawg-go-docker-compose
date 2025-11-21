@@ -10,7 +10,7 @@ set -e
 WG_DIR="/etc/amneziawg"
 # WG_IFACE=$WG_IFACE
 LOG_FILE="/var/log/amneziawg/unified-monitor.log"
-CHECK_INTERVAL=30
+CHECK_INTERVAL=10
 CHECK_TIMEOUT=10
 EXTERNAL_CHECK_TARGET="8.8.8.8"
 
