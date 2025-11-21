@@ -40,6 +40,9 @@ if [ -f ".env" ]; then
     esac
 fi
 
+fix_permissions "$SCRIPT_DIR"/scripts
+fix_permissions "$SCRIPT_DIR"/entrypoint
+
 # Step 1: Install Docker and Docker Compose
 if ! "$SCRIPT_DIR/scripts/install-docker.sh"; then
     error "Docker installation failed"
