@@ -23,29 +23,69 @@ SECURITY_EMOJI="🔒"
 DNS_EMOJI="🌍"
 SQUID_EMOJI="🦑"
 
+# Log levels (in order of verbosity)
+LOG_ERROR=0
+LOG_WARN=1
+LOG_INFO=2
+LOG_DEBUG=3
+
+# Default log level if not set
+DEFAULT_LOG_LEVEL=$LOG_INFO
+
+# Get current log level, default to INFO if not set
+get_log_level() {
+    case "${LOG_LEVEL:-}" in
+        "ERROR") return $LOG_ERROR ;;
+        "WARN")  return $LOG_WARN ;;
+        "INFO")  return $LOG_INFO ;;
+        "DEBUG") return $LOG_DEBUG ;;
+        *)       return $DEFAULT_LOG_LEVEL ;;
+    esac
+}
+
+# Check if we should log at the given level
+should_log() {
+    local level=$1
+    get_log_level
+    local current_level=$?
+    [ $level -le $current_level ]
+}
+
 log() { 
-    echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] ${INFO_EMOJI} $*" | tee -a "$WG_LOGFILE" 
+    if should_log $LOG_INFO; then
+        echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] ${INFO_EMOJI} $*" | tee -a "$WG_LOGFILE" 
+    fi
 }
 
 success() { 
-    echo -e "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] ${GREEN}${SUCCESS_EMOJI} $*${NC}" | tee -a "$WG_LOGFILE" 
+    if should_log $LOG_INFO; then
+        echo -e "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] ${GREEN}${SUCCESS_EMOJI} $*${NC}" | tee -a "$WG_LOGFILE" 
+    fi
 }
 
 warn() { 
-    echo -e "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] ${YELLOW}${WARNING_EMOJI} $*${NC}" | tee -a "$WG_LOGFILE" 
+    if should_log $LOG_WARN; then
+        echo -e "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] ${YELLOW}${WARNING_EMOJI} $*${NC}" | tee -a "$WG_LOGFILE" 
+    fi
 }
 
 error() { 
-    echo -e "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] ${RED}${ERROR_EMOJI} ERROR: $*${NC}" | tee -a "$WG_LOGFILE" 
+    if should_log $LOG_ERROR; then
+        echo -e "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] ${RED}${ERROR_EMOJI} ERROR: $*${NC}" | tee -a "$WG_LOGFILE" 
+    fi
     exit 1
 }
 
 info() { 
-    echo -e "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] ${BLUE}${INFO_EMOJI} $*${NC}" | tee -a "$WG_LOGFILE" 
+    if should_log $LOG_INFO; then
+        echo -e "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] ${BLUE}${INFO_EMOJI} $*${NC}" | tee -a "$WG_LOGFILE" 
+    fi
 }
 
 debug() { 
-    echo -e "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] ${CYAN}${CONFIG_EMOJI} $*${NC}" | tee -a "$WG_LOGFILE" 
+    if should_log $LOG_DEBUG; then
+        echo -e "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] ${CYAN}${CONFIG_EMOJI} $*${NC}" | tee -a "$WG_LOGFILE" 
+    fi
 }
 
 gen_key() { 
