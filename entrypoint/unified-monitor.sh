@@ -8,14 +8,9 @@ set -e
 
 # Configuration
 WG_DIR="/etc/amneziawg"
-# WG_IFACE=$WG_IFACE
-LOG_FILE="/var/log/amneziawg/unified-monitor.log"
 CHECK_INTERVAL=10
 CHECK_TIMEOUT=10
 EXTERNAL_CHECK_TARGET="8.8.8.8"
-
-# Ensure log directory exists
-mkdir -p "$(dirname "$LOG_FILE")"
 
 # Function to check tunnel health (client mode)
 check_tunnel_health() {
@@ -187,7 +182,7 @@ switch_to_peer_config() {
         fi
         
         # Apply the reassembled configuration
-        if awg setconf "$WG_IFACE" "$WG_DIR/$WG_IFACE.conf" >>"$LOG_FILE" 2>&1; then
+        if awg setconf "$WG_IFACE" "$WG_DIR/$WG_IFACE.conf" 2>/dev/null; then
             log "✅ Successfully applied WireGuard configuration"
             
             # Add new IP address to interface
