@@ -24,7 +24,7 @@ jobs:
 
     - name: Login to GHCR
       run: |
-        echo "${{ secrets.TOKEN }}" | buildah login ghcr.io -u ${{ github.actor }} --password-stdin
+        echo "${{ secrets.GITHUB_TOKEN }}" | buildah login ghcr.io -u ${{ github.actor }} --password-stdin
 
     - name: Build image
       run: |
