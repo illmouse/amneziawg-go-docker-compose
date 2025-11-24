@@ -27,10 +27,10 @@ check_tunnel_health() {
     
     # Check if we can reach the external target with ping
     if ping -c 3 -W "$timeout" "$test_target" >/dev/null 2>&1; then
-        log "✅ Tunnel health check passed: $test_target"
+        success "Tunnel health check passed: $test_target"
         return 0
     else
-        log "❌ Tunnel health check failed: $test_target"
+        error "Tunnel health check failed: $test_target"
         return 1
     fi
 }
@@ -111,7 +111,7 @@ EOF
         echo "$peer_buffer" >> "$output_config"
     fi
     
-    log "✅ Successfully reassembled configuration to $output_config"
+    success "Successfully reassembled configuration to $output_config"
     return 0
 }
 
@@ -174,45 +174,45 @@ switch_to_peer_config() {
             if [ -n "$current_ip" ]; then
                 log "🧹 Removing current IP $current_ip from $WG_IFACE"
                 if ip addr del "$current_ip" dev "$WG_IFACE" 2>/dev/null; then
-                    log "✅ Successfully removed IP $current_ip from $WG_IFACE"
+                    success "Successfully removed IP $current_ip from $WG_IFACE"
                 else
-                    log "⚠️ Failed to remove IP $current_ip from $WG_IFACE"
+                    warning "Failed to remove IP $current_ip from $WG_IFACE"
                 fi
             fi
         fi
         
         # Apply the reassembled configuration
         if awg setconf "$WG_IFACE" "$WG_DIR/$WG_IFACE.conf" 2>/dev/null; then
-            log "✅ Successfully applied WireGuard configuration"
+            success "Successfully applied WireGuard configuration"
             
             # Add new IP address to interface
             if [ -n "$new_ip" ]; then
                 log "➕ Adding new IP $new_ip to $WG_IFACE"
                 if ip addr add "$new_ip" dev "$WG_IFACE" 2>/dev/null; then
-                    log "✅ Successfully added IP $new_ip to $WG_IFACE"
+                    success "Successfully added IP $new_ip to $WG_IFACE"
                     
                     # Add default route via $WG_IFACE interface
                     log "🛣️ Adding default route via $WG_IFACE"
                     if ip route add default dev "$WG_IFACE" 2>/dev/null; then
-                        log "✅ Successfully added default route via $WG_IFACE"
+                        success "Successfully added default route via $WG_IFACE"
                     else
-                        log "⚠️ Failed to add default route via $WG_IFACE"
+                        warning "Failed to add default route via $WG_IFACE"
                         # Don't fail the entire operation, as the interface may still work
                     fi
                 else
-                    log "❌ Failed to add IP $new_ip to $WG_IFACE"
+                    error "Failed to add IP $new_ip to $WG_IFACE"
                     return 1
                 fi
             fi
             
-            log "✅ Successfully switched to $(basename "$new_config")"
+            success "Successfully switched to $(basename "$new_config")"
             return 0
         else
-            log "❌ Failed to apply reassembled configuration: $new_config"
+            error "Failed to apply reassembled configuration: $new_config"
             return 1
         fi
     else
-        log "❌ Failed to reassemble configuration: $new_config"
+        error "Failed to reassemble configuration: $new_config"
         return 1
     fi
 }
@@ -220,7 +220,7 @@ switch_to_peer_config() {
 # Function to check if WireGuard interface is up
 is_wg_interface_up() {
     if ! ip link show "$WG_IFACE" >/dev/null 2>&1; then
-        log "❌ WireGuard interface $WG_IFACE is down"
+        error "WireGuard interface $WG_IFACE is down"
         return 1
     fi
     return 0
@@ -241,7 +241,7 @@ get_wg_interface_ip() {
 has_valid_wg_config() {
     local config_file="$1"
     if [ ! -f "$config_file" ]; then
-        log "❌ No WireGuard configuration found at $config_file"
+        error "No WireGuard configuration found at $config_file"
         return 1
     fi
     return 0
@@ -250,7 +250,7 @@ has_valid_wg_config() {
 # Function to check if WireGuard is listening
 is_wg_listening() {
     if ! awg show "$WG_IFACE" 2>/dev/null | grep -q "listening"; then
-        log "❌ WireGuard is not listening on $WG_IFACE"
+        error "WireGuard is not listening on $WG_IFACE"
         return 1
     fi
     return 0
@@ -272,10 +272,10 @@ check_container_health() {
     
     # Check if we can reach the external target with ping
     if ping -c 3 -W "$CHECK_TIMEOUT" "$EXTERNAL_CHECK_TARGET" >/dev/null 2>&1; then
-        log "✅ Server health check passed: $EXTERNAL_CHECK_TARGET"
+        success "Server health check passed: $EXTERNAL_CHECK_TARGET"
         return 0
     else
-        log "❌ Server health check failed: $EXTERNAL_CHECK_TARGET"
+        error "Server health check failed: $EXTERNAL_CHECK_TARGET"
         return 1
     fi
 }
@@ -307,7 +307,7 @@ find_current_peer_config() {
     done
     
     # If no matching peer config found
-    log "⚠️ No peer configuration found matching IP $current_ip"
+    warning "No peer configuration found matching IP $current_ip"
     echo ""
 }
 
@@ -329,14 +329,14 @@ if [ ! -f "$WG_DIR/$WG_IFACE.conf" ]; then
     exit 1
 fi
 
-log "✅ Assembled WireGuard configuration found: $WG_DIR/$WG_IFACE.conf"
+success "Assembled WireGuard configuration found: $WG_DIR/$WG_IFACE.conf"
 
 # Main monitoring loop based on mode
 while true; do
     if [ "$WG_MODE" = "client" ]; then
         # Client mode monitoring
         if [ ! -d "$CLIENT_PEERS_DIR" ]; then
-            log "⚠️ No peer configuration directory found in $CLIENT_PEERS_DIR"
+            warning "No peer configuration directory found in $CLIENT_PEERS_DIR"
             sleep "$CHECK_INTERVAL"
             continue
         fi
@@ -344,7 +344,7 @@ while true; do
         # Get all peer configs
         peer_files=("$CLIENT_PEERS_DIR"/*.conf)
         if [ ${#peer_files[@]} -eq 0 ] || [ ! -f "${peer_files[0]}" ]; then
-            log "⚠️ No peer configuration files found in $CLIENT_PEERS_DIR"
+            warning "No peer configuration files found in $CLIENT_PEERS_DIR"
             sleep "$CHECK_INTERVAL"
             continue
         fi
@@ -359,7 +359,7 @@ while true; do
         if [ -n "$MASTER_PEER" ]; then
             master_peer_config="$CLIENT_PEERS_DIR/$MASTER_PEER"
             if [ ! -f "$master_peer_config" ]; then
-                log "⚠️ MASTER_PEER $MASTER_PEER specified but file not found"
+                warning "MASTER_PEER $MASTER_PEER specified but file not found"
                 master_peer_config=""
             fi
         fi
@@ -387,7 +387,7 @@ while true; do
                     if [ -n "$master_host" ] && [ -n "$master_port" ]; then
                         # Check if master peer is reachable
                         if nc -zvu "$master_host" "$master_port" >/dev/null 2>&1; then
-                            log "✅ Master peer $MASTER_PEER is reachable, switching back to it"
+                            success "Master peer $MASTER_PEER is reachable, switching back to it"
                             if switch_to_peer_config "$master_peer_config" "$current_peer_config"; then
                                 current_peer_config="$master_peer_config"
                             fi
@@ -399,26 +399,26 @@ while true; do
             sleep "$CHECK_INTERVAL"
         else
             # Tunnel is down, determine which peer to switch to
-            log "⚠️ Tunnel is down, attempting to switch to next peer configuration..."
+            warning "Tunnel is down, attempting to switch to next peer configuration..."
             
             # If we have a master peer and it's not the current one, try master first
             if [ -n "$master_peer_config" ] && [ -n "$current_peer_config" ] && [ "$current_peer_config" != "$master_peer_config" ]; then
                 # Try master peer first
                 if switch_to_peer_config "$master_peer_config" "$current_peer_config"; then
                     current_peer_config="$master_peer_config"
-                    log "✅ Switched to master peer $MASTER_PEER"
+                    success "Switched to master peer $MASTER_PEER"
                 else
-                    log "❌ Failed to switch to master peer $MASTER_PEER, trying next available peer"
+                    warning "Failed to switch to master peer $MASTER_PEER, trying next available peer"
                     # Get next peer config from sorted list
                     next_peer_config=$(get_next_peer_config "$current_peer_config")
                     if [ -n "$next_peer_config" ] && [ -f "$next_peer_config" ]; then
                         if switch_to_peer_config "$next_peer_config" "$current_peer_config"; then
                             current_peer_config="$next_peer_config"
                         else
-                            log "❌ Failed to switch to next peer configuration, will retry in $CHECK_INTERVAL seconds"
+                            warning "Failed to switch to next peer configuration, will retry in $CHECK_INTERVAL seconds"
                         fi
                     else
-                        log "❌ No valid next peer configuration found, will retry in $CHECK_INTERVAL seconds"
+                        warning "No valid next peer configuration found, will retry in $CHECK_INTERVAL seconds"
                     fi
                 fi
             else
@@ -438,10 +438,10 @@ while true; do
                     if switch_to_peer_config "$next_peer_config" "$current_peer_config"; then
                         current_peer_config="$next_peer_config"
                     else
-                        log "❌ Failed to switch to next peer configuration, will retry in $CHECK_INTERVAL seconds"
+                        error "Failed to switch to next peer configuration, will retry in $CHECK_INTERVAL seconds"
                     fi
                 else
-                    log "❌ No valid next peer configuration found, will retry in $CHECK_INTERVAL seconds"
+                    warning "No valid next peer configuration found, will retry in $CHECK_INTERVAL seconds"
                 fi
             fi
             
@@ -456,12 +456,12 @@ while true; do
             sleep "$CHECK_INTERVAL"
         else
             # Server is unhealthy, log and wait
-            log "⚠️ Server is unhealthy, will retry in $CHECK_INTERVAL seconds"
+            warning "Server is unhealthy, will retry in $CHECK_INTERVAL seconds"
             sleep "$CHECK_INTERVAL"
         fi
         
     else
-        log "❌ Unknown WG_MODE: $WG_MODE. Expected 'server' or 'client'"
+        error "Unknown WG_MODE: $WG_MODE. Expected 'server' or 'client'"
         sleep "$CHECK_INTERVAL"
     fi
 done
