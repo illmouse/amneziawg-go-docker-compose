@@ -1,6 +1,6 @@
 services:
   amneziawg:
-    image: amneziavpn/amneziawg-go:0.2.15
+    image:  ghcr.io/illmouse/amneziawg-go:latest
     container_name: amneziawg
     env_file:
       - .env
@@ -13,17 +13,10 @@ services:
       - /dev/net/tun:/dev/net/tun
     ports:
       - ${WG_PORT}:${WG_PORT}/udp
+      - ${SQUID_PORT}:${SQUID_PORT}/tcp
     volumes:
       - ./config:/etc/amneziawg
       - ./logs:/var/log/amneziawg
-      - ./entrypoint:/entrypoint:ro
-    entrypoint: ["/entrypoint/main.sh"]
-    healthcheck:
-      test: ["CMD", "sh", "-c", "ip link show wg0 && awg show wg0 2>/dev/null | grep -q listening"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
     restart: always
     networks:
       awg:

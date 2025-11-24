@@ -1,4 +1,0 @@
-# AmneziaWG Container Monitor - runs every minute
-# copy amneziawg-monitor.sh to /usr/local/bin/amneziawg-monitor.sh
-# copy this file to /etc/cron.d/
-* * * * * root /usr/local/bin/amneziawg-monitor.sh

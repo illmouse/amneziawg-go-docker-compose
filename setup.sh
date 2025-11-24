@@ -8,18 +8,10 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export SCRIPT_DIR
 
-log() {
-    echo -e "${GREEN}[SETUP]${NC} $*"
-}
-
-warn() {
-    echo -e "${YELLOW}[WARNING]${NC} $*"
-}
-
-error() {
-    echo -e "${RED}[ERROR]${NC} $*"
-}
+source "$SCRIPT_DIR/scripts/functions.sh"
+source "$SCRIPT_DIR/scripts/env.sh"
 
 # Check if running as root
 if [ "$EUID" -ne 0 ]; then
@@ -27,47 +19,55 @@ if [ "$EUID" -ne 0 ]; then
     exit 1
 fi
 
-main() {
-    log "Starting AmneziaWG setup..."
+fix_permissions "$SCRIPT_DIR"/scripts
+# fix_permissions "$SCRIPT_DIR"/entrypoint
 
-    chmod +x "$SCRIPT_DIR"/scripts/*.sh "$SCRIPT_DIR"/entrypoint/*.sh
-    
-    # Step 1: Install Docker and Docker Compose
-    if ! "$SCRIPT_DIR/scripts/install-docker.sh"; then
-        error "Docker installation failed"
-        exit 1
-    fi
-    
-    # Step 2: Configure system settings
-    if ! "$SCRIPT_DIR/scripts/configure-system.sh"; then
-        error "System configuration failed"
-        exit 1
-    fi
-    
-    # Step 3: Setup environment
-    if ! "$SCRIPT_DIR/scripts/setup-env.sh"; then
-        error "Environment setup failed"
-        exit 1
-    fi
-    
-    # Step 4: Deploy monitoring
-    if ! "$SCRIPT_DIR/scripts/deploy-monitoring.sh"; then
-        error "Monitoring deployment failed"
-        exit 1
-    fi
-    
-    # Step 5: Start services
-    if ! "$SCRIPT_DIR/scripts/start-services.sh"; then
-        error "Service startup failed"
-        exit 1
-    fi
-    
-    log "Setup complete!"
-    log "- IP forwarding configured in /etc/sysctl.conf"
-    log "- Monitor script: /usr/local/bin/amneziawg-monitor.sh"
-    log "- Cron job: /etc/cron.d/amneziawg-monitor"
-    log "- Container logs: docker logs amneziawg"
-    log "- .env file configured with WG_ENDPOINT and obfuscation values"
-}
+# Check if .env exists and ask for overwrite
+if [ -f ".env" ]; then
+    echo ""
+    warn ".env file already exists!"
+    echo -n "Overwrite .env with new configuration? (y/n, default n): "
+    read -r overwrite_choice
+    case "$overwrite_choice" in
+        y|Y|yes|Yes|YES)
+            log "Overwriting existing .env file"
+            ;;
+        n|N|no|No|NO|"")
+            log "Exiting without overwriting .env"
+            exit 0
+            ;;
+        *)
+            log "Invalid choice, defaulting to no overwrite"
+            exit 0
+            ;;
+    esac
+fi
 
-main "$@"
+# Step 1: Install Docker and Docker Compose
+if ! "$SCRIPT_DIR/scripts/install-docker.sh"; then
+    error "Docker installation failed"
+    exit 1
+fi
+
+# Step 2: Configure system settings
+if ! "$SCRIPT_DIR/scripts/configure-system.sh"; then
+    error "System configuration failed"
+    exit 1
+fi
+
+# Step 3: Create .env file
+if ! "$SCRIPT_DIR/scripts/create-env-file.sh"; then
+    error "Environment setup failed"
+    exit 1
+fi
+
+# Step 4: Setup logrotate for logs
+if ! "$SCRIPT_DIR/scripts/logrotate.sh"; then
+    error "Logrotate setup failed"
+    exit 1
+fi
+
+# Step 5: Start services
+start_services
+
+log "Setup complete!"
