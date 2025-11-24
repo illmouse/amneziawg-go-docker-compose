@@ -10,7 +10,10 @@ jobs:
       image: quay.io/buildah/stable:latest
       options: --privileged --device /dev/fuse
     permissions:
+      contents: read
       packages: write
+      id-token: write
+      attestations: write
 
     steps:
     - name: Checkout
