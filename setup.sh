@@ -20,7 +20,7 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 fix_permissions "$SCRIPT_DIR"/scripts
-fix_permissions "$SCRIPT_DIR"/entrypoint
+# fix_permissions "$SCRIPT_DIR"/entrypoint
 
 # Check if .env exists and ask for overwrite
 if [ -f ".env" ]; then
