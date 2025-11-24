@@ -17,8 +17,8 @@ services:
     volumes:
       - ./config:/etc/amneziawg
       - ./logs:/var/log/amneziawg
-      - ./entrypoint:/entrypoint:ro
-    entrypoint: ["/entrypoint/main.sh"]
+      # - ./entrypoint:/entrypoint:ro
+    # entrypoint: ["/entrypoint/main.sh"]
     restart: always
     networks:
       awg:
