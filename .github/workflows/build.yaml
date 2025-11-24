@@ -1,7 +1,10 @@
-name: Build All Branches
+name: Build All
 on:
   push:
     branches: ['**']
+    tags:
+      - 'v*'
+      - '*'
 
 jobs:
   build:
@@ -12,18 +15,27 @@ jobs:
     permissions:
       contents: read
       packages: write
-      id-token: write
-      attestations: write
 
     steps:
     - name: Checkout
       uses: actions/checkout@v4
 
-    - name: Sanitize branch name
-      id: sanitize
+    - name: Determine build type and tags
+      id: vars
       run: |
-        BRANCH_NAME=$(echo "${{ github.ref_name }}" | sed 's/[^a-zA-Z0-9._-]/-/g')
-        echo "branch=${BRANCH_NAME}" >> $GITHUB_OUTPUT
+        if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+          # Tag push - use the tag name
+          TAG_NAME=${GITHUB_REF#refs/tags/}
+          echo "build_type=tag" >> $GITHUB_OUTPUT
+          echo "tag_name=${TAG_NAME}" >> $GITHUB_OUTPUT
+          echo "Building for TAG: ${TAG_NAME}"
+        else
+          # Branch push - use branch naming
+          BRANCH_NAME=$(echo "${GITHUB_REF#refs/heads/}" | sed 's/[^a-zA-Z0-9._-]/-/g')
+          echo "build_type=branch" >> $GITHUB_OUTPUT
+          echo "branch_name=${BRANCH_NAME}" >> $GITHUB_OUTPUT
+          echo "Building for BRANCH: ${BRANCH_NAME}"
+        fi
 
     - name: Login to GHCR
       run: |
@@ -31,29 +43,34 @@ jobs:
 
     - name: Build image
       run: |
-        # Always build SHA tag
-        TAGS="--tag ghcr.io/${{ github.repository_owner }}/amneziawg-go:${{ github.sha }}"
-        
-        # Add appropriate tag based on branch
-        if [ "${{ github.ref }}" == "refs/heads/main" ]; then
-          TAGS="$TAGS --tag ghcr.io/${{ github.repository_owner }}/amneziawg-go:latest"
+        if [ "${{ steps.vars.outputs.build_type }}" == "tag" ]; then
+          # Build for tag/release
+          buildah bud \
+            --tag ghcr.io/${{ github.repository_owner }}/amneziawg-go:${{ steps.vars.outputs.tag_name }} \
+            --tag ghcr.io/${{ github.repository_owner }}/amneziawg-go:latest \
+            .
         else
-          TAGS="$TAGS --tag ghcr.io/${{ github.repository_owner }}/amneziawg-go:${{ steps.sanitize.outputs.branch }}-latest"
+          # Build for branch
+          buildah bud \
+            --tag ghcr.io/${{ github.repository_owner }}/amneziawg-go:${{ github.sha }} \
+            --tag ghcr.io/${{ github.repository_owner }}/amneziawg-go:${{ steps.vars.outputs.branch_name }}-latest \
+            .
         fi
-        
-        buildah bud $TAGS .
 
-    - name: Push tags
+    - name: Push image
       run: |
-        # Always push SHA tag
-        echo "Pushing SHA tag: ${{ github.sha }}"
-        buildah push ghcr.io/${{ github.repository_owner }}/amneziawg-go:${{ github.sha }}
-        
-        # Push appropriate branch tag
-        if [ "${{ github.ref }}" == "refs/heads/main" ]; then
-          echo "Pushing latest tag"
+        if [ "${{ steps.vars.outputs.build_type }}" == "tag" ]; then
+          # Push tag/release images
+          echo "Pushing release images:"
+          echo "- ${{ steps.vars.outputs.tag_name }}"
+          echo "- latest"
+          buildah push ghcr.io/${{ github.repository_owner }}/amneziawg-go:${{ steps.vars.outputs.tag_name }}
           buildah push ghcr.io/${{ github.repository_owner }}/amneziawg-go:latest
         else
-          echo "Pushing branch tag: ${{ steps.sanitize.outputs.branch }}-latest"
-          buildah push ghcr.io/${{ github.repository_owner }}/amneziawg-go:${{ steps.sanitize.outputs.branch }}-latest
+          # Push branch images
+          echo "Pushing branch images:"
+          echo "- ${{ github.sha }}"
+          echo "- ${{ steps.vars.outputs.branch_name }}-latest"
+          buildah push ghcr.io/${{ github.repository_owner }}/amneziawg-go:${{ github.sha }}
+          buildah push ghcr.io/${{ github.repository_owner }}/amneziawg-go:${{ steps.vars.outputs.branch_name }}-latest
         fi
