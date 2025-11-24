@@ -73,7 +73,6 @@ error() {
     if should_log $LOG_ERROR; then
         echo -e "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] ${RED}${ERROR_EMOJI} ERROR: $*${NC}" | tee -a "$WG_LOGFILE" 
     fi
-    exit 1
 }
 
 info() { 
