@@ -73,7 +73,6 @@ error() {
     if should_log $LOG_ERROR; then
         echo -e "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] ${RED}${ERROR_EMOJI} ERROR: $*${NC}" | tee -a "$WG_LOGFILE" 
     fi
-    exit 1
 }
 
 info() { 
@@ -333,7 +332,7 @@ setup_wireguard_routing() {
         if ping -c 2 -W 2 8.8.8.8 >/dev/null 2>&1; then
             success "WireGuard connectivity test passed"
         else
-            error "WireGuard connectivity test failed"
+            error "WireGuard connectivity test failed. Tunnel may be unhealthy."
         fi
     fi
 }

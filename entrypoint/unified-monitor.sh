@@ -1,7 +1,7 @@
 #!/bin/bash
 # Use set -e to exit on error, but not -u to allow undefined variables
 # This prevents the script from exiting if environment variables are not set
-set -e
+set -eu
 
 # Source functions for colors and emojis
 . /entrypoint/functions.sh
@@ -176,7 +176,7 @@ switch_to_peer_config() {
                 if ip addr del "$current_ip" dev "$WG_IFACE" 2>/dev/null; then
                     success "Successfully removed IP $current_ip from $WG_IFACE"
                 else
-                    warning "Failed to remove IP $current_ip from $WG_IFACE"
+                    warn "Failed to remove IP $current_ip from $WG_IFACE"
                 fi
             fi
         fi
@@ -196,7 +196,7 @@ switch_to_peer_config() {
                     if ip route add default dev "$WG_IFACE" 2>/dev/null; then
                         success "Successfully added default route via $WG_IFACE"
                     else
-                        warning "Failed to add default route via $WG_IFACE"
+                        warn "Failed to add default route via $WG_IFACE"
                         # Don't fail the entire operation, as the interface may still work
                     fi
                 else
@@ -307,7 +307,7 @@ find_current_peer_config() {
     done
     
     # If no matching peer config found
-    warning "No peer configuration found matching IP $current_ip"
+    warn "No peer configuration found matching IP $current_ip"
     echo ""
 }
 
@@ -336,7 +336,7 @@ while true; do
     if [ "$WG_MODE" = "client" ]; then
         # Client mode monitoring
         if [ ! -d "$CLIENT_PEERS_DIR" ]; then
-            warning "No peer configuration directory found in $CLIENT_PEERS_DIR"
+            warn "No peer configuration directory found in $CLIENT_PEERS_DIR"
             sleep "$CHECK_INTERVAL"
             continue
         fi
@@ -344,7 +344,7 @@ while true; do
         # Get all peer configs
         peer_files=("$CLIENT_PEERS_DIR"/*.conf)
         if [ ${#peer_files[@]} -eq 0 ] || [ ! -f "${peer_files[0]}" ]; then
-            warning "No peer configuration files found in $CLIENT_PEERS_DIR"
+            warn "No peer configuration files found in $CLIENT_PEERS_DIR"
             sleep "$CHECK_INTERVAL"
             continue
         fi
@@ -359,7 +359,7 @@ while true; do
         if [ -n "$MASTER_PEER" ]; then
             master_peer_config="$CLIENT_PEERS_DIR/$MASTER_PEER"
             if [ ! -f "$master_peer_config" ]; then
-                warning "MASTER_PEER $MASTER_PEER specified but file not found"
+                warn "MASTER_PEER $MASTER_PEER specified but file not found"
                 master_peer_config=""
             fi
         fi
@@ -399,7 +399,7 @@ while true; do
             sleep "$CHECK_INTERVAL"
         else
             # Tunnel is down, determine which peer to switch to
-            warning "Tunnel is down, attempting to switch to next peer configuration..."
+            warn "Tunnel is down, attempting to switch to next peer configuration..."
             
             # If we have a master peer and it's not the current one, try master first
             if [ -n "$master_peer_config" ] && [ -n "$current_peer_config" ] && [ "$current_peer_config" != "$master_peer_config" ]; then
@@ -408,17 +408,17 @@ while true; do
                     current_peer_config="$master_peer_config"
                     success "Switched to master peer $MASTER_PEER"
                 else
-                    warning "Failed to switch to master peer $MASTER_PEER, trying next available peer"
+                    warn "Failed to switch to master peer $MASTER_PEER, trying next available peer"
                     # Get next peer config from sorted list
                     next_peer_config=$(get_next_peer_config "$current_peer_config")
                     if [ -n "$next_peer_config" ] && [ -f "$next_peer_config" ]; then
                         if switch_to_peer_config "$next_peer_config" "$current_peer_config"; then
                             current_peer_config="$next_peer_config"
                         else
-                            warning "Failed to switch to next peer configuration, will retry in $CHECK_INTERVAL seconds"
+                            warn "Failed to switch to next peer configuration, will retry in $CHECK_INTERVAL seconds"
                         fi
                     else
-                        warning "No valid next peer configuration found, will retry in $CHECK_INTERVAL seconds"
+                        warn "No valid next peer configuration found, will retry in $CHECK_INTERVAL seconds"
                     fi
                 fi
             else
@@ -441,7 +441,7 @@ while true; do
                         error "Failed to switch to next peer configuration, will retry in $CHECK_INTERVAL seconds"
                     fi
                 else
-                    warning "No valid next peer configuration found, will retry in $CHECK_INTERVAL seconds"
+                    warn "No valid next peer configuration found, will retry in $CHECK_INTERVAL seconds"
                 fi
             fi
             
@@ -456,7 +456,7 @@ while true; do
             sleep "$CHECK_INTERVAL"
         else
             # Server is unhealthy, log and wait
-            warning "Server is unhealthy, will retry in $CHECK_INTERVAL seconds"
+            warn "Server is unhealthy, will retry in $CHECK_INTERVAL seconds"
             sleep "$CHECK_INTERVAL"
         fi
         
