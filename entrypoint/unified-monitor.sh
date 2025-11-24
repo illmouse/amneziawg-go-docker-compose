@@ -1,7 +1,7 @@
 #!/bin/bash
 # Use set -e to exit on error, but not -u to allow undefined variables
 # This prevents the script from exiting if environment variables are not set
-set -e
+set -eu
 
 # Source functions for colors and emojis
 . /entrypoint/functions.sh

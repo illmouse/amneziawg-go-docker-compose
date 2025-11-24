@@ -332,7 +332,7 @@ setup_wireguard_routing() {
         if ping -c 2 -W 2 8.8.8.8 >/dev/null 2>&1; then
             success "WireGuard connectivity test passed"
         else
-            error "WireGuard connectivity test failed"
+            warning "WireGuard connectivity test failed. Ingoring..."
         fi
     fi
 }
