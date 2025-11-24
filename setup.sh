@@ -61,7 +61,13 @@ if ! "$SCRIPT_DIR/scripts/create-env-file.sh"; then
     exit 1
 fi
 
-# Step 4: Start services
+# Step 4: Setup logrotate for logs
+if ! "$SCRIPT_DIR/scripts/logrotate.sh"; then
+    error "Logrotate setup failed"
+    exit 1
+fi
+
+# Step 5: Start services
 start_services
 
 log "Setup complete!"
