@@ -54,7 +54,7 @@ validate_or_repair_db() {
 
     # DB missing
     if [ ! -f "$CONFIG_DB" ]; then
-        error "Configuration database missing: $CONFIG_DB"
+        warning "Configuration database missing: $CONFIG_DB"
         init_config_db
         return
     fi
