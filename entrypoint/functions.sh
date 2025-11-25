@@ -228,7 +228,7 @@ setup_squid() {
     # Simple Squid config using SQUID_PORT variable
     cat > "$SQUID_CONF_DIR/squid.conf" << SQUID_CONFIG
 # Squid proxy configuration
-http_port ${SQUID_PORT}
+http_port 0.0.0.0:${SQUID_PORT}
 
 # Allow all traffic
 http_access allow all
@@ -320,9 +320,9 @@ setup_wireguard_routing() {
         ip route add default dev $WG_IFACE
         
         # Step 3: Add specific route for Docker network and local clients
-        # ip route add 172.16.0.0/12 via $DEFAULT_GW dev $DEFAULT_IFACE
-        # ip route add 10.0.0.0/8 via $DEFAULT_GW dev $DEFAULT_IFACE
-        # ip route add 192.168.0.0/16 via $DEFAULT_GW dev $DEFAULT_IFACE
+        ip route add 172.16.0.0/12 via $DEFAULT_GW dev $DEFAULT_IFACE
+        ip route add 10.0.0.0/8 via $DEFAULT_GW dev $DEFAULT_IFACE
+        ip route add 192.168.0.0/16 via $DEFAULT_GW dev $DEFAULT_IFACE
         
         info "Simple routing configured:"
         info "- Internet traffic → WireGuard"
