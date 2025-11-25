@@ -299,7 +299,7 @@ start_squid() {
 }
 
 
-setup_wireguard_routing() {
+setup_client_routing() {
     if [ "$WG_MODE" = "client" ]; then
         info "🌐 Setting up routing for WireGuard tunnel..."
         
