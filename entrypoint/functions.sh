@@ -228,7 +228,7 @@ setup_squid() {
     # Simple Squid config using SQUID_PORT variable
     cat > "$SQUID_CONF_DIR/squid.conf" << SQUID_CONFIG
 # Squid proxy configuration
-http_port ${SQUID_PORT}
+http_port 0.0.0.0:${SQUID_PORT}
 
 # Allow all traffic
 http_access allow all
