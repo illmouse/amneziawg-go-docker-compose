@@ -20,4 +20,4 @@ fi
 
 success "${NETWORK_EMOJI} Client setup complete. Interface $WG_IFACE is connected to peers."
 
-setup_wireguard_routing
+setup_client_routing
