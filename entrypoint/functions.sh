@@ -323,6 +323,7 @@ setup_client_routing() {
         ip route add 172.16.0.0/12 via $DEFAULT_GW dev $DEFAULT_IFACE
         ip route add 10.0.0.0/8 via $DEFAULT_GW dev $DEFAULT_IFACE
         ip route add 192.168.0.0/16 via $DEFAULT_GW dev $DEFAULT_IFACE
+        ip route add 100.64.0.0/10 via $DEFAULT_GW dev $DEFAULT_IFACE
         
         info "Simple routing configured:"
         info "- Internet traffic → WireGuard"
