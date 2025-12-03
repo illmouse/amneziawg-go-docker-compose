@@ -69,7 +69,7 @@ fi
 extract_param() {
     local param="$1"
     local value=$(grep -E "^${param}[[:space:]]*=" "$main_peer_config" | head -1 | sed "s/^${param}[[:space:]]*=[[:space:]]*//" | tr -d '\r\n')
-    echo "$value"
+    echo "$value"g
 }
 
 # Extract all parameters in a loop
@@ -83,7 +83,21 @@ for param in $params; do
     fi
 done
 
-# Create the final configuration
+# --- Ensure I1-I5 exist ---------------------------------------------------
+# I1: use get_protocol_value if not defined
+if [ -z "${extracted_params[I1]}" ]; then
+    extracted_params["I1"]=$(get_protocol_value)  # get value based on UDP_SIGNATURE env
+fi
+
+# I2-I5: generate if not defined
+for i in {2..5}; do
+    key="I$i"
+    if [ -z "${extracted_params[$key]}" ]; then
+        extracted_params["$key"]=$(generate_cps_value)
+    fi
+done
+
+# --- Create the final configuration ----------------------------------------
 info "Creating AmneziaWG configuration..."
 
 cat > "$WG_DIR/$WG_CONF_FILE" << EOF
@@ -99,6 +113,7 @@ for param in Jc Jmin Jmax S1 S2 H1 H2 H3 H4 I1 I2 I3 I4 I5; do
     fi
 done
 
+# Optional blank line at the end
 echo "" >> "$WG_DIR/$WG_CONF_FILE"
 
 # Extract and add peer sections
