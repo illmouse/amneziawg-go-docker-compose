@@ -69,7 +69,7 @@ fi
 extract_param() {
     local param="$1"
     local value=$(grep -E "^${param}[[:space:]]*=" "$main_peer_config" | head -1 | sed "s/^${param}[[:space:]]*=[[:space:]]*//" | tr -d '\r\n')
-    echo "$value"g
+    echo "$value"
 }
 
 # Extract all parameters in a loop
