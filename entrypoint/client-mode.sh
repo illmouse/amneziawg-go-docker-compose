@@ -88,10 +88,17 @@ done
 
 # --- Ensure I1-I5 exist ---------------------------------------------------
 # I1: use get_protocol_value if not defined
-if [ -z "${extracted_params[I1]}" ]; then
-    extracted_params["I1"]=$(get_protocol_value)  # get value based on UDP_SIGNATURE env
+if [[ -z "${extracted_params[I1]+_}" ]]; then
+    extracted_params["I1"]=$(get_protocol_value)
 fi
 
+# I2–I5: generate if missing
+for i in {2..5}; do
+    key="I$i"
+    if [[ -z "${extracted_params[$key]+_}" ]]; then
+        extracted_params["$key"]=$(generate_cps_value)
+    fi
+done
 # I2-I5: generate if not defined
 for i in {2..5}; do
     key="I$i"
