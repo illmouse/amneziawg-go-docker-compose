@@ -127,7 +127,7 @@ set_db_value() {
 generate_cps_value() {
     # --- CONFIG ---------------------------------------------------------
     local RANDOM_LEN=64           # random bytes length
-    local COUNTER_FILE="$WG_DIR/config/cps_counter.state"
+    local COUNTER_FILE="$WG_DIR/cps_counter.state"
     local MAX_COUNTER=$((0xFFFFFFFF))  # 32-bit unsigned max
 
     # Initialize counter if missing
