@@ -163,7 +163,7 @@ generate_cps_value() {
     r=$(openssl rand -hex "$RANDOM_LEN")
 
     # --- RETURN CPS VALUE ------------------------------------------------
-    echo "${c}${t}${r}"
+    echo "<b 0x${c}${t}${r}>"
 }
 
 get_protocol_value() {
@@ -173,14 +173,14 @@ get_protocol_value() {
 
     if [[ -z "$code" ]]; then
         value="$default_value"
-        echo "[LOG] No protocol code provided. Using default: $value"
+        info "[LOG] No protocol code provided. Using default: $value"
     else
         if [[ -n "${PROTOCOL_MAP[$code]}" ]]; then
             value="${PROTOCOL_MAP[$code]}"
-            echo "[LOG] Found protocol '$code': $value"
+            info "[LOG] Found protocol '$code': $value"
         else
             value="$default_value"
-            echo "[LOG] Protocol code '$code' not found. Using default: $value"
+            warn "[LOG] Protocol code '$code' not found. Using default: $value"
         fi
     fi
 
