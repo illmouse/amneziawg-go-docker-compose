@@ -173,14 +173,14 @@ get_protocol_value() {
 
     if [[ -z "$code" ]]; then
         value="$default_value"
-        info "[LOG] No protocol code provided. Using default: $value"
+        info "No protocol code provided. Using default: $value" >&2
     else
         if [[ -n "${PROTOCOL_MAP[$code]}" ]]; then
             value="${PROTOCOL_MAP[$code]}"
-            info "[LOG] Found protocol '$code': $value"
+            info "Found protocol '$code': $value" >&2
         else
             value="$default_value"
-            warn "[LOG] Protocol code '$code' not found. Using default: $value"
+            warn "Protocol code '$code' not found. Using default: $value" >&2
         fi
     fi
 
