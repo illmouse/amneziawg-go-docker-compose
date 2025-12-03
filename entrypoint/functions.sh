@@ -167,6 +167,7 @@ generate_cps_value() {
 }
 
 get_protocol_value() {
+    info "Setting CSP protocol for peer" >&2
     local code="$UDP_SIGNATURE"
     local default_value="${PROTOCOL_MAP[DEFAULT]}"
     local value
@@ -177,10 +178,10 @@ get_protocol_value() {
     else
         if [[ -n "${PROTOCOL_MAP[$code]}" ]]; then
             value="${PROTOCOL_MAP[$code]}"
-            info "Found protocol '$code': $value" >&2
+            info "Found protocol '$code'" >&2
         else
             value="$default_value"
-            warn "Protocol code '$code' not found. Using default: $value" >&2
+            warn "Protocol code '$code' not found. Using default." >&2
         fi
     fi
 
