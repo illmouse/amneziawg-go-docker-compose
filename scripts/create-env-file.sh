@@ -15,8 +15,8 @@ setup_env() {
     
     # Generate random values for obfuscation parameters
     Jc=$(get_random_int 3 10)
-    Jmin=$(get_random_int 1 10)
-    Jmax=$(get_random_int 50 1000)
+    Jmin=1
+    Jmax=50
     S1=$(get_random_junk_size)
     S2=$(get_random_junk_size)
     H1=$(get_random_header)
