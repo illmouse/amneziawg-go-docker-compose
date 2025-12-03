@@ -73,7 +73,7 @@ extract_param() {
 }
 
 # Extract all parameters in a loop
-params="PrivateKey Jc Jmin Jmax S1 S2 H1 H2 H3 H4 Address"
+params="PrivateKey Jc Jmin Jmax S1 S2 H1 H2 H3 H4 I1 I2 I3 I4 I5 Address"
 declare -A extracted_params
 
 for param in $params; do
@@ -93,7 +93,7 @@ ListenPort = 0
 EOF
 
 # Add junk parameters if they exist
-for param in Jc Jmin Jmax S1 S2 H1 H2 H3 H4; do
+for param in Jc Jmin Jmax S1 S2 H1 H2 H3 H4 I1 I2 I3 I4 I5; do
     if [ -n "${extracted_params[$param]}" ]; then
         echo "$param = ${extracted_params[$param]}" >> "$WG_DIR/$WG_CONF_FILE"
     fi

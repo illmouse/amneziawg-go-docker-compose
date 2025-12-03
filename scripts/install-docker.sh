@@ -50,30 +50,65 @@ install_docker() {
 }
 
 install_docker_debian() {
-    # Update package index
     apt-get update
-    
-    # Install prerequisites
     apt-get install -y apt-transport-https ca-certificates curl gnupg lsb-release
-    
-    # Add Docker's official GPG key
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
-    
-    # Add Docker repository
-    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
-    
-    # Install Docker
+
+    # Detect base distro for Docker repository
+    BASE_ID="$ID"
+    CODENAME="$(lsb_release -cs)"    # may be wrong for Linux Mint / LMDE
+
+    # Correct handling for Linux Mint (Ubuntu-based OR LMDE)
+    if [ "$ID" = "linuxmint" ]; then
+        if [ -n "$UBUNTU_CODENAME" ]; then
+            # Ubuntu-based Linux Mint (e.g., Mint 21.x)
+            echo "Detected Ubuntu-based Linux Mint – using Ubuntu codename '$UBUNTU_CODENAME'"
+            BASE_ID="ubuntu"
+            CODENAME="$UBUNTU_CODENAME"
+        elif [ -n "$DEBIAN_CODENAME" ]; then
+            # LMDE (Debian-based)
+            echo "Detected LMDE – using Debian codename '$DEBIAN_CODENAME'"
+            BASE_ID="debian"
+            CODENAME="$DEBIAN_CODENAME"
+        else
+            echo "Unable to determine base distro for Linux Mint"
+            exit 1
+        fi
+    fi
+
+    # Correct handling for Ubuntu
+    if [ "$ID" = "ubuntu" ]; then
+        BASE_ID="ubuntu"
+        CODENAME="$UBUNTU_CODENAME"
+        echo "Detected Ubuntu – using codename '$CODENAME'"
+    fi
+
+    # Correct handling for Debian
+    if [ "$ID" = "debian" ]; then
+        BASE_ID="debian"
+        CODENAME="$DEBIAN_CODENAME"
+        echo "Detected Debian – using codename '$CODENAME'"
+    fi
+
+    # Add Docker GPG key
+    curl -fsSL https://download.docker.com/linux/$BASE_ID/gpg \
+        | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+
+    # Add correct repository
+    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] \
+        https://download.docker.com/linux/$BASE_ID $CODENAME stable" \
+        > /etc/apt/sources.list.d/docker.list
+
+    # Install Docker + Compose
     apt-get update
-    # Install Docker packages
     apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
-    # Also install docker-compose standalone for compatibility
-    curl -SL "https://github.com/docker/compose/releases/download/v2.20.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-    chmod +x /usr/local/bin/docker-compose
-    
-    # Install Docker Compose standalone (for compatibility)
-    curl -SL "https://github.com/docker/compose/releases/download/v2.20.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+
+    # Install standalone Compose for safety
+    curl -SL "https://github.com/docker/compose/releases/download/v2.20.0/docker-compose-$(uname -s)-$(uname -m)" \
+        -o /usr/local/bin/docker-compose
     chmod +x /usr/local/bin/docker-compose
 }
+
+
 
 install_docker_redhat() {
     # Install prerequisites
