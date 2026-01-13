@@ -1,6 +1,6 @@
 services:
-  amneziawg:
-    image:  ghcr.io/illmouse/amneziawg-go:latest
+  awg:
+    image:  ghcr.io/illmouse/amneziawg-go:feature-amneziawg15-latest
     container_name: amneziawg
     env_file:
       - .env

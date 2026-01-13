@@ -10,9 +10,9 @@ set -eu
 # Trap to catch any exits
 trap 'log "Script exiting with code: $?"' EXIT
 
-success "🚀 Starting container in ${WG_MODE:-server} mode..."
+success "🚀 Starting container in ${WG_MODE} mode..."
 
-if [ "${WG_MODE:-server}" = "server" ]; then
+if [ "${WG_MODE}" = "server" ]; then
     info "🌈 === Starting SERVER setup process ==="
 
     info "1. 📁 Initializing environment..."
@@ -38,7 +38,7 @@ if [ "${WG_MODE:-server}" = "server" ]; then
 
     success "🎉 === Server setup completed successfully ==="
 
-elif [ "${WG_MODE:-server}" = "client" ]; then
+elif [ "${WG_MODE}" = "client" ]; then
     info "🌈 === Starting CLIENT setup process ==="
 
     info "1. 📁 Initializing environment..."

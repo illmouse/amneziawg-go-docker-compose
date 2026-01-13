@@ -124,6 +124,71 @@ set_db_value() {
     jq "$jq_path = $value" "$CONFIG_DB" > "$tmp" && mv "$tmp" "$CONFIG_DB"
 }
 
+generate_cps_value() {
+    # --- CONFIG ---------------------------------------------------------
+    local RANDOM_LEN=64           # random bytes length
+    local COUNTER_FILE="$WG_DIR/cps_counter.state"
+    local MAX_COUNTER=$((0xFFFFFFFF))  # 32-bit unsigned max
+
+    # Initialize counter if missing
+    if [[ ! -f "$COUNTER_FILE" ]]; then
+        echo 1 > "$COUNTER_FILE"
+    fi
+
+    # Read counter
+    local COUNTER
+    COUNTER=$(cat "$COUNTER_FILE")
+
+    # --- HELPERS --------------------------------------------------------
+    u32be() {
+        printf "%08x" "$1"
+    }
+
+    # --- GENERATE PARTS --------------------------------------------------
+    local c t r
+
+    # wrap counter if exceeded max
+    if (( COUNTER > MAX_COUNTER )); then
+        COUNTER=1
+    fi
+
+    c=$(u32be "$COUNTER")
+    COUNTER=$((COUNTER + 1))
+    echo "$COUNTER" > "$COUNTER_FILE"
+
+    # timestamp (current UNIX time)
+    t=$(u32be "$(date +%s)")
+
+    # random bytes
+    r=$(openssl rand -hex "$RANDOM_LEN")
+
+    # --- RETURN CPS VALUE ------------------------------------------------
+    echo "<b 0x${c}${t}${r}>"
+}
+
+get_protocol_value() {
+    info "Setting CSP protocol for peer" >&2
+    local code="$UDP_SIGNATURE"
+    local default_value="${PROTOCOL_MAP[DEFAULT]}"
+    local value
+
+    if [[ -z "$code" ]]; then
+        value="$default_value"
+        info "No protocol code provided. Using default: $value" >&2
+    else
+        if [[ -n "${PROTOCOL_MAP[$code]}" ]]; then
+            value="${PROTOCOL_MAP[$code]}"
+            success "Found protocol '$code'" >&2
+        else
+            value="$default_value"
+            warn "Protocol code '$code' not found. Using default." >&2
+        fi
+    fi
+
+    # Return value (can be captured by caller)
+    echo "$value"
+}
+
 # Function to fix permissions
 fix_permissions() {
     info "${SECURITY_EMOJI} Fixing permissions in $WG_DIR..."
