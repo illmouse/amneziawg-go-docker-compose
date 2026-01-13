@@ -89,7 +89,7 @@ for param in $params; do
 done
 
 # --- Ensure I1-I5 exist ---------------------------------------------------
-# I1: use get_protocol_value if not defined
+# I1: use Setting CSP protocol for peer if not defined
 if [[ -z "${extracted_params[I1]+_}" ]]; then
     extracted_params["I1"]=$(get_protocol_value)
 fi
@@ -97,7 +97,7 @@ fi
 # I2–I5: generate if not defined or missing
 for i in {2..5}; do
     key="I$i"
-    if [[ -z "${params[$key]+_}" || -z "${params[$key]}" ]]; then
+    if [[ -z "${extracted_params[$key]+_}" || -z "${extracted_params[$key]}" ]]; then
         extracted_params["$key"]=$(generate_cps_value)
     fi
 done
