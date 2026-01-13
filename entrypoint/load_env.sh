@@ -27,6 +27,7 @@ fi
 : "${LOG_LEVEL:=INFO}"
 
 # WireGuard defaults
+: "${WG_MODE:=server}"
 : "${WG_IFACE:=wg0}"
 : "${WG_ADDRESS:=10.100.0.1/24}"
 : "${WG_PORT:=13440}"
