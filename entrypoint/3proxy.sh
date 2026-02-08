@@ -96,8 +96,16 @@ EOF
     fi
 }
 
-# Set up proxy
-3proxy_setup
+# Setup proxy if enabled
+if [ "$PROXY_ENABLED" = "true" ]; then
 
-# Start proxy
-3proxy_start
+    info "Starting proxy"
+
+    # Set up proxy
+    3proxy_setup
+
+    # Start proxy
+    3proxy_start
+else
+    debug "Proxy disabled"
+fi

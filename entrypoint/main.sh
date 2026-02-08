@@ -47,17 +47,14 @@ elif [ "${WG_MODE}" = "client" ]; then
     info "2. Setting up client mode..."
     . /entrypoint/client-mode.sh
 
-    info "3. Setting up proxy..."
-    . /entrypoint/3proxy.sh
-
-    info "4. ${SECURITY_EMOJI} Fixing permissions..."
+    info "3. ${SECURITY_EMOJI} Fixing permissions..."
     fix_permissions
 
-    info "5. ${NETWORK_EMOJI} Starting WireGuard client..."
+    info "4. ${NETWORK_EMOJI} Starting WireGuard client..."
     . /entrypoint/start-wireguard-client.sh
 
-    info "6. 🦑 Starting Squid proxy (if enabled)..."
-    start_squid
+    info "5. Starting proxy (if enabled)..."
+    . /entrypoint/3proxy.sh
 
     success "🎉 === Client setup completed successfully ==="
 

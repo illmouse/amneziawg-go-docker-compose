@@ -43,19 +43,6 @@ if [ ! -f "$main_peer_config" ]; then
     error "Main peer configuration file not found: $main_peer_config"
 fi
 
-# Check if Squid should be enabled
-SQUID_ENABLE=${SQUID_ENABLE:-false}
-SQUID_PORT=${SQUID_PORT:-3128}
-
-if [ "$SQUID_ENABLE" = "true" ]; then
-    info "🦑 Squid proxy enabled on port $SQUID_PORT"
-    export SQUID_ENABLED=true
-    export SQUID_PORT=$SQUID_PORT
-else
-    info "Squid proxy disabled"
-    export SQUID_ENABLED=false
-fi
-
 # Extract DNS servers from peer config
 dns_servers=$(grep "^DNS" "$main_peer_config" | head -1 | sed 's/^DNS[[:space:]]*=[[:space:]]*//' | tr -d '\r\n')
 if [ -n "$dns_servers" ]; then
@@ -173,11 +160,6 @@ fi
 if [ -n "$PEER_DNS_SERVERS" ]; then
     info "Configuring DNS servers: $PEER_DNS_SERVERS"
     configure_dns "$PEER_DNS_SERVERS"
-fi
-
-# Setup Squid if enabled
-if [ "$SQUID_ENABLED" = "true" ]; then
-    setup_squid
 fi
 
 success "🔍 Client mode setup completed"

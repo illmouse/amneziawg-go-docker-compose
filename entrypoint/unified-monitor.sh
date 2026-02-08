@@ -21,7 +21,7 @@ check_tunnel_health() {
     
     # Check if we can reach the external target with ping
     if ping -c 3 -W "$timeout" "$test_target" >/dev/null 2>&1; then
-        success "Tunnel health check passed: $test_target"
+        debug "Tunnel health check passed: $test_target"
         return 0
     else
         error "Tunnel health check failed: $test_target"

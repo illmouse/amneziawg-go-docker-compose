@@ -1,6 +1,6 @@
 services:
   awg:
-    image: awg-test-config15:latest
+    image: ghcr.io/illmouse/amneziawg-go:latest
     container_name: amneziawg
     env_file:
       - .env
