@@ -6,12 +6,6 @@ set -eu
 # Source functions for colors and emojis
 . /entrypoint/functions.sh
 
-# Configuration
-WG_DIR="/etc/amneziawg"
-CHECK_INTERVAL=10
-CHECK_TIMEOUT=10
-EXTERNAL_CHECK_TARGET="8.8.8.8"
-
 # Function to check tunnel health (client mode)
 check_tunnel_health() {
     local test_target="$1"
@@ -271,11 +265,11 @@ check_container_health() {
     fi
     
     # Check if we can reach the external target with ping
-    if ping -c 3 -W "$CHECK_TIMEOUT" "$EXTERNAL_CHECK_TARGET" >/dev/null 2>&1; then
-        success "Server health check passed: $EXTERNAL_CHECK_TARGET"
+    if ping -c 3 -W "$MON_CHECK_TIMEOUT" "$MON_CHECK_IP" >/dev/null 2>&1; then
+        debug "Server health check passed: $MON_CHECK_IP"
         return 0
     else
-        error "Server health check failed: $EXTERNAL_CHECK_TARGET"
+        error "Server health check failed: $MON_CHECK_IP"
         return 1
     fi
 }
@@ -337,7 +331,7 @@ while true; do
         # Client mode monitoring
         if [ ! -d "$CLIENT_PEERS_DIR" ]; then
             warn "No peer configuration directory found in $CLIENT_PEERS_DIR"
-            sleep "$CHECK_INTERVAL"
+            sleep "$MON_CHECK_INTERVAL"
             continue
         fi
         
@@ -345,7 +339,7 @@ while true; do
         peer_files=("$CLIENT_PEERS_DIR"/*.conf)
         if [ ${#peer_files[@]} -eq 0 ] || [ ! -f "${peer_files[0]}" ]; then
             warn "No peer configuration files found in $CLIENT_PEERS_DIR"
-            sleep "$CHECK_INTERVAL"
+            sleep "$MON_CHECK_INTERVAL"
             continue
         fi
         
@@ -371,7 +365,7 @@ while true; do
         debug "Current peer config: $current_peer_config"
         
         # Check tunnel health
-        if check_tunnel_health "$EXTERNAL_CHECK_TARGET" "$CHECK_TIMEOUT"; then
+        if check_tunnel_health "$MON_CHECK_IP" "$MON_CHECK_TIMEOUT"; then
             # Tunnel is healthy, check if we should switch to master peer
             debug "Tunnel is healthy, check if we should switch to master peer"
             if [ -n "$master_peer_config" ] && [ -n "$current_peer_config" ] && [ "$current_peer_config" != "$master_peer_config" ]; then
@@ -396,7 +390,7 @@ while true; do
                 fi
             fi
             # Tunnel is healthy, wait for next check
-            sleep "$CHECK_INTERVAL"
+            sleep "$MON_CHECK_INTERVAL"
         else
             # Tunnel is down, determine which peer to switch to
             warn "Tunnel is down, attempting to switch to next peer configuration..."
@@ -415,10 +409,10 @@ while true; do
                         if switch_to_peer_config "$next_peer_config" "$current_peer_config"; then
                             current_peer_config="$next_peer_config"
                         else
-                            warn "Failed to switch to next peer configuration, will retry in $CHECK_INTERVAL seconds"
+                            warn "Failed to switch to next peer configuration, will retry in $MON_CHECK_INTERVAL seconds"
                         fi
                     else
-                        warn "No valid next peer configuration found, will retry in $CHECK_INTERVAL seconds"
+                        warn "No valid next peer configuration found, will retry in $MON_CHECK_INTERVAL seconds"
                     fi
                 fi
             else
@@ -438,30 +432,30 @@ while true; do
                     if switch_to_peer_config "$next_peer_config" "$current_peer_config"; then
                         current_peer_config="$next_peer_config"
                     else
-                        error "Failed to switch to next peer configuration, will retry in $CHECK_INTERVAL seconds"
+                        error "Failed to switch to next peer configuration, will retry in $MON_CHECK_INTERVAL seconds"
                     fi
                 else
-                    warn "No valid next peer configuration found, will retry in $CHECK_INTERVAL seconds"
+                    warn "No valid next peer configuration found, will retry in $MON_CHECK_INTERVAL seconds"
                 fi
             fi
             
             # Wait a bit before next check after a switch
-            sleep "$CHECK_INTERVAL"
+            sleep "$MON_CHECK_INTERVAL"
         fi
         
     elif [ "$WG_MODE" = "server" ]; then
         # Server mode monitoring
         if check_container_health; then
             # Server is healthy, wait for next check
-            sleep "$CHECK_INTERVAL"
+            sleep "$MON_CHECK_INTERVAL"
         else
             # Server is unhealthy, log and wait
-            warn "Server is unhealthy, will retry in $CHECK_INTERVAL seconds"
-            sleep "$CHECK_INTERVAL"
+            warn "Server is unhealthy, will retry in $MON_CHECK_INTERVAL seconds"
+            sleep "$MON_CHECK_INTERVAL"
         fi
         
     else
         error "Unknown WG_MODE: $WG_MODE. Expected 'server' or 'client'"
-        sleep "$CHECK_INTERVAL"
+        sleep "$MON_CHECK_INTERVAL"
     fi
 done

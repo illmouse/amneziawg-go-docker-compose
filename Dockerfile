@@ -1,5 +1,5 @@
 # Use the base image
-FROM docker.io/amneziavpn/amneziawg-go:0.2.15
+FROM docker.io/amneziavpn/amneziawg-go:latest
 
 # Install required packages
 RUN apk add --no-cache \
