@@ -44,7 +44,7 @@ elif [ "${WG_MODE}" = "client" ]; then
     info "1. 📁 Initializing environment..."
     . /entrypoint/init.sh
 
-    info "2. 🔍 Setting up client mode..."
+    info "2. Setting up client mode..."
     . /entrypoint/client-mode.sh
 
     info "3. ${SECURITY_EMOJI} Fixing permissions..."
@@ -53,8 +53,8 @@ elif [ "${WG_MODE}" = "client" ]; then
     info "4. ${NETWORK_EMOJI} Starting WireGuard client..."
     . /entrypoint/start-wireguard-client.sh
 
-    info "5. 🦑 Starting Squid proxy (if enabled)..."
-    start_squid
+    info "5. Starting proxy (if enabled)..."
+    . /entrypoint/3proxy.sh
 
     success "🎉 === Client setup completed successfully ==="
 
@@ -63,7 +63,6 @@ else
 fi
 
 # Start unified monitoring in background
-info "🚀 Starting unified monitoring system..."
 /entrypoint/unified-monitor.sh 2>/dev/null &
 
 success "🏁 Container startup complete. Entering sleep..."

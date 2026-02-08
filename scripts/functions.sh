@@ -49,9 +49,10 @@ get_public_endpoint() {
 prompt_user() {
     log "Starting AmneziaWG setup..."
     
-    # Set default values for SQUID_ENABLED and SQUID_PORT
-    SQUID_ENABLED=${SQUID_ENABLED:-"true"}
-    SQUID_PORT=${SQUID_PORT:-"3128"}
+    # Set default values for PROXY
+    PROXY_ENABLED=${PROXY_ENABLED:-"true"}
+    PROXY_PORT_HTTP=${PROXY_PORT_HTTP:-"3128"}
+    PROXY_PORT_SOCKS5=${PROXY_PORT_SOCKS5:-"4128"}
     
     # Interactive setup for WG_MODE
     echo ""
@@ -91,38 +92,49 @@ prompt_user() {
         fi
     fi
     
-    # Interactive setup for SQUID_ENABLED and SQUID_PORT (only for client mode)
+    # Interactive setup for PROXY (only for client mode)
     if [ "$WG_MODE" = "client" ]; then
         echo ""
-        log "Configure Squid proxy settings:"
-        echo "Squid proxy can be enabled to route traffic through a proxy server"
-        echo -n "Enable Squid proxy? (y/n, default y): "
-        read -r squid_enable_choice
-        case "$squid_enable_choice" in
+        log "Configure proxy settings:"
+        echo "Proxy can be enabled to route traffic through a proxy server"
+        echo -n "Enable proxy? (y/n, default y): "
+        read -r proxy_enable_choice
+        case "$proxy_enable_choice" in
             y|Y|yes|Yes|YES)
-                SQUID_ENABLED="true"
-                log "Enabled Squid proxy"
+                PROXY_ENABLED="true"
+                log "Enabled proxy"
                 ;;
             n|N|no|No|NO)
-                SQUID_ENABLED="false"
-                log "Disabled Squid proxy"
+                PROXY_ENABLED="false"
+                log "Disabled proxy"
                 ;;
             *)
-                SQUID_ENABLED="true"
+                PROXY_ENABLED="true"
                 log "No input provided, defaulting to enabled"
                 ;;
         esac
         
-        if [ "$SQUID_ENABLED" = "true" ]; then
+        if [ "$PROXY_ENABLED" = "true" ]; then
             echo ""
-            echo -n "Enter Squid port (default 3128): "
-            read -r squid_port
-            if [[ "$squid_port" =~ ^[0-9]+$ ]] && [ "$squid_port" -ge 1 ] && [ "$squid_port" -le 65535 ]; then
-                SQUID_PORT="$squid_port"
-                log "Set SQUID_PORT=$SQUID_PORT"
+            echo -n "Enter proxy HTTP port (default 3128): "
+            read -r proxy_port_http
+            if [[ "$proxy_port_http" =~ ^[0-9]+$ ]] && [ "$proxy_port_http" -ge 1 ] && [ "$proxy_port_http" -le 65535 ]; then
+                PROXY_PORT_HTTP="$proxy_port_http"
+                log "Set PROXY_PORT_HTTP=$PROXY_PORT_HTTP"
             else
-                SQUID_PORT=3128
-                log "Invalid input, defaulting to SQUID_PORT=3128"
+                PROXY_PORT_HTTP=3128
+                log "Invalid input, defaulting to PROXY_PORT_HTTP=3128"
+            fi
+
+            echo ""
+            echo -n "Enter proxy SOCKS5 port (default 4128): "
+            read -r proxy_port_socks5
+            if [[ "$proxy_port_socks5" =~ ^[0-9]+$ ]] && [ "$proxy_port_socks5" -ge 1 ] && [ "$proxy_port_socks5" -le 65535 ]; then
+                PROXY_PORT_SOCKS5="$proxy_port_socks5"
+                log "Set PROXY_PORT_SOCKS5=$PROXY_PORT_SOCKS5"
+            else
+                PROXY_PORT_SOCKS5=4128
+                log "Invalid input, defaulting to PROXY_PORT_SOCKS5=4128"
             fi
         fi
     fi

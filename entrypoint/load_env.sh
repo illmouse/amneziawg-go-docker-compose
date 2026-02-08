@@ -34,12 +34,11 @@ fi
 : "${WG_ENDPOINT:=}"
 : "${WG_PEER_COUNT:=1}"
 
-# Squid defaults
-: "${SQUID_ENABLE:=true}"
-: "${SQUID_PORT:=3128}"
-: "${SQUID_CACHE:=/var/cache/squid}"
-: "${SQUID_LOG:=/var/log/amneziawg/squid/access.log}"
-: "${SQUID_EMOJI:=🦑}"
+# Proxy defaults
+: "${PROXY_ENABLED:=true}"
+: "${PROXY_PORT_HTTP:=3128}"
+: "${PROXY_PORT_SOCKS5:=4128}"
+: "${PROXY_LOG_DIR:=/var/log/3proxy}"
 
 # Junk/obfuscation values
 : "${Jc:=3}"
@@ -66,6 +65,6 @@ declare -A PROTOCOL_MAP=(
 # Export all variables for other scripts
 export WG_DIR TMP_DIR CLIENT_PEERS_DIR SERVER_PEERS_DIR CONFIG_DB WG_CONF_FILE WG_LOGFILE KEYS_DIR LOG_LEVEL
 export WG_IFACE WG_ADDRESS WG_PORT WG_ENDPOINT WG_PEER_COUNT
-export SQUID_ENABLE SQUID_PORT SQUID_CACHE SQUID_LOG SQUID_EMOJI
+export PROXY_ENABLED PROXY_PORT_HTTP PROXY_PORT_SOCKS5 PROXY_LOG_DIR
 export Jc Jmin Jmax S1 S2 H1 H2 H3 H4 UDP_SIGNATURE
 export MON_CHECK_IP MON_CHECK_INTERVAL MON_CHECK_TIMEOUT PROTOCOL_MAP

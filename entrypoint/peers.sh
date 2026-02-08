@@ -2,7 +2,7 @@
 
 . /entrypoint/functions.sh
 
-info "${PEER_EMOJI} Managing peers..."
+debug "${PEER_EMOJI} Managing peers..."
 
 # Helper: Archive a peer configuration file
 archive_peer_conf() {
@@ -17,7 +17,7 @@ archive_peer_conf() {
             archive_file="$archive_file.$(date -u +'%H%M%S')"
         fi
         mv "$peer_conf_file" "$archive_file"
-        info "Archived peer configuration: $peer_conf_file → $archive_file"
+        debug "Archived peer configuration: $peer_conf_file → $archive_file"
     fi
 }
 
@@ -59,14 +59,14 @@ add_peer_to_db() {
 
 current_peer_count=$(jq '.peers | keys | length' "$CONFIG_DB" 2>/dev/null || echo "0")
 desired_peer_count=${WG_PEER_COUNT:-1}
-info "Current peers in DB: $current_peer_count, desired: $desired_peer_count"
+debug "Current peers in DB: $current_peer_count, desired: $desired_peer_count"
 
 # Backup DB
 cp "$CONFIG_DB" "$CONFIG_DB.backup" 2>/dev/null || true
 
 # Remove excess peers
 if [ "$current_peer_count" -gt "$desired_peer_count" ]; then
-    info "Removing $((current_peer_count - desired_peer_count)) excess peer(s)..."
+    debug "Removing $((current_peer_count - desired_peer_count)) excess peer(s)..."
     
     # Compute arrays safely
     peers_all=($(jq -r '.peers | keys | sort_by(.[4:] | tonumber) | .[]' "$CONFIG_DB"))
@@ -86,7 +86,7 @@ current_peer_count=$(jq '.peers | keys | length' "$CONFIG_DB" 2>/dev/null || ech
 peers_needed=$((desired_peer_count - current_peer_count))
 
 if [ "$peers_needed" -gt 0 ]; then
-    info "Adding $peers_needed new peer(s)..."
+    debug "Adding $peers_needed new peer(s)..."
     existing_numbers=$(jq -r '.peers | keys | map(.[4:] | tonumber) | sort | .[]' "$CONFIG_DB" 2>/dev/null || echo "")
     peers_added=0
 
