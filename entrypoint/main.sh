@@ -7,6 +7,9 @@ set -eu
 # Source functions for logging, colors, emojis
 . /entrypoint/functions.sh
 
+# Source 3proxy
+. /entrypoint/3proxy.sh
+
 # Trap to catch any exits
 trap 'log "Script exiting with code: $?"' EXIT
 
@@ -44,16 +47,19 @@ elif [ "${WG_MODE}" = "client" ]; then
     info "1. 📁 Initializing environment..."
     . /entrypoint/init.sh
 
-    info "2. 🔍 Setting up client mode..."
+    info "2. Setting up client mode..."
     . /entrypoint/client-mode.sh
 
-    info "3. ${SECURITY_EMOJI} Fixing permissions..."
+    info "3. Setting up proxy..."
+    . /entrypoint/3proxy.sh
+
+    info "4. ${SECURITY_EMOJI} Fixing permissions..."
     fix_permissions
 
-    info "4. ${NETWORK_EMOJI} Starting WireGuard client..."
+    info "5. ${NETWORK_EMOJI} Starting WireGuard client..."
     . /entrypoint/start-wireguard-client.sh
 
-    info "5. 🦑 Starting Squid proxy (if enabled)..."
+    info "6. 🦑 Starting Squid proxy (if enabled)..."
     start_squid
 
     success "🎉 === Client setup completed successfully ==="

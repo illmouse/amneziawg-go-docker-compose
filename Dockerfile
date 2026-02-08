@@ -4,8 +4,8 @@ FROM docker.io/amneziavpn/amneziawg-go:latest
 # Install required packages
 RUN apk add --no-cache \
     jq \
-    squid \
-    openssl
+    openssl \
+    3proxy --repository=https://dl-cdn.alpinelinux.org/alpine/edge/testing
 
 # Copy entrypoint files and make them executable
 RUN mkdir -p /entrypoint

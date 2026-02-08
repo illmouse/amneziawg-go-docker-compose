@@ -35,11 +35,10 @@ fi
 : "${WG_PEER_COUNT:=1}"
 
 # Squid defaults
-: "${SQUID_ENABLE:=true}"
-: "${SQUID_PORT:=3128}"
-: "${SQUID_CACHE:=/var/cache/squid}"
-: "${SQUID_LOG:=/var/log/amneziawg/squid/access.log}"
-: "${SQUID_EMOJI:=🦑}"
+: "${PROXY_ENABLED:=true}"
+: "${PROXY_PORT_HTTP:=3128}"
+: "${PROXY_PORT_SOCKS5:=4128}"
+: "${PROXY_LOG_DIR:=/var/log/3proxy}"
 
 # Junk/obfuscation values
 : "${Jc:=3}"
