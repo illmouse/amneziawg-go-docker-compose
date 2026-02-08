@@ -51,41 +51,28 @@ should_log() {
     [ $level -le $current_level ]
 }
 
-log() { 
-    if should_log $LOG_INFO; then
-        echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] ${INFO_EMOJI} $*" | tee -a "$WG_LOGFILE" 
+log_message() {
+    local level=$1
+    local color=$2
+    local emoji=$3
+    shift 3
+    local msg="$*"
+
+    if should_log $level; then
+        local timestamp="[$(date -u +'%Y-%m-%dT%H:%M:%SZ')]"
+        # Terminal output (colored)
+        echo -e "${timestamp} ${color}${emoji} ${msg}${NC}"
+        # Log file output (clean, no color)
+        echo "${timestamp} ${emoji} ${msg}" >> "$WG_LOGFILE"
     fi
 }
 
-success() { 
-    if should_log $LOG_INFO; then
-        echo -e "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] ${GREEN}${SUCCESS_EMOJI} $*${NC}" | tee -a "$WG_LOGFILE" 
-    fi
-}
+info()    { log_message $LOG_INFO  "$BLUE"  "$INFO_EMOJI"    "INFO $*"; }
+success() { log_message $LOG_INFO  "$GREEN" "$SUCCESS_EMOJI" "INFO $*"; }
+warn()    { log_message $LOG_WARN  "$YELLOW" "$WARNING_EMOJI" "WARN $*"; }
+error()   { log_message $LOG_ERROR "$RED"   "$ERROR_EMOJI"   "ERROR $*"; }
+debug()   { log_message $LOG_DEBUG "$CYAN"  "$CONFIG_EMOJI"  "DEBUG $*"; }
 
-warn() { 
-    if should_log $LOG_WARN; then
-        echo -e "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] ${YELLOW}${WARNING_EMOJI} $*${NC}" | tee -a "$WG_LOGFILE" 
-    fi
-}
-
-error() { 
-    if should_log $LOG_ERROR; then
-        echo -e "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] ${RED}${ERROR_EMOJI} ERROR: $*${NC}" | tee -a "$WG_LOGFILE" 
-    fi
-}
-
-info() { 
-    if should_log $LOG_INFO; then
-        echo -e "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] ${BLUE}${INFO_EMOJI} $*${NC}" | tee -a "$WG_LOGFILE" 
-    fi
-}
-
-debug() { 
-    if should_log $LOG_DEBUG; then
-        echo -e "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] ${CYAN}${CONFIG_EMOJI} $*${NC}" | tee -a "$WG_LOGFILE" 
-    fi
-}
 
 gen_key() { 
     awg genkey 2>/dev/null | tr -d '\n\r'
@@ -167,18 +154,18 @@ generate_cps_value() {
 }
 
 get_protocol_value() {
-    info "Setting CSP protocol for peer" >&2
+    debug "Setting CSP protocol for peer" >&2
     local code="$UDP_SIGNATURE"
     local default_value="${PROTOCOL_MAP[DEFAULT]}"
     local value
 
     if [[ -z "$code" ]]; then
         value="$default_value"
-        info "No protocol code provided. Using default: $value" >&2
+        debug "No protocol code provided. Using default: $value" >&2
     else
         if [[ -n "${PROTOCOL_MAP[$code]}" ]]; then
             value="${PROTOCOL_MAP[$code]}"
-            success "Found protocol '$code'" >&2
+            info "Found protocol '$code'" >&2
         else
             value="$default_value"
             warn "Protocol code '$code' not found. Using default." >&2
@@ -191,11 +178,11 @@ get_protocol_value() {
 
 # Function to fix permissions
 fix_permissions() {
-    info "${SECURITY_EMOJI} Fixing permissions in $WG_DIR..."
+    debug "${SECURITY_EMOJI} Fixing permissions in $WG_DIR..."
     
     # Fix directory permissions
     find "$WG_DIR" -type d -exec chmod 700 {} \; 2>/dev/null || true
-    success "Directory permissions set to 700"
+    debug "Directory permissions set to 700"
     
     # Fix file permissions (config files and keys should be 600)
     find "$WG_DIR" -type f -name "*.conf" -exec chmod 600 {} \; 2>/dev/null || true
@@ -209,13 +196,13 @@ fix_permissions() {
     [ -f "$CONFIG_DB" ] && chmod 600 "$CONFIG_DB"
     [ -f "$WG_DIR/$WG_CONF_FILE" ] && chmod 600 "$WG_DIR/$WG_CONF_FILE"
     
-    success "File permissions set to 600"
+    debug "File permissions set to 600"
 }
 
 # Function to configure DNS in container
 configure_dns() {
     local dns_servers="$1"
-    info "${DNS_EMOJI} Configuring DNS servers: $dns_servers"
+    debug "${DNS_EMOJI} Configuring DNS servers: $dns_servers"
     
     # Method 1: Update /etc/resolv.conf directly
     if [ -w "/etc/resolv.conf" ]; then
@@ -243,19 +230,19 @@ configure_dns() {
     # Method 2: Use environment variables (for Docker)
     else
         warn "Cannot write to /etc/resolv.conf, using alternative methods"
-        info "To use DNS in client mode, set these environment variables in your container:"
+        debug "To use DNS in client mode, set these environment variables in your container:"
         
         echo "$dns_servers" | tr ',' '\n' | while read -r dns_server; do
             dns_server=$(echo "$dns_server" | tr -d ' ')
             if [ -n "$dns_server" ]; then
-                info "  -e DNS_SERVER=$dns_server"
+                debug "  -e DNS_SERVER=$dns_server"
             fi
         done
     fi
     
     # Test DNS resolution
     if command -v nslookup >/dev/null 2>&1; then
-        info "Testing DNS resolution..."
+        debug "Testing DNS resolution..."
         if nslookup google.com >/dev/null 2>&1; then
             success "DNS resolution working"
         else
@@ -266,7 +253,7 @@ configure_dns() {
 
 setup_client_routing() {
     if [ "$WG_MODE" = "client" ]; then
-        info "🌐 Setting up routing for WireGuard tunnel..."
+        debug "🌐 Setting up routing for WireGuard tunnel..."
         
         # Get the current default gateway and interface
         DEFAULT_GW=$(ip route | awk '/default/ {print $3; exit}')
@@ -275,7 +262,7 @@ setup_client_routing() {
         # Get WireGuard server endpoint IP
         WG_SERVER_IP=$(grep -E '^Endpoint' "$WG_DIR/$WG_CONF_FILE" | head -1 | awk -F'=' '{print $2}' | awk -F':' '{print $1}' | tr -d ' ')
         
-        info "WireGuard server IP: $WG_SERVER_IP"
+        debug "WireGuard server IP: $WG_SERVER_IP"
         
         # Step 1: Route WireGuard server through original gateway
         ip route add $WG_SERVER_IP via $DEFAULT_GW dev $DEFAULT_IFACE
@@ -290,9 +277,9 @@ setup_client_routing() {
         ip route add 192.168.0.0/16 via $DEFAULT_GW dev $DEFAULT_IFACE
         ip route add 100.64.0.0/10 via $DEFAULT_GW dev $DEFAULT_IFACE
         
-        info "Simple routing configured:"
-        info "- Internet traffic → WireGuard"
-        info "- Local/Docker traffic → Original interface"
+        debug "Simple routing configured:"
+        debug "- Internet traffic → WireGuard"
+        debug "- Local/Docker traffic → Original interface"
         
         # Test
         if ping -c 2 -W 2 8.8.8.8 >/dev/null 2>&1; then
@@ -309,11 +296,11 @@ setup_client_routing() {
 start_wg_iface() {
     local iface="$1"
 
-    info "Starting amneziawg-go on $iface..."
+    debug "Starting amneziawg-go on $iface..."
     amneziawg-go "$iface" >>"$WG_LOGFILE" 2>&1 &
     sleep 2
 
-    info "Verifying WireGuard configuration..."
+    debug "Verifying WireGuard configuration..."
     if awg show "$iface" >>"$WG_LOGFILE" 2>&1; then
         success "WireGuard configuration verified"
     else

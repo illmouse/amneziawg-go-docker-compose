@@ -7,9 +7,6 @@ set -eu
 # Source functions for logging, colors, emojis
 . /entrypoint/functions.sh
 
-# Source 3proxy
-. /entrypoint/3proxy.sh
-
 # Trap to catch any exits
 trap 'log "Script exiting with code: $?"' EXIT
 
@@ -69,7 +66,6 @@ else
 fi
 
 # Start unified monitoring in background
-info "🚀 Starting unified monitoring system..."
 /entrypoint/unified-monitor.sh 2>/dev/null &
 
 success "🏁 Container startup complete. Entering sleep..."

@@ -52,9 +52,9 @@ EOF
     if netstat -tuln | grep -q ":${PORT} "; then
         success "${TYPE} proxy is listening on port ${PORT}"
 
-        info "${TYPE} proxy listening addresses:"
+        debug "${TYPE} proxy listening addresses:"
         netstat -tuln | grep ":${PORT}" | while read -r line; do
-            info "  $line"
+            debug "  $line"
         done
     else
         error "${TYPE} proxy is NOT listening on port ${PORT}"
@@ -64,18 +64,18 @@ EOF
 # Function to start proxy
 3proxy_start() {
     if [ "$PROXY_ENABLED" != "true" ]; then
-        info "Proxy is disabled, skipping..."
+        debug "Proxy is disabled, skipping..."
         return
     fi
 
-    info "Starting proxy..."
+    debug "Starting proxy..."
     
     # Kill any existing processes first
     pkill 3proxy 2>/dev/null || true
     sleep 2
     
     # Start proxy in background
-    info "Starting proxy process..."
+    debug "Starting proxy process..."
     3proxy $PROXY_CONF_DIR/3proxy.cfg &
     PROXY_PID=$!
 

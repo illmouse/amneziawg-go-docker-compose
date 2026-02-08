@@ -39,7 +39,7 @@ reassemble_peer_config() {
         return 1
     fi
     
-    log "🔄 Reassembling peer configuration: $(basename "$peer_config")"
+    debug "🔄 Reassembling peer configuration: $(basename "$peer_config")"
     
     # Extract parameters we need
     extract_param() {
@@ -155,7 +155,7 @@ switch_to_peer_config() {
         return 1
     fi
     
-    log "🔄 Switching from $(basename "$current_config") to $(basename "$new_config")"
+    info "🔄 Switching from $(basename "$current_config") to $(basename "$new_config")"
     
     # Extract IP address from the new peer config
     new_ip=$(grep -E "^Address[[:space:]]*=" "$new_config" | head -1 | sed "s/^Address[[:space:]]*=[[:space:]]*//" | tr -d '\r\n')
@@ -166,7 +166,7 @@ switch_to_peer_config() {
         if ip addr show "$WG_IFACE" | grep -q "inet "; then
             current_ip=$(ip addr show "$WG_IFACE" | grep "inet " | head -1 | awk '{print $2}')
             if [ -n "$current_ip" ]; then
-                log "🧹 Removing current IP $current_ip from $WG_IFACE"
+                debug "🧹 Removing current IP $current_ip from $WG_IFACE"
                 if ip addr del "$current_ip" dev "$WG_IFACE" 2>/dev/null; then
                     success "Successfully removed IP $current_ip from $WG_IFACE"
                 else
@@ -181,12 +181,12 @@ switch_to_peer_config() {
             
             # Add new IP address to interface
             if [ -n "$new_ip" ]; then
-                log "➕ Adding new IP $new_ip to $WG_IFACE"
+                debug "➕ Adding new IP $new_ip to $WG_IFACE"
                 if ip addr add "$new_ip" dev "$WG_IFACE" 2>/dev/null; then
                     success "Successfully added IP $new_ip to $WG_IFACE"
                     
                     # Add default route via $WG_IFACE interface
-                    log "🛣️ Adding default route via $WG_IFACE"
+                    debug "🛣️ Adding default route via $WG_IFACE"
                     if ip route add default dev "$WG_IFACE" 2>/dev/null; then
                         success "Successfully added default route via $WG_IFACE"
                     else
@@ -306,16 +306,16 @@ find_current_peer_config() {
 }
 
 # Main monitoring loop
-log "🚀 Starting unified monitoring system in $WG_MODE mode"
+info "🚀 Starting unified monitoring system in $WG_MODE mode"
 
 # Wait for the assembled configuration to be created
-log "⏳ Waiting for assembled WireGuard configuration to be created..."
+debug "⏳ Waiting for assembled WireGuard configuration to be created..."
 max_wait=60
 waited=0
 while [ ! -f "$WG_DIR/$WG_IFACE.conf" ] && [ $waited -lt $max_wait ]; do
     sleep 2
     waited=$((waited + 2))
-    log "⏳ Still waiting for $WG_DIR/$WG_IFACE.conf... ($waited seconds elapsed)"
+    debug "⏳ Still waiting for $WG_DIR/$WG_IFACE.conf... ($waited seconds elapsed)"
 done
 
 if [ ! -f "$WG_DIR/$WG_IFACE.conf" ]; then
@@ -420,7 +420,7 @@ while true; do
                 if [ -z "$current_peer_config" ]; then
                     # Initialize with first peer if not set
                     current_peer_config="${sorted_files[0]}"
-                    log "🔌 Using initial peer config: $(basename "$current_peer_config")"
+                    debug "🔌 Using initial peer config: $(basename "$current_peer_config")"
                 fi
                 
                 # Get next peer config

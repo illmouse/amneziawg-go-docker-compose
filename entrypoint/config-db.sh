@@ -9,7 +9,7 @@ CONFIG_DB="/etc/amneziawg/config.json"
 # Initialize a fresh clean configuration DB
 #############################################
 init_config_db() {
-    info "Initializing new configuration database..."
+    debug "Initializing new configuration database..."
 
     mkdir -p /etc/amneziawg
 
@@ -73,7 +73,7 @@ validate_or_repair_db() {
 # Update DB with current env values
 #############################################
 update_config_db() {
-    info "Updating configuration database from environment..."
+    debug "Updating configuration database from environment..."
 
     TMP_FILE=$(mktemp)
 

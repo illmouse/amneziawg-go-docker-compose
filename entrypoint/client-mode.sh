@@ -23,7 +23,7 @@ master_peer_config=""
 if [ -n "$MASTER_PEER" ]; then
     master_peer_config="$CLIENT_PEERS_DIR/$MASTER_PEER"
     if [ ! -f "$master_peer_config" ]; then
-        log "⚠️ MASTER_PEER $MASTER_PEER specified but file not found"
+        warn "⚠️ MASTER_PEER $MASTER_PEER specified but file not found"
         master_peer_config=""
     else
         info "✅ Using master peer configuration: $MASTER_PEER"

@@ -2,7 +2,7 @@
 
 . /entrypoint/functions.sh
 
-info "${CONFIG_EMOJI} Generating server configuration..."
+debug "${CONFIG_EMOJI} Generating server configuration..."
 
 # Get server junk values
 server_priv_key=$(get_db_value '.server.keys.private_key')
@@ -43,7 +43,7 @@ EOF
 # Add peers to server config
 peers_count=$(jq '.peers | keys | length' "$CONFIG_DB")
 if [ "$peers_count" -gt 0 ]; then
-    info "Adding $peers_count peer(s) to server config"
+    debug "Adding $peers_count peer(s) to server config"
     jq -r '.peers | to_entries[] |
         "[Peer]\nPublicKey = " + .value.public_key +
         "\nPresharedKey = " + .value.preshared_key +
@@ -55,14 +55,14 @@ fi
 # Deploy if changed
 CONF_PATH="$WG_DIR/$WG_CONF_FILE"
 if [ -f "$CONF_PATH" ] && cmp -s "$TMP_CONF" "$CONF_PATH"; then
-    success "Server config unchanged"
+    info "Server config unchanged"
 else
     cp "$TMP_CONF" "$CONF_PATH"
-    success "Server configuration deployed: $CONF_PATH"
+    info "Server configuration deployed: $CONF_PATH"
 fi
 
 # Generate peer configs
-info "${CONFIG_EMOJI} Generating peer configurations..."
+debug "${CONFIG_EMOJI} Generating peer configurations..."
 server_pub_key=$(get_db_value '.server.keys.public_key')
 server_endpoint=$(get_db_value '.server.endpoint')
 server_port=$(get_db_value '.server.port')
@@ -101,4 +101,4 @@ EOF
     success "Peer config generated: $PEER_CONF_FILE"
 done
 
-success "${CONFIG_EMOJI} Configuration generation completed"
+debug "${CONFIG_EMOJI} Configuration generation completed"
