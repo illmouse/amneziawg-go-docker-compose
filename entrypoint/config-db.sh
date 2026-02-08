@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 . /entrypoint/functions.sh
 . /entrypoint/load_env.sh

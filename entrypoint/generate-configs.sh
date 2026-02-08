@@ -85,6 +85,10 @@ H1 = $server_h1
 H2 = $server_h2
 H3 = $server_h3
 H4 = $server_h4
+I1 = $(get_protocol_value)
+I2 = $(generate_cps_value)
+I3 = $(generate_cps_value)
+I4 = $(generate_cps_value)
 
 [Peer]
 PublicKey = $server_pub_key
