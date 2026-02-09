@@ -23,10 +23,10 @@ init_config_db() {
       "s2": $S2,
       "s3": $S3,
       "s4": $S4,
-      "h1": $H1,
-      "h2": $H2,
-      "h3": $H3,
-      "h4": $H4
+      "h1": "$H1",
+      "h2": "$H2",
+      "h3": "$H3",
+      "h4": "$H4"
     },
     "keys": {
       "private_key": "",
@@ -83,10 +83,10 @@ update_config_db() {
         --argjson s2 "$S2" \
         --argjson s3 "$S3" \
         --argjson s4 "$S4" \
-        --argjson h1 "$H1" \
-        --argjson h2 "$H2" \
-        --argjson h3 "$H3" \
-        --argjson h4 "$H4" \
+        --arg h1 "$H1" \
+        --arg h2 "$H2" \
+        --arg h3 "$H3" \
+        --arg h4 "$H4" \
         --arg timestamp "$(date -Iseconds)" \
     '
     .server.interface = $iface |

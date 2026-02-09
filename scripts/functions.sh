@@ -31,9 +31,17 @@ get_random_range() {
   local max=$2
 
   local a=$(( RANDOM * RANDOM % (max - min + 1) + min ))
-  local b=$(( RANDOM * RANDOM % (max - min + 1) + min ))
+  local b
+  while true; do
+    b=$(( RANDOM * RANDOM % (max - min + 1) + min ))
+    (( b != a )) && break
+  done
 
-  echo "${a}-${b}"
+  if (( a < b )); then
+    echo "${a}-${b}"
+  else
+    echo "${b}-${a}"
+  fi
 }
 
 get_random_junk_size() {
