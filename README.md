@@ -7,7 +7,7 @@ Automation for running **AmneziaWG** using Docker Compose. The project aims to r
 * One-command installation and launch
 * Simple configuration via a `.env` file
 * Supports both "server" and "client" modes
-* Support for AmneziaWG protocol version 1.5
+* Support for AmneziaWG protocol version 2.0
 * Automatic peer configuration and generation of client configuration files
 * Transparent [3proxy](https://3proxy.ru/) proxy for routing requests through the container in client mode (HTTP(S)/SOCKS5)
 * Monitoring and automatic failover between peers if a tunnel fails
@@ -112,7 +112,7 @@ PROXY_PORT_HTTP="3128"
 PROXY_PORT_SOCKS5="4128"
 ```
 
-## Using protocol version 1.5
+## Using protocol version 2.0
 
 In client mode, the use of obfuscation via the UDP protocol is enabled by default. If parameters I1–I5 are not specified in the peer configuration, the DEFAULT obfuscation protocol is selected automatically and parameters I2–I5 are generated automatically.
 
