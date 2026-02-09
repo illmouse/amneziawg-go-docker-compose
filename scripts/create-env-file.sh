@@ -15,14 +15,16 @@ setup_env() {
     
     # Generate random values for obfuscation parameters
     Jc=$(get_random_int 3 10)
-    Jmin=1
+    Jmin=5
     Jmax=50
     S1=$(get_random_junk_size)
     S2=$(get_random_junk_size)
-    H1=$(get_random_header)
-    H2=$(get_random_header)
-    H3=$(get_random_header)
-    H4=$(get_random_header)
+    S3=$(get_random_junk_size)
+    S4=$(get_random_junk_size)
+    H1=$(get_random_header_range 1 10000)
+    H2=$(get_random_header_range 20000 30000)
+    H3=$(get_random_header_range 40000 50000)
+    H4=$(get_random_header_range 60000 70000)
     
     # Create .env file directly from template inside script with all values
     cat > "$SCRIPT_DIR/.env" << EOF
@@ -63,6 +65,8 @@ Jmin=$Jmin
 Jmax=$Jmax
 S1=$S1
 S2=$S2
+S3=$S3
+S4=$S4
 H1=$H1
 H2=$H2
 H3=$H3
@@ -71,7 +75,7 @@ EOF
         
     log "Generated obfuscation values:"
     log "  Jc=$Jc, Jmin=$Jmin, Jmax=$Jmax"
-    log "  S1=$S1, S2=$S2"
+    log "  S1=$S1, S2=$S2", S3=$S3", S4=$S4"
     log "  H1=$H1, H2=$H2, H3=$H3, H4=$H4"
     log "WG_ENDPOINT set to: $WG_ENDPOINT"
     
