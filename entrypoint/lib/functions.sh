@@ -166,7 +166,7 @@ get_protocol_value() {
     else
         if [[ -n "${PROTOCOL_MAP[$code]}" ]]; then
             value="${PROTOCOL_MAP[$code]}"
-            info "Found protocol '$code'" >&2
+            debug "Found protocol '$code'" >&2
         else
             value="$default_value"
             warn "Protocol code '$code' not found. Using default." >&2

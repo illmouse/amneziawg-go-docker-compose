@@ -24,7 +24,7 @@ if [ -n "$MASTER_PEER" ]; then
         warn "MASTER_PEER $MASTER_PEER specified but file not found"
         master_peer_config=""
     else
-        info "Using master peer configuration: $MASTER_PEER"
+        info "Found master peer configuration at $master_peer_config"
     fi
 fi
 
