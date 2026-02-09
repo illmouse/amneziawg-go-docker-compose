@@ -216,45 +216,25 @@ while true; do
         fi
         sleep "$MON_CHECK_INTERVAL"
     else
-        # Tunnel is down -- attempt failover
+        # Tunnel is down -- attempt failover via circular rotation
+        # Master peer recovery is handled in the healthy path above (via nc check)
         warn "Tunnel is down, attempting to switch to next peer configuration..."
 
-        if [ -n "$master_peer_config" ] && [ -n "$current_peer_config" ] && [ "$current_peer_config" != "$master_peer_config" ]; then
-            # Try master peer first
-            if switch_to_peer_config "$master_peer_config" "$current_peer_config"; then
-                current_peer_config="$master_peer_config"
-                success "Switched to master peer $MASTER_PEER"
+        if [ -z "$current_peer_config" ]; then
+            current_peer_config="${sorted_files[0]}"
+            debug "Using initial peer config: $(basename "$current_peer_config")"
+        fi
+
+        next_peer_config=$(get_next_peer_config "$current_peer_config")
+
+        if [ -n "$next_peer_config" ] && [ -f "$next_peer_config" ]; then
+            if switch_to_peer_config "$next_peer_config" "$current_peer_config"; then
+                current_peer_config="$next_peer_config"
             else
-                warn "Failed to switch to master peer $MASTER_PEER, trying next available peer"
-                next_peer_config=$(get_next_peer_config "$current_peer_config")
-                if [ -n "$next_peer_config" ] && [ -f "$next_peer_config" ]; then
-                    if switch_to_peer_config "$next_peer_config" "$current_peer_config"; then
-                        current_peer_config="$next_peer_config"
-                    else
-                        warn "Failed to switch to next peer configuration, will retry in $MON_CHECK_INTERVAL seconds"
-                    fi
-                else
-                    warn "No valid next peer configuration found, will retry in $MON_CHECK_INTERVAL seconds"
-                fi
+                error "Failed to switch to next peer configuration, will retry in $MON_CHECK_INTERVAL seconds"
             fi
         else
-            # No master peer or already on master peer -- circular switch
-            if [ -z "$current_peer_config" ]; then
-                current_peer_config="${sorted_files[0]}"
-                debug "Using initial peer config: $(basename "$current_peer_config")"
-            fi
-
-            next_peer_config=$(get_next_peer_config "$current_peer_config")
-
-            if [ -n "$next_peer_config" ] && [ -f "$next_peer_config" ]; then
-                if switch_to_peer_config "$next_peer_config" "$current_peer_config"; then
-                    current_peer_config="$next_peer_config"
-                else
-                    error "Failed to switch to next peer configuration, will retry in $MON_CHECK_INTERVAL seconds"
-                fi
-            else
-                warn "No valid next peer configuration found, will retry in $MON_CHECK_INTERVAL seconds"
-            fi
+            warn "No valid next peer configuration found, will retry in $MON_CHECK_INTERVAL seconds"
         fi
 
         sleep "$MON_CHECK_INTERVAL"
