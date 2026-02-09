@@ -108,9 +108,13 @@ prompt_user() {
                 PROXY_ENABLED="false"
                 log "Disabled proxy"
                 ;;
-            *)
+            "")
                 PROXY_ENABLED="true"
                 log "No input provided, defaulting to enabled"
+                ;;
+            *)
+                PROXY_ENABLED="true"
+                log "Invalid choice, defaulting to enabled"
                 ;;
         esac
         
