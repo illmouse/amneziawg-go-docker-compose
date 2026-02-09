@@ -59,7 +59,7 @@ get_next_peer_config() {
     echo "${sorted_files[$next_index]}"
 }
 
-# Find current peer config by matching interface IP to peer template Address
+# Find current peer config by matching interface IP and active endpoint
 find_current_peer_config() {
     local current_ip
     current_ip=$(get_iface_ip "$WG_IFACE")
@@ -69,20 +69,43 @@ find_current_peer_config() {
         return
     fi
 
+    # Get the active peer endpoint from the running WireGuard interface
+    local current_endpoint
+    current_endpoint=$(awg show "$WG_IFACE" endpoints 2>/dev/null | head -1 | awk '{print $2}')
+
     local peer_files=("$CLIENT_PEERS_DIR"/*.conf)
+
+    # If we have endpoint info, match by both IP and endpoint for precision
+    if [ -n "$current_endpoint" ]; then
+        for peer_file in "${peer_files[@]}"; do
+            if [ -f "$peer_file" ]; then
+                local peer_ip peer_endpoint
+                peer_ip=$(conf_get_value "Address" "$peer_file" | cut -d/ -f1)
+                peer_endpoint=$(conf_get_value "Endpoint" "$peer_file")
+                if [ -n "$peer_ip" ] && [ "$peer_ip" = "$current_ip" ] \
+                    && [ -n "$peer_endpoint" ] && [ "$peer_endpoint" = "$current_endpoint" ]; then
+                    debug "Found current peer config: $(basename "$peer_file") (IP + endpoint match)" >&2
+                    echo "$peer_file"
+                    return 0
+                fi
+            fi
+        done
+    fi
+
+    # Fallback: match by IP only
     for peer_file in "${peer_files[@]}"; do
         if [ -f "$peer_file" ]; then
             local peer_ip
             peer_ip=$(conf_get_value "Address" "$peer_file" | cut -d/ -f1)
             if [ -n "$peer_ip" ] && [ "$peer_ip" = "$current_ip" ]; then
-                debug "Found current peer config: $(basename "$peer_file")" >&2
+                debug "Found current peer config: $(basename "$peer_file") (IP-only match)" >&2
                 echo "$peer_file"
                 return 0
             fi
         fi
     done
 
-    warn "No peer configuration found matching IP $current_ip"
+    warn "No peer configuration found matching IP $current_ip endpoint ${current_endpoint:-unknown}"
     echo ""
 }
 
