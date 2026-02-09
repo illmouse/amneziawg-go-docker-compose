@@ -258,11 +258,20 @@ setup_client_routing() {
         DEFAULT_GW=$(ip route | awk '/default/ {print $3; exit}')
         DEFAULT_IFACE=$(ip route | awk '/default/ {print $5; exit}')
 
-        WG_SERVER_IP=$(grep -E '^Endpoint' "$WG_DIR/$WG_CONF_FILE" | head -1 | awk -F'=' '{print $2}' | awk -F':' '{print $1}' | tr -d ' ')
-
-        debug "WireGuard server IP: $WG_SERVER_IP"
-
-        ip route add $WG_SERVER_IP via $DEFAULT_GW dev $DEFAULT_IFACE
+        # Add routes for all peer endpoints via physical gateway
+        # so WG traffic and health checks never go through the tunnel
+        local peer_configs
+        peer_configs=$(find "$CLIENT_PEERS_DIR" -name "*.conf" -type f 2>/dev/null)
+        if [ -n "$peer_configs" ]; then
+            while IFS= read -r peer_file; do
+                local endpoint_host
+                endpoint_host=$(conf_get_value "Endpoint" "$peer_file" | cut -d: -f1)
+                if [ -n "$endpoint_host" ]; then
+                    debug "Adding endpoint route: $endpoint_host via $DEFAULT_GW dev $DEFAULT_IFACE"
+                    ip route add "$endpoint_host" via "$DEFAULT_GW" dev "$DEFAULT_IFACE" 2>/dev/null || true
+                fi
+            done <<< "$peer_configs"
+        fi
 
         ip route del default
         ip route add default dev $WG_IFACE
@@ -275,6 +284,7 @@ setup_client_routing() {
         debug "Simple routing configured:"
         debug "- Internet traffic -> WireGuard"
         debug "- Local/Docker traffic -> Original interface"
+        debug "- All peer endpoints -> Physical interface"
 
         if ping -c 2 -W 2 8.8.8.8 >/dev/null 2>&1; then
             success "WireGuard connectivity test passed"

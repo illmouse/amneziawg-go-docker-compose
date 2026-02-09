@@ -124,30 +124,6 @@ switch_to_peer_config() {
     local new_ip
     new_ip=$(conf_get_value "Address" "$new_config")
 
-    # Update endpoint routing so the new peer is reachable via physical interface
-    local old_endpoint_host new_endpoint_host
-    old_endpoint_host=$(conf_get_value "Endpoint" "$current_config" | cut -d: -f1)
-    new_endpoint_host=$(conf_get_value "Endpoint" "$new_config" | cut -d: -f1)
-
-    if [ -n "$new_endpoint_host" ] && [ "$old_endpoint_host" != "$new_endpoint_host" ]; then
-        # Get physical gateway from private network routes set by setup_client_routing
-        local phys_gw phys_dev
-        phys_gw=$(ip route | awk '/10\.0\.0\.0\/8 via/ {print $3; exit}')
-        phys_dev=$(ip route | awk '/10\.0\.0\.0\/8 via/ {print $5; exit}')
-
-        if [ -n "$phys_gw" ] && [ -n "$phys_dev" ]; then
-            debug "Adding endpoint route: $new_endpoint_host via $phys_gw dev $phys_dev"
-            ip route add "$new_endpoint_host" via "$phys_gw" dev "$phys_dev" 2>/dev/null || true
-
-            if [ -n "$old_endpoint_host" ]; then
-                debug "Removing old endpoint route: $old_endpoint_host"
-                ip route del "$old_endpoint_host" via "$phys_gw" dev "$phys_dev" 2>/dev/null || true
-            fi
-        else
-            warn "Could not determine physical gateway for endpoint routing"
-        fi
-    fi
-
     # Rebuild config using the shared builder (eliminates duplication)
     if build_client_config "$new_config" "$WG_DIR/$WG_IFACE.conf"; then
         # Remove current IP address from interface
