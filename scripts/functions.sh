@@ -26,12 +26,26 @@ get_random_int() {
     echo $(( min + ( $(od -An -N4 -tu4 /dev/urandom) % (max - min + 1) ) ))
 }
 
+get_random_range() {
+  local min=$1
+  local max=$2
+
+  local a=$(( RANDOM * RANDOM % (max - min + 1) + min ))
+  local b=$(( RANDOM * RANDOM % (max - min + 1) + min ))
+
+  echo "${a}-${b}"
+}
+
 get_random_junk_size() {
     get_random_int 15 150
 }
 
 get_random_header() {
     get_random_int 1 2147483647
+}
+
+get_random_header_range() {
+    get_random_range $1 $2
 }
 
 get_public_endpoint() {

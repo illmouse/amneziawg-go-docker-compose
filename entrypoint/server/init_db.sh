@@ -21,6 +21,8 @@ init_config_db() {
       "jmax": $Jmax,
       "s1": $S1,
       "s2": $S2,
+      "s3": $S4,
+      "s3": $S4,
       "h1": $H1,
       "h2": $H2,
       "h3": $H3,
@@ -79,6 +81,8 @@ update_config_db() {
         --argjson jmax "$Jmax" \
         --argjson s1 "$S1" \
         --argjson s2 "$S2" \
+        --argjson s3 "$S3" \
+        --argjson s4 "$S4" \
         --argjson h1 "$H1" \
         --argjson h2 "$H2" \
         --argjson h3 "$H3" \
@@ -94,6 +98,8 @@ update_config_db() {
     .server.junk.jmax = $jmax |
     .server.junk.s1 = $s1 |
     .server.junk.s2 = $s2 |
+    .server.junk.s3 = $s3 |
+    .server.junk.s4 = $s4 |
     .server.junk.h1 = $h1 |
     .server.junk.h2 = $h2 |
     .server.junk.h3 = $h3 |

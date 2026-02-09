@@ -29,7 +29,7 @@ build_client_config() {
     debug "Building client config from: $(basename "$peer_config")"
 
     # --- Extract parameters ---------------------------------------------------
-    local params="PrivateKey Jc Jmin Jmax S1 S2 H1 H2 H3 H4 I1 I2 I3 I4 I5 Address"
+    local params="PrivateKey Jc Jmin Jmax S1 S2 S3 S4 H1 H2 H3 H4 I1 I2 I3 I4 I5 Address"
     declare -A extracted_params
 
     for param in $params; do
@@ -58,7 +58,7 @@ PrivateKey = ${extracted_params[PrivateKey]}
 ListenPort = 0
 EOF
 
-    for param in Jc Jmin Jmax S1 S2 H1 H2 H3 H4 I1 I2 I3 I4 I5; do
+    for param in Jc Jmin Jmax S1 S2 S3 S4 H1 H2 H3 H4 I1 I2 I3 I4 I5; do
         if [[ -n "${extracted_params[$param]+_}" ]]; then
             printf "%s = %s\n" "$param" "${extracted_params[$param]}" >> "$output_config"
         fi
