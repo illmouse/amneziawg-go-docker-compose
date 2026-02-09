@@ -1,5 +1,4 @@
 #!/bin/bash
-. /entrypoint/functions.sh
 
 debug "${NETWORK_EMOJI} Starting WireGuard interface $WG_IFACE in SERVER mode..."
 

@@ -1,7 +1,5 @@
 #!/bin/bash
 
-. /entrypoint/functions.sh
-
 debug "${CONFIG_EMOJI} Generating server configuration..."
 
 # Get server junk values
@@ -20,7 +18,6 @@ server_h4=$(get_db_value '.server.junk.h4')
 
 TMP_CONF="$TMP_DIR/$WG_CONF_FILE"
 
-# Make sure TMP_DIR exists
 mkdir -p "$TMP_DIR"
 
 # Generate server config

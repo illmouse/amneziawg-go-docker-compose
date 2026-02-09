@@ -7,11 +7,9 @@ RUN apk add --no-cache \
     openssl \
     3proxy --repository=https://dl-cdn.alpinelinux.org/alpine/edge/testing
 
-# Copy entrypoint files and make them executable
+# Copy entrypoint directory tree and make scripts executable
 RUN mkdir -p /entrypoint
-COPY entrypoint/* /entrypoint/
-
-# Make entrypoint files executable
-RUN chmod +x /entrypoint/*.sh
+COPY entrypoint/ /entrypoint/
+RUN find /entrypoint -name "*.sh" -exec chmod +x {} \;
 
 ENTRYPOINT ["/entrypoint/main.sh"]
