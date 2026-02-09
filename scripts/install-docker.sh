@@ -38,7 +38,7 @@ install_docker() {
     systemctl start docker
     
     # Verify Docker installation worked
-    if command -v docker >/dev/null 2>&1 && command -v docker-compose >/dev/null 2>&1; then
+    if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
         log "Docker and Docker Compose are installed and working"
     else
         warn "Docker installation may have failed, but continuing as Docker might be installed manually"
@@ -61,16 +61,16 @@ install_docker_debian() {
     if [ "$ID" = "linuxmint" ]; then
         if [ -n "$UBUNTU_CODENAME" ]; then
             # Ubuntu-based Linux Mint (e.g., Mint 21.x)
-            echo "Detected Ubuntu-based Linux Mint – using Ubuntu codename '$UBUNTU_CODENAME'"
+            log "Detected Ubuntu-based Linux Mint – using Ubuntu codename '$UBUNTU_CODENAME'"
             BASE_ID="ubuntu"
             CODENAME="$UBUNTU_CODENAME"
         elif [ -n "$DEBIAN_CODENAME" ]; then
             # LMDE (Debian-based)
-            echo "Detected LMDE – using Debian codename '$DEBIAN_CODENAME'"
+            log "Detected LMDE – using Debian codename '$DEBIAN_CODENAME'"
             BASE_ID="debian"
             CODENAME="$DEBIAN_CODENAME"
         else
-            echo "Unable to determine base distro for Linux Mint"
+            error "Unable to determine base distro for Linux Mint"
             exit 1
         fi
     fi
@@ -79,22 +79,26 @@ install_docker_debian() {
     if [ "$ID" = "ubuntu" ]; then
         BASE_ID="ubuntu"
         CODENAME="$UBUNTU_CODENAME"
-        echo "Detected Ubuntu – using codename '$CODENAME'"
+        log "Detected Ubuntu – using codename '$CODENAME'"
     fi
 
     # Correct handling for Debian
     if [ "$ID" = "debian" ]; then
         BASE_ID="debian"
         CODENAME="$DEBIAN_CODENAME"
-        echo "Detected Debian – using codename '$CODENAME'"
+        log "Detected Debian – using codename '$CODENAME'"
     fi
+
+    # Detect architecture
+    local dpkg_arch
+    dpkg_arch="$(dpkg --print-architecture)"
 
     # Add Docker GPG key
     curl -fsSL https://download.docker.com/linux/$BASE_ID/gpg \
         | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
 
     # Add correct repository
-    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] \
+    echo "deb [arch=$dpkg_arch signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] \
         https://download.docker.com/linux/$BASE_ID $CODENAME stable" \
         > /etc/apt/sources.list.d/docker.list
 
@@ -113,18 +117,14 @@ install_docker_debian() {
 install_docker_redhat() {
     # Install prerequisites
     yum install -y yum-utils device-mapper-persistent-data lvm2
-    
+
     # Add Docker repository
     yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
-    
-    # Install Docker
+
     # Install Docker packages
     yum install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
-    # Also install docker-compose standalone for compatibility
-    curl -SL "https://github.com/docker/compose/releases/download/v2.20.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-    chmod +x /usr/local/bin/docker-compose
-    
-    # Install Docker Compose standalone
+
+    # Install docker-compose standalone for compatibility
     curl -SL "https://github.com/docker/compose/releases/download/v2.20.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
     chmod +x /usr/local/bin/docker-compose
 }

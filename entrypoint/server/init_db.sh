@@ -1,17 +1,12 @@
 #!/bin/bash
 
-. /entrypoint/functions.sh
-. /entrypoint/load_env.sh
-
-CONFIG_DB="/etc/amneziawg/config.json"
-
 #############################################
 # Initialize a fresh clean configuration DB
 #############################################
 init_config_db() {
     debug "Initializing new configuration database..."
 
-    mkdir -p /etc/amneziawg
+    mkdir -p "$WG_DIR"
 
     cat > "$CONFIG_DB" <<EOF
 {
@@ -51,15 +46,12 @@ EOF
 # Validate or repair existing DB
 #############################################
 validate_or_repair_db() {
-
-    # DB missing
     if [ ! -f "$CONFIG_DB" ]; then
         warn "Configuration database missing: $CONFIG_DB"
         init_config_db
         return
     fi
 
-    # DB empty
     if [ ! -s "$CONFIG_DB" ]; then
         error "Configuration database is empty: $CONFIG_DB"
         init_config_db

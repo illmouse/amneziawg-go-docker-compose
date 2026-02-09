@@ -2,19 +2,16 @@
 set -eu
 
 # Function to setup proxy
-3proxy_setup() {
+proxy_setup() {
     info "Setting up proxy..."
-    
-    # Create configuration directories
+
     PROXY_CONF_DIR="/etc/3proxy"
-    
+
     mkdir -p "$PROXY_LOG_DIR" /var/lib/3proxy
-    
-    # Fix permissions
+
     chown -R 3proxy:3proxy "$PROXY_LOG_DIR" /var/lib/3proxy 2>/dev/null || true
     chmod 755 "$PROXY_LOG_DIR" /var/lib/3proxy
-    
-    # Simple 3proxy config
+
     cat > "$PROXY_CONF_DIR/3proxy.cfg" << EOF
 # daemon
 nserver 9.9.9.9
@@ -39,13 +36,12 @@ socks -p${PROXY_PORT_SOCKS5}
 # chroot /var/lib/3proxy
 # user 3proxy:3proxy
 EOF
-    
-    
+
     success "Proxy configuration created for ports HTTP: ${PROXY_PORT_HTTP} SOCKS5: ${PROXY_PORT_SOCKS5}"
 }
 
 # Function to check a proxy port
-3proxy_check() {
+proxy_check() {
     local PORT=$1
     local TYPE=$2
 
@@ -62,50 +58,38 @@ EOF
 }
 
 # Function to start proxy
-3proxy_start() {
+proxy_start() {
     if [ "$PROXY_ENABLED" != "true" ]; then
         debug "Proxy is disabled, skipping..."
         return
     fi
 
     debug "Starting proxy..."
-    
-    # Kill any existing processes first
+
     pkill 3proxy 2>/dev/null || true
     sleep 2
-    
-    # Start proxy in background
+
     debug "Starting proxy process..."
     3proxy $PROXY_CONF_DIR/3proxy.cfg &
     PROXY_PID=$!
 
-    # Wait for proxy to start
     sleep 3
-    
+
     if kill -0 $PROXY_PID 2>/dev/null; then
         success "Proxy running (PID: $PROXY_PID)"
-        
-        # Check HTTP proxy
-        3proxy_check $PROXY_PORT_HTTP "HTTP"
 
-        # Check SOCKS5 proxy
-        3proxy_check $PROXY_PORT_SOCKS5 "SOCKS5"
-        
+        proxy_check $PROXY_PORT_HTTP "HTTP"
+        proxy_check $PROXY_PORT_SOCKS5 "SOCKS5"
     else
         error "Proxy failed to start"
     fi
 }
 
-# Setup proxy if enabled
+# Setup and start proxy if enabled
 if [ "$PROXY_ENABLED" = "true" ]; then
-
     info "Starting proxy"
-
-    # Set up proxy
-    3proxy_setup
-
-    # Start proxy
-    3proxy_start
+    proxy_setup
+    proxy_start
 else
     debug "Proxy disabled"
 fi

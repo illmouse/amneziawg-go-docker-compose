@@ -54,6 +54,8 @@ WG_MODE=$WG_MODE
 MASTER_PEER=
 # log level to use - ERROR,INFO,WARN,DEBUG
 LOG_LEVEL=INFO
+# UDP protocol to be used for obfuscation. Available options: DEFAULT, DNS, QUIC
+UDP_SIGNATURE=DEFAULT
 
 # AmneziaWG tunable parameters
 Jc=$Jc

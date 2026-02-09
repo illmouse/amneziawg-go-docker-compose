@@ -1,7 +1,5 @@
 #!/bin/bash
 
-. /entrypoint/functions.sh
-
 debug "${KEY_EMOJI} Generating server keys..."
 
 debug "Getting private key from database"
@@ -10,7 +8,7 @@ current_priv_key=$(get_db_value '.server.keys.private_key')
 if [ -z "$current_priv_key" ] || [ "$current_priv_key" = "null" ] || [ "$current_priv_key" = "" ]; then
     debug "Generating new server private key..."
     SERVER_PRIV_KEY=$(gen_key)
-    
+
     debug "Storing private key in database..."
     if set_db_value '.server.keys.private_key' "\"$SERVER_PRIV_KEY\""; then
         success "${KEY_EMOJI} Server private key stored in database"
@@ -28,7 +26,7 @@ current_pub_key=$(get_db_value '.server.keys.public_key')
 if [ -z "$current_pub_key" ] || [ "$current_pub_key" = "null" ] || [ "$current_pub_key" = "" ]; then
     debug "Deriving server public key from private key..."
     SERVER_PUB_KEY=$(pub_from_priv "$SERVER_PRIV_KEY")
-    
+
     debug "Storing public key in database..."
     if set_db_value '.server.keys.public_key' "\"$SERVER_PUB_KEY\""; then
         success "${KEY_EMOJI} Server public key stored in database"

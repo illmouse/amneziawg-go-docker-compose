@@ -1,7 +1,5 @@
 #!/bin/bash
 
-. /entrypoint/functions.sh
-
 debug "${PEER_EMOJI} Managing peers..."
 
 # Helper: Archive a peer configuration file
@@ -17,7 +15,7 @@ archive_peer_conf() {
             archive_file="$archive_file.$(date -u +'%H%M%S')"
         fi
         mv "$peer_conf_file" "$archive_file"
-        debug "Archived peer configuration: $peer_conf_file → $archive_file"
+        debug "Archived peer configuration: $peer_conf_file -> $archive_file"
     fi
 }
 
@@ -49,7 +47,6 @@ add_peer_to_db() {
 
     if set_db_value ".peers.\"$peer_name\"" "$peer_json"; then
         success "Peer $peer_name added to database"
-        # Do NOT generate peer config here, generate_configs.sh will handle it
     else
         error "Failed to add peer $peer_name to database"
     fi
@@ -67,10 +64,9 @@ cp "$CONFIG_DB" "$CONFIG_DB.backup" 2>/dev/null || true
 # Remove excess peers
 if [ "$current_peer_count" -gt "$desired_peer_count" ]; then
     debug "Removing $((current_peer_count - desired_peer_count)) excess peer(s)..."
-    
-    # Compute arrays safely
+
     peers_all=($(jq -r '.peers | keys | sort_by(.[4:] | tonumber) | .[]' "$CONFIG_DB"))
-    
+
     peers_to_keep=("${peers_all[@]:0:desired_peer_count}")
     peers_to_remove=("${peers_all[@]:desired_peer_count}")
 
