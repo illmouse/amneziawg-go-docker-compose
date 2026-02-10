@@ -45,7 +45,7 @@ get_random_range() {
 }
 
 get_random_junk_size() {
-    get_random_int 15 150
+    get_random_int 1 15
 }
 
 get_random_header() {

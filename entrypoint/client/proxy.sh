@@ -15,11 +15,11 @@ proxy_setup() {
     cat > "$PROXY_CONF_DIR/3proxy.cfg" << EOF
 nserver 9.9.9.9
 nserver 149.112.112.112
+
 nscache 65536
 stacksize 262144
 
-maxconn 65536
-connlim
+maxconn 80000
 timeouts 1 5 15 30 60 300 5 30
 
 # Logging
@@ -36,8 +36,6 @@ proxy -n -p${PROXY_PORT_HTTP}
 # SOCKS5 proxy
 socks -n -p${PROXY_PORT_SOCKS5}
 
-# chroot /var/lib/3proxy
-# user 3proxy:3proxy
 EOF
 
     success "Proxy configuration created for ports HTTP: ${PROXY_PORT_HTTP} SOCKS5: ${PROXY_PORT_SOCKS5}"
