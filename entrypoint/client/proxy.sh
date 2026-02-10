@@ -18,13 +18,13 @@ nserver 149.112.112.112
 nscache 65536
 stacksize 262144
 
-maxconn 0
+maxconn 65536
+connlim
 timeouts 1 5 15 30 60 300 5 30
-
 
 # Logging
 log ${PROXY_LOG_DIR}/3proxy.log D
-logformat "- %y-%m-%d %H:%M:%S %U %C:%c %R:%r %O %I %T"
+logformat "L%C - %U [%d/%o/%Y:%H:%M:%S %z] ""%T"" %E %I %O %N/%R:%r"
 rotate 0
 
 # No authentication
