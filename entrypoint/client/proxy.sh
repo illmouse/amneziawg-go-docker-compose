@@ -13,28 +13,29 @@ proxy_setup() {
     chmod 755 "$PROXY_LOG_DIR" /var/lib/3proxy
 
     cat > "$PROXY_CONF_DIR/3proxy.cfg" << EOF
-# daemon
 nserver 9.9.9.9
 nserver 149.112.112.112
 
-maxconn 100
-timeouts 1 5 30 60 180 1800 15 60
+nscache 65536
+stacksize 262144
+
+maxconn 80000
+timeouts 1 5 15 30 60 300 5 30
 
 # Logging
 log ${PROXY_LOG_DIR}/3proxy.log D
-logformat "- %y-%m-%d %H:%M:%S %U %C:%c %R:%r %O %I %T"
+logformat "L%C - %U [%d/%o/%Y:%H:%M:%S %z] ""%T"" %E %I %O %N/%R:%r"
+rotate 0
 
 # No authentication
 auth none
 
 # HTTP proxy
-proxy -p${PROXY_PORT_HTTP}
+proxy -n -p${PROXY_PORT_HTTP}
 
 # SOCKS5 proxy
-socks -p${PROXY_PORT_SOCKS5}
+socks -n -p${PROXY_PORT_SOCKS5}
 
-# chroot /var/lib/3proxy
-# user 3proxy:3proxy
 EOF
 
     success "Proxy configuration created for ports HTTP: ${PROXY_PORT_HTTP} SOCKS5: ${PROXY_PORT_SOCKS5}"
