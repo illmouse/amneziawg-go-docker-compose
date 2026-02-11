@@ -1,6 +1,6 @@
 # AmneziaWG - Docker Compose
 
-Автоматизация запуска **AmneziaWG** через Docker Compose. Проект направлен на сокращение времени, затрачиваемого на развертывание и поддержку WG-тоннелей, и базируется на официальном Docker-образе [amneziawg-go](https://hub.docker.com/r/amneziavpn/amneziawg-go) от команды [Amnezia](https://amnezia.org/).
+Автоматизация запуска **AmneziaWG** с использованием Docker Compose. Проект направлен на сокращение времени, затрачиваемого на развертывание и обслуживание туннелей WG. Он собирается из исходных кодов [amneziawg-go](https://github.com/amnezia-vpn/amneziawg-go.git) и [amneziawg-tools](https://github.com/amnezia-vpn/amneziawg-tools.git) на базе последней версии Alpine.
 
 # Возможности
 
