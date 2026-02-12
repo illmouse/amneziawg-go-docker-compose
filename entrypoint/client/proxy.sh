@@ -66,10 +66,7 @@ proxy_setup() {
     # HTTP Proxy
     ########################################
 
-    if [ "$PROXY_AUTH_HTTP_ENABLED" = "true" ]; then
-        echo "allow ${PROXY_AUTH_HTTP_USER}"
-        echo "proxy -n -a -p${PROXY_PORT_HTTP}"
-    else
+    if [ "$PROXY_HTTP_ENABLED" = "true" ]; then
         echo "proxy -n -p${PROXY_PORT_HTTP}"
     fi
 
@@ -79,10 +76,7 @@ proxy_setup() {
     # SOCKS5 Proxy
     ########################################
 
-    if [ "$PROXY_AUTH_SOCKS5_ENABLED" = "true" ]; then
-        echo "allow ${PROXY_AUTH_SOCKS5_USER}"
-        echo "socks -n -a -p${PROXY_PORT_SOCKS5}"
-    else
+    if [ "$PROXY_SOCKS5_ENABLED" = "true" ]; then
         echo "socks -n -p${PROXY_PORT_SOCKS5}"
     fi
 
@@ -163,7 +157,7 @@ proxy_start() {
 }
 
 # Setup and start proxy if enabled
-if [ "$PROXY_ENABLED" = "true" ]; then
+if [ "$PROXY_SOCKS5_ENABLED" = "true" ] || [ "$PROXY_HTTP_ENABLED" = "true" ]; then
     if [ "$PROXY_CUSTOM_CONFIG" = "false" ]; then
         proxy_setup
     else
