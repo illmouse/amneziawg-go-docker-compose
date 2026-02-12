@@ -130,11 +130,6 @@ proxy_check() {
 
 # Function to start proxy
 proxy_start() {
-    if [ "$PROXY_ENABLED" != "true" ]; then
-        debug "Proxy is disabled, skipping..."
-        return
-    fi
-
     info "Starting proxy..."
 
     pkill 3proxy 2>/dev/null || true
