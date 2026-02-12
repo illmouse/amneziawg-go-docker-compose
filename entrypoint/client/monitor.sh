@@ -19,7 +19,7 @@ check_tunnel_health() {
         return 1
     fi
 
-    if ping -c 3 -W "$timeout" "$test_target" >/dev/null 2>&1; then
+    if ping -c 3 -W "$timeout" -I "$WG_IFACE" "$test_target" >/dev/null 2>&1; then
         debug "Tunnel health check passed: $test_target"
         return 0
     else
@@ -142,8 +142,8 @@ switch_to_peer_config() {
             new_endpoint_ip=$(resolve_host "$new_endpoint_host") || true
             if [ -n "$new_endpoint_ip" ]; then
                 local phys_gw phys_iface
-                phys_gw=$(ip route show 10.0.0.0/8 2>/dev/null | awk '{print $3}')
-                phys_iface=$(ip route show 10.0.0.0/8 2>/dev/null | awk '{print $5}')
+                phys_gw=$(ip route | awk '/default/ {print $3; exit}')
+                phys_iface=$(ip route | awk '/default/ {print $5; exit}')
                 if [ -n "$phys_gw" ] && [ -n "$phys_iface" ]; then
                     debug "Adding endpoint route: $new_endpoint_ip via $phys_gw dev $phys_iface (host: $new_endpoint_host)"
                     ip route add "$new_endpoint_ip" via "$phys_gw" dev "$phys_iface" 2>/dev/null || true
@@ -158,8 +158,8 @@ switch_to_peer_config() {
             new_endpoint_ip=$(resolve_host "$new_endpoint_host") || true
             if [ -n "$new_endpoint_ip" ]; then
                 local phys_gw phys_iface
-                phys_gw=$(ip route show 10.0.0.0/8 2>/dev/null | awk '{print $3}')
-                phys_iface=$(ip route show 10.0.0.0/8 2>/dev/null | awk '{print $5}')
+                phys_gw=$(ip route | awk '/default/ {print $3; exit}')
+                phys_iface=$(ip route | awk '/default/ {print $5; exit}')
                 if [ -n "$phys_gw" ] && [ -n "$phys_iface" ]; then
                     debug "Adding endpoint route: $new_endpoint_ip via $phys_gw dev $phys_iface (host: $new_endpoint_host)"
                     ip route add "$new_endpoint_ip" via "$phys_gw" dev "$phys_iface" 2>/dev/null || true
@@ -187,8 +187,8 @@ switch_to_peer_config() {
                 if ip addr add "$new_ip" dev "$WG_IFACE" 2>/dev/null; then
                     success "Successfully added IP $new_ip to $WG_IFACE"
 
-                    debug "Adding default route via $WG_IFACE"
-                    ip route add default dev "$WG_IFACE" 2>/dev/null || warn "Failed to add default route via $WG_IFACE"
+                    debug "Updating routing table for $WG_IFACE"
+                    ip route replace default dev "$WG_IFACE" table 200 2>/dev/null || warn "Failed to update route table 200 for $WG_IFACE"
                 else
                     error "Failed to add IP $new_ip to $WG_IFACE"
                     return 1

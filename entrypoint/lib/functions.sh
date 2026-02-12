@@ -304,20 +304,24 @@ setup_client_routing() {
             done <<< "$peer_configs"
         fi
 
-        ip route del default
-        ip route add default dev $WG_IFACE
+        if [ "$PROXY_SOCKS5_ENABLED" = "true" ] || [ "$PROXY_HTTP_ENABLED" = "true" ]; then
+            # Policy-based routing: only route 3proxy traffic through WireGuard.
+            # Default route stays on eth0 so incoming connections respond correctly.
+            local proxy_uid
+            proxy_uid=$(id -u 3proxy)
 
-        ip route add 172.16.0.0/12 via $DEFAULT_GW dev $DEFAULT_IFACE
-        ip route add 10.0.0.0/8 via $DEFAULT_GW dev $DEFAULT_IFACE
-        ip route add 192.168.0.0/16 via $DEFAULT_GW dev $DEFAULT_IFACE
-        ip route add 100.64.0.0/10 via $DEFAULT_GW dev $DEFAULT_IFACE
+            ip route add default dev "$WG_IFACE" table 200
+            iptables -t mangle -A OUTPUT -m owner --uid-owner "$proxy_uid" -j MARK --set-mark 0x2
+            ip rule add fwmark 0x2 table 200
 
-        debug "Simple routing configured:"
-        debug "- Internet traffic -> WireGuard"
-        debug "- Local/Docker traffic -> Original interface"
+            debug "Policy-based routing configured:"
+            debug "- 3proxy traffic (UID $proxy_uid) -> WireGuard tunnel"
+            debug "- All other traffic -> Default interface ($DEFAULT_IFACE)"
+        fi
+
         debug "- All peer endpoints -> Physical interface"
 
-        if ping -c 2 -W 2 8.8.8.8 >/dev/null 2>&1; then
+        if ping -c 2 -W 2 -I "$WG_IFACE" 8.8.8.8 >/dev/null 2>&1; then
             success "WireGuard connectivity test passed"
         else
             error "WireGuard connectivity test failed. Tunnel may be unhealthy."
