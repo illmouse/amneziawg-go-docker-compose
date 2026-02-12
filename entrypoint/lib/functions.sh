@@ -398,3 +398,11 @@ validate_environment() {
     success "Environment validation passed"
     return 0
 }
+
+# ===============================
+# Password helpers
+# ===============================
+
+hash_pass() {
+    printf "%s" "$1" | openssl passwd -1 -stdin
+}
