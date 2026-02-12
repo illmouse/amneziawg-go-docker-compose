@@ -311,7 +311,19 @@ setup_client_routing() {
             proxy_uid=$(id -u 3proxy)
 
             ip route add default dev "$WG_IFACE" table 200
-            iptables -t mangle -A OUTPUT -m owner --uid-owner "$proxy_uid" -j MARK --set-mark 0x2
+
+            # Tag incoming connections on eth0 so responses route back correctly
+            iptables -t mangle -A PREROUTING -i eth0 -m conntrack --ctstate NEW -j CONNMARK --set-mark 0x1
+
+            # Restore connection mark to packet mark on outgoing packets
+            iptables -t mangle -A OUTPUT -j CONNMARK --restore-mark
+
+            # Only mark NEW outgoing connections from 3proxy (mark 0x0 = no connmark yet)
+            iptables -t mangle -A OUTPUT -m owner --uid-owner "$proxy_uid" -m mark --mark 0x0 -j MARK --set-mark 0x2
+
+            # Persist upstream connection mark for subsequent packets
+            iptables -t mangle -A OUTPUT -m mark --mark 0x2 -j CONNMARK --save-mark
+
             ip rule add fwmark 0x2 table 200
 
             debug "Policy-based routing configured:"
