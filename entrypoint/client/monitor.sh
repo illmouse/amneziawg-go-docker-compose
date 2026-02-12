@@ -82,8 +82,17 @@ find_current_peer_config() {
                 local peer_ip peer_endpoint
                 peer_ip=$(conf_get_value "Address" "$peer_file" | cut -d/ -f1)
                 peer_endpoint=$(conf_get_value "Endpoint" "$peer_file")
+                # Resolve config endpoint host to IP for comparison with awg show output
+                local peer_endpoint_resolved=""
+                if [ -n "$peer_endpoint" ]; then
+                    local peer_ep_host peer_ep_port peer_ep_ip
+                    peer_ep_host=$(echo "$peer_endpoint" | cut -d: -f1)
+                    peer_ep_port=$(echo "$peer_endpoint" | cut -d: -f2)
+                    peer_ep_ip=$(resolve_host "$peer_ep_host" 2>/dev/null) || peer_ep_ip="$peer_ep_host"
+                    peer_endpoint_resolved="${peer_ep_ip}:${peer_ep_port}"
+                fi
                 if [ -n "$peer_ip" ] && [ "$peer_ip" = "$current_ip" ] \
-                    && [ -n "$peer_endpoint" ] && [ "$peer_endpoint" = "$current_endpoint" ]; then
+                    && [ -n "$peer_endpoint_resolved" ] && [ "$peer_endpoint_resolved" = "$current_endpoint" ]; then
                     debug "Found current peer config: $(basename "$peer_file") (IP + endpoint match)" >&2
                     echo "$peer_file"
                     return 0
@@ -133,6 +142,22 @@ switch_to_peer_config() {
             if [ -n "$current_ip" ]; then
                 debug "Removing current IP $current_ip from $WG_IFACE"
                 ip addr del "$current_ip" dev "$WG_IFACE" 2>/dev/null || warn "Failed to remove IP $current_ip"
+            fi
+        fi
+
+        # Ensure the new endpoint has a route via the physical gateway
+        local new_endpoint_host new_endpoint_ip
+        new_endpoint_host=$(conf_get_value "Endpoint" "$new_config" | cut -d: -f1)
+        if [ -n "$new_endpoint_host" ]; then
+            new_endpoint_ip=$(resolve_host "$new_endpoint_host") || true
+            if [ -n "$new_endpoint_ip" ]; then
+                local phys_gw phys_iface
+                phys_gw=$(ip route show 10.0.0.0/8 2>/dev/null | awk '{print $3}')
+                phys_iface=$(ip route show 10.0.0.0/8 2>/dev/null | awk '{print $5}')
+                if [ -n "$phys_gw" ] && [ -n "$phys_iface" ]; then
+                    debug "Adding endpoint route: $new_endpoint_ip via $phys_gw dev $phys_iface (host: $new_endpoint_host)"
+                    ip route add "$new_endpoint_ip" via "$phys_gw" dev "$phys_iface" 2>/dev/null || true
+                fi
             fi
         fi
 

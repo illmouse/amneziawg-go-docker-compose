@@ -249,6 +249,27 @@ configure_dns() {
 }
 
 # ===============================
+# DNS resolution
+# ===============================
+resolve_host() {
+    local host="$1"
+    # Already an IPv4 address — return as-is
+    if echo "$host" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$'; then
+        echo "$host"
+        return 0
+    fi
+    # Resolve via nslookup (BusyBox, available on Alpine)
+    local resolved
+    resolved=$(nslookup "$host" 2>/dev/null | awk '/^Address:/ && !/:#/ {print $2}' | head -1)
+    if [ -n "$resolved" ]; then
+        echo "$resolved"
+        return 0
+    fi
+    warn "Failed to resolve hostname: $host"
+    return 1
+}
+
+# ===============================
 # Client routing
 # ===============================
 setup_client_routing() {
@@ -264,11 +285,12 @@ setup_client_routing() {
         peer_configs=$(find "$CLIENT_PEERS_DIR" -name "*.conf" -type f 2>/dev/null)
         if [ -n "$peer_configs" ]; then
             while IFS= read -r peer_file; do
-                local endpoint_host
+                local endpoint_host endpoint_ip
                 endpoint_host=$(conf_get_value "Endpoint" "$peer_file" | cut -d: -f1)
                 if [ -n "$endpoint_host" ]; then
-                    debug "Adding endpoint route: $endpoint_host via $DEFAULT_GW dev $DEFAULT_IFACE"
-                    ip route add "$endpoint_host" via "$DEFAULT_GW" dev "$DEFAULT_IFACE" 2>/dev/null || true
+                    endpoint_ip=$(resolve_host "$endpoint_host") || continue
+                    debug "Adding endpoint route: $endpoint_ip via $DEFAULT_GW dev $DEFAULT_IFACE (host: $endpoint_host)"
+                    ip route add "$endpoint_ip" via "$DEFAULT_GW" dev "$DEFAULT_IFACE" 2>/dev/null || true
                 fi
             done <<< "$peer_configs"
         fi
