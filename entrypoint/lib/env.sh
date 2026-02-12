@@ -71,6 +71,13 @@ declare -A PROTOCOL_MAP=(
 : "${MON_CHECK_TIMEOUT:=10}"
 
 # ===============================
+# Save original DNS server
+# ===============================
+# Captured before configure_dns overwrites /etc/resolv.conf with VPN DNS.
+# Used as fallback in resolve_host() when VPN DNS is unreachable.
+ORIGINAL_DNS=$(awk '/^nameserver/ {print $2; exit}' /etc/resolv.conf 2>/dev/null || true)
+
+# ===============================
 # Export all variables
 # ===============================
 export WG_DIR TMP_DIR CLIENT_PEERS_DIR SERVER_PEERS_DIR CONFIG_DB WG_CONF_FILE WG_LOGFILE KEYS_DIR LOG_LEVEL
@@ -78,3 +85,4 @@ export WG_MODE WG_IFACE WG_ADDRESS WG_PORT WG_ENDPOINT WG_PEER_COUNT
 export PROXY_ENABLED PROXY_PORT_HTTP PROXY_PORT_SOCKS5 PROXY_LOG_DIR
 export Jc Jmin Jmax S1 S2 S3 S4 H1 H2 H3 H4 UDP_SIGNATURE
 export MON_CHECK_IP MON_CHECK_INTERVAL MON_CHECK_TIMEOUT PROTOCOL_MAP
+export ORIGINAL_DNS

@@ -259,11 +259,20 @@ resolve_host() {
         return 0
     fi
     # Resolve via nslookup (BusyBox, available on Alpine)
+    # Skip first 2 lines (Server/Address header) then extract first IPv4
     local resolved
-    resolved=$(nslookup "$host" 2>/dev/null | awk '/^Address:/ && !/:#/ {print $2}' | head -1)
+    resolved=$(nslookup "$host" 2>/dev/null | tail -n +3 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' | head -1)
     if [ -n "$resolved" ]; then
         echo "$resolved"
         return 0
+    fi
+    # Fallback: try original DNS server (pre-VPN configuration)
+    if [ -n "${ORIGINAL_DNS:-}" ]; then
+        resolved=$(nslookup "$host" "$ORIGINAL_DNS" 2>/dev/null | tail -n +3 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+        if [ -n "$resolved" ]; then
+            echo "$resolved"
+            return 0
+        fi
     fi
     warn "Failed to resolve hostname: $host"
     return 1

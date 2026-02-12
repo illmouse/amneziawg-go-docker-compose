@@ -20,3 +20,9 @@ fi
 success "${NETWORK_EMOJI} Client setup complete. Interface $WG_IFACE is connected to peers."
 
 setup_client_routing
+
+# Configure DNS after routing is established so VPN DNS servers are reachable
+if [ -n "${PEER_DNS_SERVERS:-}" ]; then
+    info "Configuring DNS servers: $PEER_DNS_SERVERS"
+    configure_dns "$PEER_DNS_SERVERS"
+fi
