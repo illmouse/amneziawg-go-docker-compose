@@ -84,33 +84,7 @@ proxy_setup() {
 
     } > "$PROXY_CONF_DIR/3proxy.cfg"
 
-#     cat > "$PROXY_CONF_DIR/3proxy.cfg" << EOF
-# nserver 9.9.9.9
-# nserver 149.112.112.112
-
-# nscache 65536
-# stacksize 262144
-
-# maxconn 80000
-# timeouts 1 5 15 30 60 300 5 30
-
-# # Logging
-# log ${PROXY_LOG_DIR}/3proxy.log D
-# logformat "L%C - %U [%d/%o/%Y:%H:%M:%S %z] ""%T"" %E %I %O %N/%R:%r"
-# rotate 0
-
-# # No authentication
-# auth none
-
-# # HTTP proxy
-# proxy -n -p${PROXY_PORT_HTTP}
-
-# # SOCKS5 proxy
-# socks -n -p${PROXY_PORT_SOCKS5}
-
-# EOF
-
-    success "Proxy configuration created for ports HTTP: ${PROXY_PORT_HTTP} SOCKS5: ${PROXY_PORT_SOCKS5}"
+    success "Proxy configuration created. HTTP: ${PROXY_HTTP_ENABLED} SOCKS5: ${PROXY_SOCKS5_ENABLED}"
 }
 
 # Function to check a proxy port
