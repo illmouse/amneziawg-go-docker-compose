@@ -45,12 +45,12 @@ proxy_setup() {
 
     if [ "$PROXY_AUTH_SOCKS5_ENABLED" = "true" ]; then
         SOCKS_HASH="$(hash_pass "$PROXY_AUTH_SOCKS5_PASSWORD")"
-        USER_LIST+=" ${PROXY_AUTH_SOCKS5_USER}:CR:\"${SOCKS_HASH}\""
+        USER_LIST+=" ${PROXY_AUTH_SOCKS5_USER}:CR:${SOCKS_HASH}"
     fi
 
     if [ "$PROXY_AUTH_HTTP_ENABLED" = "true" ]; then
         HTTP_HASH="$(hash_pass "$PROXY_AUTH_HTTP_PASSWORD")"
-        USER_LIST+=" ${PROXY_AUTH_HTTP_USER}:CR:\"${HTTP_HASH}\""
+        USER_LIST+=" ${PROXY_AUTH_HTTP_USER}:CR:${HTTP_HASH}"
     fi
 
     if [ -n "$USER_LIST" ]; then
