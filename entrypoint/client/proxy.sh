@@ -57,7 +57,7 @@ proxy_setup() {
         # Trim leading space
         USER_LIST="${USER_LIST#" "}"
         echo "auth strong"
-        echo "users $USER_LIST"
+        echo "users \"$USER_LIST\""
     else
         echo "auth none"
     fi
