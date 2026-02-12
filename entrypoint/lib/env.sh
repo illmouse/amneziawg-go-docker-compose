@@ -43,11 +43,11 @@ fi
 : "${PROXY_SOCKS5_ENABLED:=true}"
 : "${PROXY_AUTH_SOCKS5_ENABLED:=false}"
 : "${PROXY_AUTH_SOCKS5_USER:=user1}"
-: "${PROXY_AUTH_SOCKS5_PASSWORD_HASH:=$1$hE1FmmM$jxhx3S5XuTW/Pju0c9y/}"
-: "${PROXY_HTTP_ENABLED:=true}"
+: "${PROXY_AUTH_SOCKS5_PASSWORD_HASH:=passwordhash}"
+: "${PROXY_HTTP_ENABLED:=false}"
 : "${PROXY_AUTH_HTTP_ENABLED:=false}"
 : "${PROXY_AUTH_HTTP_USER:=user1}"
-: "${PROXY_AUTH_HTTP_PASSWORD_HASH:=$1$hE1FmmM$jxhx3S5XuTW/Pju0c9y/}"
+: "${PROXY_AUTH_HTTP_PASSWORD_HASH:=passwordhash}"
 : "${PROXY_CUSTOM_CONFIG:=false}"
 
 # ===============================
