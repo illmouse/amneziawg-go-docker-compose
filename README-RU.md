@@ -109,9 +109,15 @@ H4=450
 WG_MODE=client
 MASTER_PEER=peer1.conf
 
-PROXY_ENABLED="true"
-PROXY_PORT_HTTP="3128"
-PROXY_PORT_SOCKS5="4128"
+PROXY_SOCKS5_ENABLED=true
+PROXY_SOCKS5_PORT="4128"
+PROXY_SOCKS5_AUTH_ENABLED=false
+
+PROXY_HTTP_ENABLED=false
+PROXY_HTTP_PORT="3128"
+PROXY_HTTP_AUTH_ENABLED=false
+
+PROXY_CUSTOM_CONFIG=false
 ```
 
 ## Использование протокола версии 2.0
@@ -180,21 +186,29 @@ sudo ./setup.sh
 
 # Описание переменных
 
-| Название переменной | Доступные значения              | Значение по умолчанию             | Описание                                                                                                               |
-| ------------------- | ------------------------------- | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| WG_MODE             | `server`, `client`              | `server`                          | Режим запуска контейнера                                                                                               |
-| WG_IFACE            | любое корректное имя интерфейса | `wg0`                             | Имя сетевого интерфейса WireGuard внутри контейнера                                                                    |
-| WG_PORT             | 1–65535                         | `13440`                           | Порт, на котором WireGuard будет доступен на хосте                                                                     |
-| WG_ADDRESS          | любой корректный IP/маска       | `10.100.0.1/24`                   | Адрес для сети WireGuard. Пиры получают /32 по умолчанию                                                               |
-| WG_PEER_COUNT       | целое число ≥ 1                 | `1`                               | Количество пиров, для которых будут созданы конфигурации                                                               |
-| WG_ENDPOINT         | любой корректный IP             | `<IP сервера>` (автоопределяется) | IP хоста для генерации клиентских конфигураций. Пиры подключаются к этому IP                                           |
-| Параметры обфускации (`Jc`, `Jmin`, `Jmax`, `S1`, `S2`, `S3`, `S4`, `H1`, `H2`, `H3`, `H4`) | [описание параметров](https://docs.amnezia.org/documentation/amnezia-wg/#how-it-works)          | генерируется автоматически скриптом `setup.sh` |                  |
-| MASTER_PEER         | имя файла конфигурации пира     | нет                               | Имя конфигурационного файла в `config/client_peers/` для основного пира. Если не задано, выбирается первый по алфавиту |
-| UDP_SIGNATURE        |  DEFAULT,DNS,QUIC    | DEFAULT                              | код UDP протокола, который будет использоваться для обфускации соединения. В коде DEFAULT установлена сигнатура VoIP с ресурса https://voidwaifu.github.io/Special-Junk-Packet-List/ |
-| PROXY_ENABLED       | `true`, `false`                 | `true`                            | Включение прокси-сервера в клиентском режиме                                                                     |
-| PROXY_PORT_HTTP          | 1–65535                         | `3128`                            | Порт, на котором будет запущен HTTP прокси                                                                                   |
-| PROXY_PORT_SOCKS5          | 1–65535                         | `4128`                            | Порт, на котором будет запущен SOCKS5 прокси                                                                                   |
-| LOG_LEVEL             | `ERROR`, `INFO`, `WARN`, `DEBUG` | `INFO`                            | Уровень детализации логирования                                                                                        |
-| MON_CHECK_IP          | любой корректный IP             | `9.9.9.9`                         | IP-адрес для проверки доступности туннеля через ping                                                                   |
-| MON_CHECK_INTERVAL    | целое число ≥ 1                 | `10`                              | Интервал в секундах между проверками мониторинга                                                                       |
-| MON_CHECK_TIMEOUT     | целое число ≥ 1                 | `10`                              | Таймаут ping в секундах для проверки доступности                                                                       |
+| Название переменной | Доступные значения | Значение по умолчанию | Описание |
+| --- | --- | --- | --- |
+| WG_MODE | `server`, `client` | `server` | Режим запуска контейнера |
+| WG_IFACE | любое допустимое имя интерфейса | `wg0` | Имя интерфейса WireGuard внутри контейнера |
+| WG_PORT | 1–65535 | `13440` | Порт, на котором WireGuard будет доступен на хосте |
+| WG_ADDRESS | любой допустимый IP/подсеть | `10.100.0.1/24` | Сетевой адрес WireGuard. Пиры получают /32 по умолчанию |
+| WG_PEER_COUNT | целое число ≥ 1 | `1` | Количество пиров для генерации конфигураций |
+| WG_ENDPOINT | любой допустимый IP | `<IP сервера>` (автоопределение) | IP хоста для генерации клиентских конфигураций. Пиры подключаются к этому IP |
+| Параметры обфускации (`Jc`, `Jmin`, `Jmax`, `S1`, `S2`, `S3`, `S4`, `H1`, `H2`, `H3`, `H4`) | [описание параметров](https://docs.amnezia.org/documentation/amnezia-wg/#how-it-works) | автоматически генерируются `setup.sh` | |
+| MASTER_PEER | имя файла конфигурации пира | нет | Имя основного пира в `config/client_peers/`. Если не указано, выбирается первый по алфавиту |
+| UDP_SIGNATURE | DEFAULT, DNS, QUIC | DEFAULT | Код протокола UDP для обфускации соединения. DEFAULT использует VoIP-сигнатуру с https://voidwaifu.github.io/Special-Junk-Packet-List/ |
+| PROXY_SOCKS5_ENABLED | `true`, `false` | `false` | Включить SOCKS5 прокси в клиентском режиме |
+| PROXY_SOCKS5_PORT | 1–65535 | `4128` | Порт для SOCKS5 прокси |
+| PROXY_SOCKS5_AUTH_ENABLED | `true`, `false` | `false` | Включить базовую аутентификацию для SOCKS5 прокси |
+| PROXY_SOCKS5_AUTH_USER | `string` | `` | Имя пользователя для SOCKS5 прокси |
+| PROXY_SOCKS5_AUTH_PASSWORD | `string` | `` | Пароль для SOCKS5 прокси |
+| PROXY_HTTP_ENABLED | `true`, `false` | `false` | Включить HTTP прокси в клиентском режиме |
+| PROXY_HTTP_PORT | 1–65535 | `3128` | Порт для HTTP прокси |
+| PROXY_HTTP_AUTH_ENABLED | `true`, `false` | `false` | Включить базовую аутентификацию для HTTP прокси |
+| PROXY_HTTP_AUTH_USER | `string` | `` | Имя пользователя для HTTP прокси |
+| PROXY_HTTP_AUTH_PASSWORD | `string` | `` | Пароль для HTTP прокси |
+| PROXY_CUSTOM_CONFIG | `true`, `false` | `false` | Отключает управляемую конфигурацию для 3proxy. Вы можете смонтировать свой конфиг в /etc/3proxy/3proxy.cfg |
+| LOG_LEVEL | `ERROR`, `INFO`, `WARN`, `DEBUG` | `INFO` | Уровень детализации логирования |
+| MON_CHECK_IP | любой допустимый IP | `9.9.9.9` | IP-адрес для проверки работоспособности туннеля |
+| MON_CHECK_INTERVAL | целое число ≥ 1 | `10` | Интервал в секундах между проверками |
+| MON_CHECK_TIMEOUT | целое число ≥ 1 | `10` | Таймаут ping в секундах для проверок |

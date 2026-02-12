@@ -17,12 +17,13 @@ services:
       - /dev/net/tun:/dev/net/tun
     ports:
       - ${WG_PORT}:${WG_PORT}/udp
-      - ${PROXY_PORT_HTTP}:${PROXY_PORT_HTTP}/tcp
-      - ${PROXY_PORT_SOCKS5}:${PROXY_PORT_SOCKS5}/tcp
+      # - ${PROXY_HTTP_PORT}:${PROXY_HTTP_PORT}/tcp
+      # - ${PROXY_SOCKS5_PORT}:${PROXY_SOCKS5_PORT}/tcp
     volumes:
       - ./config:/etc/amneziawg
       - ./logs:/var/log/amneziawg
       - ./logs/3proxy:/var/log/3proxy
+      # - ./config/3proxy.cfg:/etc/3proxy/3proxy.cfg
     restart: always
     networks:
       awg:
