@@ -145,9 +145,12 @@ proxy_start() {
 
     if kill -0 $PROXY_PID 2>/dev/null; then
         success "Proxy running (PID: $PROXY_PID)"
-
-        proxy_check $PROXY_PORT_HTTP "HTTP"
-        proxy_check $PROXY_PORT_SOCKS5 "SOCKS5"
+        if [ "$PROXY_SOCKS5_ENABLED" = "true" ]; then
+            proxy_check $PROXY_PORT_SOCKS5 "SOCKS5"
+        fi
+        [ "$PROXY_HTTP_ENABLED" = "true" ]; then
+            proxy_check $PROXY_PORT_HTTP "HTTP"
+        fi
     else
         error "Proxy failed to start"
     fi
