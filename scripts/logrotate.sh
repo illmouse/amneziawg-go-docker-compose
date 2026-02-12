@@ -16,9 +16,9 @@ fi
 
 # Create config
 cat > "$LOGROTATE_CONFIG" << EOF
-${LOG_DIR}/*.log
-${LOG_DIR}/*/*.log
-${LOG_DIR}/*/*/*.log {
+${LOG_DIR}/*.*
+${LOG_DIR}/*/*.*
+${LOG_DIR}/*/*/*.* {
     daily
     missingok
     rotate 30

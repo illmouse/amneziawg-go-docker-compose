@@ -72,9 +72,10 @@ prompt_user() {
     log "Starting AmneziaWG setup..."
     
     # Set default values for PROXY
-    PROXY_ENABLED=${PROXY_ENABLED:-"true"}
-    PROXY_PORT_HTTP=${PROXY_PORT_HTTP:-"3128"}
-    PROXY_PORT_SOCKS5=${PROXY_PORT_SOCKS5:-"4128"}
+    PROXY_SOCKS5_ENABLED=${PROXY_SOCKS5_ENABLED:-"false"}
+    PROXY_SOCKS5_PORT=${PROXY_SOCKS5_PORT:-"4128"}
+    PROXY_HTTP_ENABLED=${PROXY_HTTP_ENABLED:-"false"}
+    PROXY_HTTP_PORT=${PROXY_HTTP_PORT:-"3128"}
     
     # Interactive setup for WG_MODE
     echo ""
@@ -119,48 +120,71 @@ prompt_user() {
         echo ""
         log "Configure proxy settings:"
         echo "Proxy can be enabled to route traffic through a proxy server"
-        echo -n "Enable proxy? (y/n, default y): "
+        echo -n "Enable SOCKS5 proxy? (y/n, default y): "
         read -r proxy_enable_choice
         case "$proxy_enable_choice" in
             y|Y|yes|Yes|YES)
-                PROXY_ENABLED="true"
+                PROXY_SOCKS5_ENABLED="true"
                 log "Enabled proxy"
                 ;;
             n|N|no|No|NO)
-                PROXY_ENABLED="false"
+                PROXY_SOCKS5_ENABLED="false"
                 log "Disabled proxy"
                 ;;
             "")
-                PROXY_ENABLED="true"
+                PROXY_SOCKS5_ENABLED="true"
                 log "No input provided, defaulting to enabled"
                 ;;
             *)
-                PROXY_ENABLED="true"
+                PROXY_SOCKS5_ENABLED="true"
                 log "Invalid choice, defaulting to enabled"
                 ;;
         esac
         
-        if [ "$PROXY_ENABLED" = "true" ]; then
-            echo ""
-            echo -n "Enter proxy HTTP port (default 3128): "
-            read -r proxy_port_http
-            if [[ "$proxy_port_http" =~ ^[0-9]+$ ]] && [ "$proxy_port_http" -ge 1 ] && [ "$proxy_port_http" -le 65535 ]; then
-                PROXY_PORT_HTTP="$proxy_port_http"
-                log "Set PROXY_PORT_HTTP=$PROXY_PORT_HTTP"
-            else
-                PROXY_PORT_HTTP=3128
-                log "Invalid input, defaulting to PROXY_PORT_HTTP=3128"
-            fi
-
+        if [ "$PROXY_SOCKS5_ENABLED" = "true" ]; then
             echo ""
             echo -n "Enter proxy SOCKS5 port (default 4128): "
-            read -r proxy_port_socks5
-            if [[ "$proxy_port_socks5" =~ ^[0-9]+$ ]] && [ "$proxy_port_socks5" -ge 1 ] && [ "$proxy_port_socks5" -le 65535 ]; then
-                PROXY_PORT_SOCKS5="$proxy_port_socks5"
-                log "Set PROXY_PORT_SOCKS5=$PROXY_PORT_SOCKS5"
+            read -r PROXY_SOCKS5_PORT
+            if [[ "$PROXY_SOCKS5_PORT" =~ ^[0-9]+$ ]] && [ "$PROXY_SOCKS5_PORT" -ge 1 ] && [ "$PROXY_SOCKS5_PORT" -le 65535 ]; then
+                PROXY_SOCKS5_PORT="$PROXY_SOCKS5_PORT"
+                log "Set PROXY_SOCKS5_PORT=$PROXY_SOCKS5_PORT"
             else
-                PROXY_PORT_SOCKS5=4128
-                log "Invalid input, defaulting to PROXY_PORT_SOCKS5=4128"
+                PROXY_SOCKS5_PORT=4128
+                log "Invalid input, defaulting to PROXY_SOCKS5_PORT=4128"
+            fi
+        fi
+
+        echo -n "Enable HTTP proxy? (y/n, default y): "
+        read -r proxy_enable_choice
+        case "$proxy_enable_choice" in
+            y|Y|yes|Yes|YES)
+                PROXY_HTTP_ENABLED="true"
+                log "Enabled proxy"
+                ;;
+            n|N|no|No|NO)
+                PROXY_HTTP_ENABLED="false"
+                log "Disabled proxy"
+                ;;
+            "")
+                PROXY_HTTP_ENABLED="true"
+                log "No input provided, defaulting to enabled"
+                ;;
+            *)
+                PROXY_HTTP_ENABLED="true"
+                log "Invalid choice, defaulting to enabled"
+                ;;
+        esac
+        
+        if [ "$PROXY_HTTP_ENABLED" = "true" ]; then
+            echo ""
+            echo -n "Enter proxy HTTP port (default 3128): "
+            read -r PROXY_HTTP_PORT
+            if [[ "$PROXY_HTTP_PORT" =~ ^[0-9]+$ ]] && [ "$PROXY_HTTP_PORT" -ge 1 ] && [ "$PROXY_HTTP_PORT" -le 65535 ]; then
+                PROXY_HTTP_PORT="$PROXY_HTTP_PORT"
+                log "Set PROXY_HTTP_PORT=$PROXY_HTTP_PORT"
+            else
+                PROXY_HTTP_PORT=3128
+                log "Invalid input, defaulting to PROXY_HTTP_PORT=3128"
             fi
         fi
     fi

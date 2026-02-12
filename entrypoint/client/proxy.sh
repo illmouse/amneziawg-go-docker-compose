@@ -43,14 +43,14 @@ proxy_setup() {
     # Build user list string if any auth is enabled
     USER_LIST=""
 
-    if [ "$PROXY_AUTH_SOCKS5_ENABLED" = "true" ]; then
-        SOCKS_HASH="$(hash_pass "$PROXY_AUTH_SOCKS5_PASSWORD")"
-        USER_LIST+=" ${PROXY_AUTH_SOCKS5_USER}:CR:${SOCKS_HASH}"
+    if [ "$PROXY_SOCKS5_AUTH_ENABLED" = "true" ]; then
+        SOCKS_HASH="$(hash_pass "$PROXY_SOCKS5_AUTH_PASSWORD")"
+        USER_LIST+=" ${PROXY_SOCKS5_AUTH_USER}:CR:${SOCKS_HASH}"
     fi
 
-    if [ "$PROXY_AUTH_HTTP_ENABLED" = "true" ]; then
-        HTTP_HASH="$(hash_pass "$PROXY_AUTH_HTTP_PASSWORD")"
-        USER_LIST+=" ${PROXY_AUTH_HTTP_USER}:CR:${HTTP_HASH}"
+    if [ "$PROXY_HTTP_AUTH_ENABLED" = "true" ]; then
+        HTTP_HASH="$(hash_pass "$PROXY_HTTP_AUTH_PASSWORD")"
+        USER_LIST+=" ${PROXY_HTTP_AUTH_USER}:CR:${HTTP_HASH}"
     fi
 
     if [ -n "$USER_LIST" ]; then
@@ -77,7 +77,7 @@ proxy_setup() {
     ########################################
 
     if [ "$PROXY_HTTP_ENABLED" = "true" ]; then
-        echo "proxy -n -p${PROXY_PORT_HTTP}"
+        echo "proxy -n -p${PROXY_HTTP_PORT}"
     fi
 
     echo ""
@@ -87,7 +87,7 @@ proxy_setup() {
     ########################################
 
     if [ "$PROXY_SOCKS5_ENABLED" = "true" ]; then
-        echo "socks -n -p${PROXY_PORT_SOCKS5}"
+        echo "socks -n -p${PROXY_SOCKS5_PORT}"
     fi
 
     } > "$PROXY_CONF_DIR/3proxy.cfg"
@@ -128,10 +128,10 @@ proxy_start() {
     if kill -0 $PROXY_PID 2>/dev/null; then
         success "Proxy running (PID: $PROXY_PID)"
         if [ "$PROXY_SOCKS5_ENABLED" = "true" ]; then
-            proxy_check $PROXY_PORT_SOCKS5 "SOCKS5"
+            proxy_check $PROXY_SOCKS5_PORT "SOCKS5"
         fi
         if [ "$PROXY_HTTP_ENABLED" = "true" ]; then
-            proxy_check $PROXY_PORT_HTTP "HTTP"
+            proxy_check $PROXY_HTTP_PORT "HTTP"
         fi
     else
         error "Proxy failed to start"
