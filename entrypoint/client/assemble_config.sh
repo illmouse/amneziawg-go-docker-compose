@@ -83,10 +83,4 @@ if [ -n "$client_address" ]; then
     info "Client interface address: $client_address"
 fi
 
-# Configure DNS if specified in peer config
-if [ -n "${PEER_DNS_SERVERS:-}" ]; then
-    info "Configuring DNS servers: $PEER_DNS_SERVERS"
-    configure_dns "$PEER_DNS_SERVERS"
-fi
-
 success "Client mode setup completed"

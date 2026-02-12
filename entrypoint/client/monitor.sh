@@ -135,16 +135,6 @@ switch_to_peer_config() {
 
     # Rebuild config using the shared builder (eliminates duplication)
     if build_client_config "$new_config" "$WG_DIR/$WG_IFACE.conf"; then
-        # Remove current IP address from interface
-        if ip addr show "$WG_IFACE" | grep -q "inet "; then
-            local current_ip
-            current_ip=$(ip addr show "$WG_IFACE" | grep "inet " | head -1 | awk '{print $2}')
-            if [ -n "$current_ip" ]; then
-                debug "Removing current IP $current_ip from $WG_IFACE"
-                ip addr del "$current_ip" dev "$WG_IFACE" 2>/dev/null || warn "Failed to remove IP $current_ip"
-            fi
-        fi
-
         # Ensure the new endpoint has a route via the physical gateway
         local new_endpoint_host new_endpoint_ip
         new_endpoint_host=$(conf_get_value "Endpoint" "$new_config" | cut -d: -f1)
@@ -166,6 +156,17 @@ switch_to_peer_config() {
             success "Successfully applied WireGuard configuration"
 
             if [ -n "$new_ip" ]; then
+                # Remove current IP only after awg setconf succeeds
+                # (prevents losing the address if setconf fails)
+                if ip addr show "$WG_IFACE" | grep -q "inet "; then
+                    local current_ip
+                    current_ip=$(ip addr show "$WG_IFACE" | grep "inet " | head -1 | awk '{print $2}')
+                    if [ -n "$current_ip" ]; then
+                        debug "Removing current IP $current_ip from $WG_IFACE"
+                        ip addr del "$current_ip" dev "$WG_IFACE" 2>/dev/null || warn "Failed to remove IP $current_ip"
+                    fi
+                fi
+
                 debug "Adding new IP $new_ip to $WG_IFACE"
                 if ip addr add "$new_ip" dev "$WG_IFACE" 2>/dev/null; then
                     success "Successfully added IP $new_ip to $WG_IFACE"

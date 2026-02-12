@@ -265,6 +265,14 @@ resolve_host() {
         echo "$resolved"
         return 0
     fi
+    # Fallback: try original DNS server (pre-VPN configuration)
+    if [ -n "${ORIGINAL_DNS:-}" ]; then
+        resolved=$(nslookup "$host" "$ORIGINAL_DNS" 2>/dev/null | awk '/^Address:/ && !/:#/ {print $2}' | head -1)
+        if [ -n "$resolved" ]; then
+            echo "$resolved"
+            return 0
+        fi
+    fi
     warn "Failed to resolve hostname: $host"
     return 1
 }
