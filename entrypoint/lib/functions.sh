@@ -312,6 +312,10 @@ setup_client_routing() {
 
             ip route add default dev "$WG_IFACE" table 200
 
+            # Rewrite source address for packets re-routed to wg0
+            # (kernel selects eth0 src before mangle mark triggers re-route)
+            iptables -t nat -A POSTROUTING -o "$WG_IFACE" -j MASQUERADE
+
             # Tag incoming connections on eth0 so responses route back correctly
             iptables -t mangle -A PREROUTING -i eth0 -m conntrack --ctstate NEW -j CONNMARK --set-mark 0x1
 
