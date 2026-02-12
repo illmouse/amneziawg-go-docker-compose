@@ -21,6 +21,9 @@ proxy_setup() {
     chmod 755 "$PROXY_LOG_DIR" /var/lib/3proxy
 
     {
+    echo "setgid $(id -g 3proxy)"
+    echo "setuid $(id -u 3proxy)"
+    echo ""
     echo "nserver 9.9.9.9"
     echo "nserver 149.112.112.112"
     echo ""
