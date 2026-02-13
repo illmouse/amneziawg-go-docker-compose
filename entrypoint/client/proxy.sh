@@ -28,7 +28,7 @@ proxy_setup() {
     echo "stacksize 65536"
     echo ""
     echo "maxconn 1000"
-    echo "connlim 50 20"
+    echo "connlim 50 20 * *"
     echo "timeouts 1 5 30 60 180 1800 15 60 15 5"
     echo ""
     echo "# Logging"
