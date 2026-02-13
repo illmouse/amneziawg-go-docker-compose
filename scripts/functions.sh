@@ -222,3 +222,60 @@ apply_sysctl_param() {
         log "Added ${KEY}=${VALUE}"
     fi
 }
+
+set_docker_compose_ports() {
+    # Default docker-compose file
+    COMPOSE_FILE="${1:-docker-compose.yaml}"
+
+    # Check if file exists
+    if [ ! -f "$COMPOSE_FILE" ]; then
+        echo "Error: File $COMPOSE_FILE not found!"
+        exit 1
+    fi
+
+    # Source .env file if it exists
+    if [ -f ".env" ]; then
+        echo "Sourcing .env file..."
+        set -a
+        source .env
+        set +a
+    fi
+
+    # Create backup
+    cp "$COMPOSE_FILE" "${COMPOSE_FILE}.backup"
+    echo "Backup created: ${COMPOSE_FILE}.backup"
+
+    # Function to ensure HTTP port line has correct state
+    update_http_port() {
+        if [[ "${PROXY_HTTP_ENABLED,,}" == "true" ]]; then
+            echo "PROXY_HTTP_ENABLED=true - Ensuring HTTP proxy port is uncommented with proper indentation..."
+            # Remove any existing line (commented or uncommented) and add properly indented uncommented line
+            sed -i '/PROXY_HTTP_PORT/d' "$COMPOSE_FILE"
+            sed -i '/ports:/a\      - ${PROXY_HTTP_PORT}:${PROXY_HTTP_PORT}/tcp' "$COMPOSE_FILE"
+        else
+            echo "PROXY_HTTP_ENABLED not set to true - Ensuring HTTP proxy port is commented with proper indentation..."
+            # Remove any existing line (commented or uncommented) and add properly indented commented line
+            sed -i '/PROXY_HTTP_PORT/d' "$COMPOSE_FILE"
+            sed -i '/ports:/a\      # - ${PROXY_HTTP_PORT}:${PROXY_HTTP_PORT}/tcp' "$COMPOSE_FILE"
+        fi
+    }
+
+    # Function to ensure SOCKS5 port line has correct state
+    update_socks5_port() {
+        if [[ "${PROXY_SOCKS5_ENABLED,,}" == "true" ]]; then
+            echo "PROXY_SOCKS5_ENABLED=true - Ensuring SOCKS5 proxy port is uncommented with proper indentation..."
+            # Remove any existing line (commented or uncommented) and add properly indented uncommented line
+            sed -i '/PROXY_SOCKS5_PORT/d' "$COMPOSE_FILE"
+            sed -i '/ports:/a\      - ${PROXY_SOCKS5_PORT}:${PROXY_SOCKS5_PORT}/tcp' "$COMPOSE_FILE"
+        else
+            echo "PROXY_SOCKS5_ENABLED not set to true - Ensuring SOCKS5 proxy port is commented with proper indentation..."
+            # Remove any existing line (commented or uncommented) and add properly indented commented line
+            sed -i '/PROXY_SOCKS5_PORT/d' "$COMPOSE_FILE"
+            sed -i '/ports:/a\      # - ${PROXY_SOCKS5_PORT}:${PROXY_SOCKS5_PORT}/tcp' "$COMPOSE_FILE"
+        fi
+    }
+
+    # Update both ports
+    update_http_port
+    update_socks5_port
+}
