@@ -14,25 +14,25 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 fix_permissions "$SCRIPT_DIR"/scripts
-# fix_permissions "$SCRIPT_DIR"/entrypoint
 
 # Check if .env exists and ask for overwrite
 if [ -f ".env" ]; then
     echo ""
     warn ".env file already exists!"
-    echo -n "Overwrite .env with new configuration? (y/n, default n): "
+    echo -n "Overwrite .env with new configuration? (y/n, default: n): "
     read -r overwrite_choice
     case "$overwrite_choice" in
         y|Y|yes|Yes|YES)
             log "Overwriting existing .env file"
+            overwrite_choice=true 
             ;;
         n|N|no|No|NO|"")
-            log "Exiting without overwriting .env"
-            exit 0
+            log "Proceeding without overwriting .env"
+            overwrite_choice=false 
             ;;
         *)
             log "Invalid choice, defaulting to no overwrite"
-            exit 0
+            overwrite_choice=false 
             ;;
     esac
 fi
@@ -50,9 +50,11 @@ if ! "$SCRIPT_DIR/scripts/configure-system.sh"; then
 fi
 
 # Step 3: Create .env file
-if ! "$SCRIPT_DIR/scripts/create-env-file.sh"; then
-    error "Environment setup failed"
-    exit 1
+if [ "$overwrite_choice" == true ]; then
+    if ! "$SCRIPT_DIR/scripts/create-env-file.sh"; then
+        error "env. setup failed"
+        exit 1
+    fi
 fi
 
 # Step 4: Setup logrotate for logs
@@ -61,7 +63,28 @@ if ! "$SCRIPT_DIR/scripts/logrotate.sh"; then
     exit 1
 fi
 
+
+echo ""
+echo -n "Start services? (y/n, default: y): "
+read -r start_choice
+case "$start_choice" in
+    y|Y|yes|Yes|YES)
+        log "Starting services..."
+        start_choice=true 
+        ;;
+    n|N|no|No|NO|"")
+        log "Exeting without service start..."
+        start_choice=false 
+        ;;
+    *)
+        log "Starting services..."
+        start_choice=true 
+        ;;
+esac
+
 # Step 5: Start services
-start_services
+if [ "$start_choice" == true ]; then
+    start_services
+fi
 
 log "Setup complete!"

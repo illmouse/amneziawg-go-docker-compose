@@ -82,7 +82,7 @@ prompt_user() {
     log "Select AmneziaWG mode:"
     echo "1) Server mode (default) - Acts as a VPN server, accepts connections from clients"
     echo "2) Client mode - Connects to remote VPN servers using peer configurations"
-    echo -n "Choose mode (1-2, default 1): "
+    echo -n "Choose mode (1-2, default: 1): "
     read -r mode_choice
     case "$mode_choice" in
         1|""|server|Server|SERVER)
@@ -120,7 +120,7 @@ prompt_user() {
         echo ""
         log "Configure proxy settings:"
         echo "Proxy can be enabled to route traffic through a proxy server"
-        echo -n "Enable SOCKS5 proxy? (y/n, default y): "
+        echo -n "Enable SOCKS5 proxy? (y/n, default: n): "
         read -r proxy_enable_choice
         case "$proxy_enable_choice" in
             y|Y|yes|Yes|YES)
@@ -154,7 +154,7 @@ prompt_user() {
             fi
         fi
 
-        echo -n "Enable HTTP proxy? (y/n, default y): "
+        echo -n "Enable HTTP proxy? (y/n, default: n): "
         read -r proxy_enable_choice
         case "$proxy_enable_choice" in
             y|Y|yes|Yes|YES)
