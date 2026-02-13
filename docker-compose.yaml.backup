@@ -23,7 +23,7 @@ services:
     devices:
       - /dev/net/tun:/dev/net/tun
     ports:
-      - ${PROXY_SOCKS5_PORT}:${PROXY_SOCKS5_PORT}/tcp
+      # - ${PROXY_SOCKS5_PORT}:${PROXY_SOCKS5_PORT}/tcp
       - ${PROXY_HTTP_PORT}:${PROXY_HTTP_PORT}/tcp
       - ${WG_PORT}:${WG_PORT}/udp
     volumes:

@@ -63,6 +63,8 @@ if ! "$SCRIPT_DIR/scripts/logrotate.sh"; then
     exit 1
 fi
 
+# Step 5: Set docker compose proxy ports
+set_docker_compose_ports
 
 echo ""
 echo -n "Start services? (y/n, default: y): "
@@ -82,7 +84,7 @@ case "$start_choice" in
         ;;
 esac
 
-# Step 5: Start services
+# Step 6: Start services
 if [ "$start_choice" == true ]; then
     start_services
 fi
