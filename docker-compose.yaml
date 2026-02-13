@@ -2,12 +2,19 @@ services:
   awg:
     image: ghcr.io/illmouse/amneziawg-go:latest
     container_name: amneziawg
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+        reservations:
+          memory: 512m
     ulimits:
       nofile:
-        soft: 1048576
-        hard: 1048576
-    env_file:
-      - .env
+        soft: 65535
+        hard: 65535
+      nproc:
+        soft: 20000
+        hard: 20000
     cap_add:
       - NET_ADMIN
     sysctls:
@@ -25,6 +32,8 @@ services:
       - ./logs/3proxy:/var/log/3proxy
       # - ./config/3proxy.cfg:/etc/3proxy/3proxy.cfg
     restart: always
+    env_file:
+      - .env
     networks:
       awg:
 

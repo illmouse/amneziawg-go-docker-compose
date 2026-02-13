@@ -209,3 +209,16 @@ start_services() {
     
     return 0
 }
+
+apply_sysctl_param() {
+    KEY="$1"
+    VALUE="$2"
+
+    if grep -q "^${KEY}=" /etc/sysctl.conf; then
+        sed -i "s|^${KEY}=.*|${KEY}=${VALUE}|" /etc/sysctl.conf
+        log "Updated ${KEY}=${VALUE}"
+    else
+        echo "${KEY}=${VALUE}" >> /etc/sysctl.conf
+        log "Added ${KEY}=${VALUE}"
+    fi
+}
