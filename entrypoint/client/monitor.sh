@@ -151,22 +151,6 @@ switch_to_peer_config() {
             fi
         fi
 
-        # Ensure the new endpoint has a route via the physical gateway
-        local new_endpoint_host new_endpoint_ip
-        new_endpoint_host=$(conf_get_value "Endpoint" "$new_config" | cut -d: -f1)
-        if [ -n "$new_endpoint_host" ]; then
-            new_endpoint_ip=$(resolve_host "$new_endpoint_host") || true
-            if [ -n "$new_endpoint_ip" ]; then
-                local phys_gw phys_iface
-                phys_gw=$(ip route | awk '/default/ {print $3; exit}')
-                phys_iface=$(ip route | awk '/default/ {print $5; exit}')
-                if [ -n "$phys_gw" ] && [ -n "$phys_iface" ]; then
-                    debug "Adding endpoint route: $new_endpoint_ip via $phys_gw dev $phys_iface (host: $new_endpoint_host)"
-                    ip route add "$new_endpoint_ip" via "$phys_gw" dev "$phys_iface" 2>/dev/null || true
-                fi
-            fi
-        fi
-
         # Apply the rebuilt configuration
         if awg setconf "$WG_IFACE" "$WG_DIR/$WG_IFACE.conf" 2>/dev/null; then
             success "Successfully applied WireGuard configuration"
