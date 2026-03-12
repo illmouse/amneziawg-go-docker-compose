@@ -151,22 +151,6 @@ switch_to_peer_config() {
             fi
         fi
 
-        # Ensure the new endpoint has a route via the physical gateway
-        local new_endpoint_host new_endpoint_ip
-        new_endpoint_host=$(conf_get_value "Endpoint" "$new_config" | cut -d: -f1)
-        if [ -n "$new_endpoint_host" ]; then
-            new_endpoint_ip=$(resolve_host "$new_endpoint_host") || true
-            if [ -n "$new_endpoint_ip" ]; then
-                local phys_gw phys_iface
-                phys_gw=$(ip route | awk '/default/ {print $3; exit}')
-                phys_iface=$(ip route | awk '/default/ {print $5; exit}')
-                if [ -n "$phys_gw" ] && [ -n "$phys_iface" ]; then
-                    debug "Adding endpoint route: $new_endpoint_ip via $phys_gw dev $phys_iface (host: $new_endpoint_host)"
-                    ip route add "$new_endpoint_ip" via "$phys_gw" dev "$phys_iface" 2>/dev/null || true
-                fi
-            fi
-        fi
-
         # Apply the rebuilt configuration
         if awg setconf "$WG_IFACE" "$WG_DIR/$WG_IFACE.conf" 2>/dev/null; then
             success "Successfully applied WireGuard configuration"
@@ -189,6 +173,17 @@ switch_to_peer_config() {
 
                     debug "Updating routing table for $WG_IFACE"
                     ip route replace default dev "$WG_IFACE" table 200 2>/dev/null || warn "Failed to update route table 200 for $WG_IFACE"
+
+                    # Update source-based routing rule: remove old WG IP rule, add new one
+                    if [ -n "${current_ip:-}" ]; then
+                        ip rule del from "${current_ip%/*}" table 200 2>/dev/null || true
+                    fi
+                    ip rule add from "${new_ip%/*}" table 200 priority 100
+
+                    # Reload 3proxy with the new WG IP as its outgoing source address
+                    if [ "$PROXY_SOCKS5_ENABLED" = "true" ] || [ "$PROXY_HTTP_ENABLED" = "true" ]; then
+                        proxy_update_external "${new_ip%/*}"
+                    fi
                 else
                     error "Failed to add IP $new_ip to $WG_IFACE"
                     return 1
@@ -213,12 +208,12 @@ switch_to_peer_config() {
 info "Starting client monitor..."
 
 # Wait for the configuration to be created
-max_wait=60
+max_wait=120
 waited=0
 while [ ! -f "$WG_DIR/$WG_IFACE.conf" ] && [ $waited -lt $max_wait ]; do
-    sleep 2
-    waited=$((waited + 2))
-    debug "Waiting for $WG_DIR/$WG_IFACE.conf... ($waited seconds elapsed)"
+    sleep 0.5
+    waited=$((waited + 1))
+    debug "Waiting for $WG_DIR/$WG_IFACE.conf... ($((waited / 2)) seconds elapsed)"
 done
 
 if [ ! -f "$WG_DIR/$WG_IFACE.conf" ]; then
