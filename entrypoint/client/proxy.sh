@@ -32,9 +32,8 @@ proxy_setup() {
     echo "timeouts 1 5 30 60 180 1800 15 60 15 5"
     echo ""
     echo "# Logging"
-    echo "log ${PROXY_LOG_DIR}/3proxy.log D"
+    echo "log ${PROXY_LOG_DIR}/3proxy.log"
     echo 'logformat "L%C - %U [%d/%o/%Y:%H:%M:%S %z] \"%T\" %E %I %O %N/%R:%r"'
-    echo "rotate 0"
     echo ""
 
     ########################################
