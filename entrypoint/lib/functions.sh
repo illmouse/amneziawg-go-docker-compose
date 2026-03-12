@@ -338,7 +338,7 @@ setup_client_routing() {
 # Proxy helpers
 # ===============================
 
-# Update the "external" directive in the 3proxy config and reload.
+# Update the "external" directive in the 3proxy config and restart the process.
 # Called by the monitor after a peer switch changes the WG interface IP.
 proxy_update_external() {
     local new_ip="$1"
@@ -349,10 +349,27 @@ proxy_update_external() {
     sed -i "s|^external .*|external $new_ip|" "$conf"
     debug "Updated 3proxy config: external $new_ip"
 
-    if pkill -HUP 3proxy 2>/dev/null; then
-        success "3proxy reloaded with new external IP: $new_ip"
+    pkill 3proxy 2>/dev/null || true
+    local kill_wait=0
+    while pgrep -x 3proxy >/dev/null 2>&1 && [ $kill_wait -lt 25 ]; do
+        sleep 0.2
+        kill_wait=$((kill_wait + 1))
+    done
+
+    3proxy "$conf" &
+    local proxy_pid=$!
+    local start_wait=0
+    while [ $start_wait -lt 50 ]; do
+        kill -0 "$proxy_pid" 2>/dev/null || break
+        netstat -tuln 2>/dev/null | grep -qE ":(${PROXY_SOCKS5_PORT}|${PROXY_HTTP_PORT}) " && break
+        sleep 0.2
+        start_wait=$((start_wait + 1))
+    done
+
+    if kill -0 "$proxy_pid" 2>/dev/null; then
+        success "3proxy restarted with new external IP: $new_ip (PID: $proxy_pid)"
     else
-        warn "Failed to send SIGHUP to 3proxy"
+        warn "3proxy failed to restart after external IP update"
     fi
 }
 
