@@ -305,33 +305,22 @@ setup_client_routing() {
         fi
 
         if [ "$PROXY_SOCKS5_ENABLED" = "true" ] || [ "$PROXY_HTTP_ENABLED" = "true" ]; then
-            # Policy-based routing: only route 3proxy traffic through WireGuard.
-            # Default route stays on eth0 so incoming connections respond correctly.
-            local proxy_uid
-            proxy_uid=$(id -u 3proxy)
+            # Source-based routing: 3proxy binds upstream sockets to the WG interface
+            # IP (via the "external" directive in its config). Packets sourced from that
+            # IP are routed through the tunnel via a dedicated routing table.
+            local wg_ip
+            wg_ip=$(ip addr show "$WG_IFACE" | awk '/inet / {print $2}' | cut -d/ -f1)
+
+            if [ -z "$wg_ip" ]; then
+                error "Cannot set up proxy routing: no IP assigned to $WG_IFACE"
+                return 1
+            fi
 
             ip route add default dev "$WG_IFACE" table 200
+            ip rule add from "$wg_ip" table 200 priority 100
 
-            # Rewrite source address for packets re-routed to wg0
-            # (kernel selects eth0 src before mangle mark triggers re-route)
-            iptables -t nat -A POSTROUTING -o "$WG_IFACE" -j MASQUERADE
-
-            # Tag incoming connections on eth0 so responses route back correctly
-            iptables -t mangle -A PREROUTING -i eth0 -m conntrack --ctstate NEW -j CONNMARK --set-mark 0x1
-
-            # Restore connection mark to packet mark on outgoing packets
-            iptables -t mangle -A OUTPUT -j CONNMARK --restore-mark
-
-            # Only mark NEW outgoing connections from 3proxy (mark 0x0 = no connmark yet)
-            iptables -t mangle -A OUTPUT -m owner --uid-owner "$proxy_uid" -m mark --mark 0x0 -j MARK --set-mark 0x2
-
-            # Persist upstream connection mark for subsequent packets
-            iptables -t mangle -A OUTPUT -m mark --mark 0x2 -j CONNMARK --save-mark
-
-            ip rule add fwmark 0x2 table 200
-
-            debug "Policy-based routing configured:"
-            debug "- 3proxy traffic (UID $proxy_uid) -> WireGuard tunnel"
+            debug "Source-based routing configured:"
+            debug "- Traffic from $wg_ip ($WG_IFACE) -> WireGuard tunnel (table 200)"
             debug "- All other traffic -> Default interface ($DEFAULT_IFACE)"
         fi
 
@@ -346,6 +335,28 @@ setup_client_routing() {
 }
 
 # ===============================
+# Proxy helpers
+# ===============================
+
+# Update the "external" directive in the 3proxy config and reload.
+# Called by the monitor after a peer switch changes the WG interface IP.
+proxy_update_external() {
+    local new_ip="$1"
+    local conf="$PROXY_CONF_DIR/3proxy.cfg"
+
+    [ -f "$conf" ] || return 0
+
+    sed -i "s|^external .*|external $new_ip|" "$conf"
+    debug "Updated 3proxy config: external $new_ip"
+
+    if pkill -HUP 3proxy 2>/dev/null; then
+        success "3proxy reloaded with new external IP: $new_ip"
+    else
+        warn "Failed to send SIGHUP to 3proxy"
+    fi
+}
+
+# ===============================
 # WireGuard interface helpers
 # ===============================
 start_wg_iface() {
@@ -353,7 +364,13 @@ start_wg_iface() {
 
     debug "Starting amneziawg-go on $iface..."
     amneziawg-go "$iface" >>"$WG_LOGFILE" 2>&1 &
-    sleep 2
+
+    local iface_wait=0
+    while [ $iface_wait -lt 25 ]; do
+        ip link show "$iface" >/dev/null 2>&1 && break
+        sleep 0.2
+        iface_wait=$((iface_wait + 1))
+    done
 
     debug "Verifying WireGuard configuration..."
     if awg show "$iface" >>"$WG_LOGFILE" 2>&1; then

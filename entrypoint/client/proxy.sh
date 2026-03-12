@@ -13,8 +13,6 @@ proxy_setup() {
 
     debug "Custom configuration of 3proxy disabled. Using built-in configuration."
 
-    PROXY_CONF_DIR="/etc/3proxy"
-
     mkdir -p "$PROXY_LOG_DIR" /var/lib/3proxy
 
     chown -R 3proxy:3proxy "$PROXY_LOG_DIR" /var/lib/3proxy 2>/dev/null || true
@@ -73,6 +71,19 @@ proxy_setup() {
     echo ""
 
     ########################################
+    # Outgoing source IP (routes upstream connections through WireGuard)
+    ########################################
+
+    local wg_ip
+    wg_ip=$(ip addr show "$WG_IFACE" | awk '/inet / {print $2}' | cut -d/ -f1)
+    if [ -n "$wg_ip" ]; then
+        echo "external $wg_ip"
+        echo ""
+    else
+        warn "No IP found on $WG_IFACE — 3proxy will use system default for outgoing connections"
+    fi
+
+    ########################################
     # HTTP Proxy
     ########################################
 
@@ -117,13 +128,23 @@ proxy_start() {
     info "Starting proxy..."
 
     pkill 3proxy 2>/dev/null || true
-    sleep 2
+    local kill_wait=0
+    while pgrep -x 3proxy >/dev/null 2>&1 && [ $kill_wait -lt 25 ]; do
+        sleep 0.2
+        kill_wait=$((kill_wait + 1))
+    done
 
     debug "Starting proxy process..."
-    3proxy $PROXY_CONF_DIR/3proxy.cfg &
+    3proxy "$PROXY_CONF_DIR/3proxy.cfg" &
     PROXY_PID=$!
 
-    sleep 3
+    local start_wait=0
+    while [ $start_wait -lt 50 ]; do
+        kill -0 "$PROXY_PID" 2>/dev/null || break
+        netstat -tuln 2>/dev/null | grep -qE ":(${PROXY_SOCKS5_PORT}|${PROXY_HTTP_PORT}) " && break
+        sleep 0.2
+        start_wait=$((start_wait + 1))
+    done
 
     if kill -0 $PROXY_PID 2>/dev/null; then
         success "Proxy running (PID: $PROXY_PID)"

@@ -173,6 +173,17 @@ switch_to_peer_config() {
 
                     debug "Updating routing table for $WG_IFACE"
                     ip route replace default dev "$WG_IFACE" table 200 2>/dev/null || warn "Failed to update route table 200 for $WG_IFACE"
+
+                    # Update source-based routing rule: remove old WG IP rule, add new one
+                    if [ -n "${current_ip:-}" ]; then
+                        ip rule del from "${current_ip%/*}" table 200 2>/dev/null || true
+                    fi
+                    ip rule add from "${new_ip%/*}" table 200 priority 100
+
+                    # Reload 3proxy with the new WG IP as its outgoing source address
+                    if [ "$PROXY_SOCKS5_ENABLED" = "true" ] || [ "$PROXY_HTTP_ENABLED" = "true" ]; then
+                        proxy_update_external "${new_ip%/*}"
+                    fi
                 else
                     error "Failed to add IP $new_ip to $WG_IFACE"
                     return 1
@@ -197,12 +208,12 @@ switch_to_peer_config() {
 info "Starting client monitor..."
 
 # Wait for the configuration to be created
-max_wait=60
+max_wait=120
 waited=0
 while [ ! -f "$WG_DIR/$WG_IFACE.conf" ] && [ $waited -lt $max_wait ]; do
-    sleep 2
-    waited=$((waited + 2))
-    debug "Waiting for $WG_DIR/$WG_IFACE.conf... ($waited seconds elapsed)"
+    sleep 0.5
+    waited=$((waited + 1))
+    debug "Waiting for $WG_DIR/$WG_IFACE.conf... ($((waited / 2)) seconds elapsed)"
 done
 
 if [ ! -f "$WG_DIR/$WG_IFACE.conf" ]; then

@@ -31,12 +31,12 @@ check_container_health() {
 # Wait for the configuration to be created
 info "Starting server monitor..."
 
-max_wait=60
+max_wait=120
 waited=0
 while [ ! -f "$WG_DIR/$WG_IFACE.conf" ] && [ $waited -lt $max_wait ]; do
-    sleep 2
-    waited=$((waited + 2))
-    debug "Waiting for $WG_DIR/$WG_IFACE.conf... ($waited seconds elapsed)"
+    sleep 0.5
+    waited=$((waited + 1))
+    debug "Waiting for $WG_DIR/$WG_IFACE.conf... ($((waited / 2)) seconds elapsed)"
 done
 
 if [ ! -f "$WG_DIR/$WG_IFACE.conf" ]; then
