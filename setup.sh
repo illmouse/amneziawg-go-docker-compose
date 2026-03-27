@@ -57,13 +57,7 @@ if [ "$overwrite_choice" == true ]; then
     fi
 fi
 
-# Step 4: Setup logrotate for logs
-if ! "$SCRIPT_DIR/scripts/logrotate.sh"; then
-    error "Logrotate setup failed"
-    exit 1
-fi
-
-# Step 5: Set docker compose proxy ports
+# Step 4: Set docker compose proxy ports
 set_docker_compose_ports
 
 echo ""
@@ -84,7 +78,7 @@ case "$start_choice" in
         ;;
 esac
 
-# Step 6: Start services
+# Step 5: Start services
 if [ "$start_choice" == true ]; then
     start_services
 fi

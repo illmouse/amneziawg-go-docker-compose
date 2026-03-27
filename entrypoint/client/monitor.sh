@@ -28,7 +28,7 @@ check_tunnel_health() {
     fi
 }
 
-# Get next peer config (circular rotation)
+# Get next peer config (circular rotation), skipping peers in failure cooldown
 get_next_peer_config() {
     local current_config="$1"
     local peer_files=("$CLIENT_PEERS_DIR"/*.conf)
@@ -50,13 +50,29 @@ get_next_peer_config() {
         fi
     done
 
-    if [ "$current_index" -eq -1 ] || [ "$peer_count" -eq 0 ]; then
+    if [ "$current_index" -eq -1 ]; then
         echo "${sorted_files[0]}"
         return
     fi
 
-    local next_index=$(( (current_index + 1) % peer_count ))
-    echo "${sorted_files[$next_index]}"
+    # Walk peers in rotation order, skip those still in failure cooldown
+    local next_index checked
+    next_index=$(( (current_index + 1) % peer_count ))
+    checked=0
+    while [ $checked -lt $peer_count ]; do
+        local candidate="${sorted_files[$next_index]}"
+        if ! is_peer_failed "$candidate"; then
+            echo "$candidate"
+            return
+        fi
+        debug "Skipping peer in cooldown: $(basename "$candidate")"
+        next_index=$(( (next_index + 1) % peer_count ))
+        checked=$(( checked + 1 ))
+    done
+
+    # All peers in cooldown — force next to avoid permanent stall
+    warn "All peers are in failure cooldown, forcing retry of next peer"
+    echo "${sorted_files[$(( (current_index + 1) % peer_count ))]}"
 }
 
 # Find current peer config by matching interface IP and active endpoint
@@ -207,6 +223,9 @@ switch_to_peer_config() {
 # ==========================================
 info "Starting client monitor..."
 
+# Failover counter — persisted in tunnel state across loop iterations
+failover_total=0
+
 # Wait for the configuration to be created
 max_wait=120
 waited=0
@@ -257,27 +276,28 @@ while true; do
     debug "Current peer config: $current_peer_config"
 
     if check_tunnel_health "$MON_CHECK_IP" "$MON_CHECK_TIMEOUT"; then
-        # Tunnel is healthy -- check if we should switch back to master peer
-        debug "Tunnel is healthy, check if we should switch to master peer"
+        # Tunnel is healthy — clear failure state for the working peer
+        if [ -n "$current_peer_config" ]; then
+            clear_peer_failed "$current_peer_config"
+        fi
+
+        write_tunnel_state 1 "$(basename "${current_peer_config:-}")" "$failover_total"
+
+        # Switch back to master only after its failure cooldown has expired.
+        # Actual connectivity proof comes from the ping health check next iteration.
         if [ -n "$master_peer_config" ] && [ -n "$current_peer_config" ] && [ "$current_peer_config" != "$master_peer_config" ]; then
-            master_endpoint=$(conf_get_value "Endpoint" "$master_peer_config")
-            if [ -n "$master_endpoint" ]; then
-                master_host=$(echo "$master_endpoint" | cut -d: -f1)
-                master_port=$(echo "$master_endpoint" | cut -d: -f2)
-                if [ -n "$master_host" ] && [ -n "$master_port" ]; then
-                    if nc -zvu "$master_host" "$master_port" >/dev/null 2>&1; then
-                        success "Master peer $MASTER_PEER is reachable, switching back to it"
-                        if switch_to_peer_config "$master_peer_config" "$current_peer_config"; then
-                            current_peer_config="$master_peer_config"
-                        fi
-                    fi
+            if ! is_peer_failed "$master_peer_config"; then
+                info "Master peer $MASTER_PEER cooldown expired, switching back"
+                if switch_to_peer_config "$master_peer_config" "$current_peer_config"; then
+                    current_peer_config="$master_peer_config"
                 fi
+            else
+                debug "Master peer $MASTER_PEER still in failure cooldown, staying on backup"
             fi
         fi
         sleep "$MON_CHECK_INTERVAL"
     else
-        # Tunnel is down -- attempt failover via circular rotation
-        # Master peer recovery is handled in the healthy path above (via nc check)
+        # Tunnel is down — mark current peer as failed and rotate to next
         warn "Tunnel is down, attempting to switch to next peer configuration..."
 
         if [ -z "$current_peer_config" ]; then
@@ -285,11 +305,15 @@ while true; do
             debug "Using initial peer config: $(basename "$current_peer_config")"
         fi
 
+        mark_peer_failed "$current_peer_config"
+        write_tunnel_state 0 "$(basename "$current_peer_config")" "$failover_total"
+
         next_peer_config=$(get_next_peer_config "$current_peer_config")
 
         if [ -n "$next_peer_config" ] && [ -f "$next_peer_config" ]; then
             if switch_to_peer_config "$next_peer_config" "$current_peer_config"; then
                 current_peer_config="$next_peer_config"
+                failover_total=$(( failover_total + 1 ))
             else
                 error "Failed to switch to next peer configuration, will retry in $MON_CHECK_INTERVAL seconds"
             fi

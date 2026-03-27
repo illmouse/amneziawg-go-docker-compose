@@ -279,6 +279,68 @@ resolve_host() {
 }
 
 # ===============================
+# Peer failure tracking
+# ===============================
+FAILED_PEERS_STATE="${TMP_DIR}/failed_peers.state"
+
+mark_peer_failed() {
+    local peer_config="$1"
+    local peer_name now tmpfile
+    peer_name=$(basename "$peer_config")
+    now=$(date +%s)
+    tmpfile=$(mktemp)
+    grep -v "^${peer_name}:" "$FAILED_PEERS_STATE" 2>/dev/null > "$tmpfile" || true
+    echo "${peer_name}:${now}" >> "$tmpfile"
+    mv "$tmpfile" "$FAILED_PEERS_STATE"
+    warn "Marked peer $peer_name as failed (cooldown: ${MON_PEER_FAIL_COOLDOWN}s)"
+}
+
+is_peer_failed() {
+    local peer_config="$1"
+    local peer_name failed_at now elapsed tmpfile
+    peer_name=$(basename "$peer_config")
+    [ -f "$FAILED_PEERS_STATE" ] || return 1
+    failed_at=$(grep "^${peer_name}:" "$FAILED_PEERS_STATE" 2>/dev/null | cut -d: -f2)
+    [ -z "$failed_at" ] && return 1
+    now=$(date +%s)
+    elapsed=$(( now - failed_at ))
+    if [ "$elapsed" -lt "$MON_PEER_FAIL_COOLDOWN" ]; then
+        debug "Peer $peer_name in cooldown (${elapsed}s / ${MON_PEER_FAIL_COOLDOWN}s elapsed)"
+        return 0
+    fi
+    tmpfile=$(mktemp)
+    grep -v "^${peer_name}:" "$FAILED_PEERS_STATE" > "$tmpfile" || true
+    mv "$tmpfile" "$FAILED_PEERS_STATE"
+    return 1
+}
+
+clear_peer_failed() {
+    local peer_config="$1"
+    local peer_name tmpfile
+    peer_name=$(basename "$peer_config")
+    [ -f "$FAILED_PEERS_STATE" ] || return 0
+    tmpfile=$(mktemp)
+    grep -v "^${peer_name}:" "$FAILED_PEERS_STATE" > "$tmpfile" || true
+    mv "$tmpfile" "$FAILED_PEERS_STATE"
+}
+
+# Write tunnel state for metrics collector
+# Usage: write_tunnel_state <healthy 0|1> [current_peer_basename] [failover_total]
+write_tunnel_state() {
+    local healthy="${1:-0}"
+    local current_peer="${2:-}"
+    local failover_total="${3:-}"
+    local state_file="${TMP_DIR}/tunnel.state"
+    local tmpfile
+    tmpfile=$(mktemp)
+    echo "tunnel_healthy=${healthy}" >> "$tmpfile"
+    echo "last_check_ts=$(date +%s)" >> "$tmpfile"
+    [ -n "$current_peer" ] && echo "current_peer=${current_peer}" >> "$tmpfile"
+    [ -n "$failover_total" ] && echo "failover_total=${failover_total}" >> "$tmpfile"
+    mv "$tmpfile" "$state_file"
+}
+
+# ===============================
 # Client routing
 # ===============================
 setup_client_routing() {

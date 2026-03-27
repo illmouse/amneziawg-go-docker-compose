@@ -76,6 +76,10 @@ prompt_user() {
     PROXY_SOCKS5_PORT=${PROXY_SOCKS5_PORT:-"4128"}
     PROXY_HTTP_ENABLED=${PROXY_HTTP_ENABLED:-"false"}
     PROXY_HTTP_PORT=${PROXY_HTTP_PORT:-"3128"}
+
+    # Set default values for METRICS
+    METRICS_ENABLED=${METRICS_ENABLED:-"false"}
+    METRICS_PORT=${METRICS_PORT:-"9586"}
     
     # Interactive setup for WG_MODE
     echo ""
@@ -188,6 +192,36 @@ prompt_user() {
             fi
         fi
     fi
+
+    # Interactive setup for Prometheus metrics (available in both server and client mode)
+    echo ""
+    log "Configure Prometheus metrics:"
+    echo "Exposes WireGuard tunnel health and peer stats at http://host:PORT/metrics"
+    echo -n "Enable Prometheus metrics? (y/n, default: n): "
+    read -r metrics_choice
+    case "$metrics_choice" in
+        y|Y|yes|Yes|YES)
+            METRICS_ENABLED="true"
+            log "Enabled metrics"
+            ;;
+        *)
+            METRICS_ENABLED="false"
+            log "Disabled metrics"
+            ;;
+    esac
+
+    if [ "$METRICS_ENABLED" = "true" ]; then
+        echo ""
+        echo -n "Enter metrics port (default 9586): "
+        read -r metrics_port_input
+        if [[ "$metrics_port_input" =~ ^[0-9]+$ ]] && [ "$metrics_port_input" -ge 1 ] && [ "$metrics_port_input" -le 65535 ]; then
+            METRICS_PORT="$metrics_port_input"
+            log "Set METRICS_PORT=$METRICS_PORT"
+        else
+            METRICS_PORT=9586
+            log "Invalid input, defaulting to METRICS_PORT=9586"
+        fi
+    fi
 }
 
 fix_permissions() {
@@ -275,7 +309,21 @@ set_docker_compose_ports() {
         fi
     }
 
-    # Update both ports
+    # Function to ensure metrics port line has correct state
+    update_metrics_port() {
+        if [[ "${METRICS_ENABLED,,}" == "true" ]]; then
+            echo "METRICS_ENABLED=true - Ensuring metrics port is uncommented with proper indentation..."
+            sed -i '/METRICS_PORT/d' "$COMPOSE_FILE"
+            sed -i '/ports:/a\      - ${METRICS_PORT}:${METRICS_PORT}/tcp' "$COMPOSE_FILE"
+        else
+            echo "METRICS_ENABLED not set to true - Ensuring metrics port is commented with proper indentation..."
+            sed -i '/METRICS_PORT/d' "$COMPOSE_FILE"
+            sed -i '/ports:/a\      # - ${METRICS_PORT}:${METRICS_PORT}/tcp' "$COMPOSE_FILE"
+        fi
+    }
+
+    # Update all ports
     update_http_port
     update_socks5_port
+    update_metrics_port
 }

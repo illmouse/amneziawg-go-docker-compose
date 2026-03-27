@@ -212,3 +212,10 @@ This will recreate:
 | MON_CHECK_IP | any valid IP | `9.9.9.9` | IP address used for tunnel health check pings |
 | MON_CHECK_INTERVAL | integer ≥ 1 | `10` | Interval in seconds between monitoring checks |
 | MON_CHECK_TIMEOUT | integer ≥ 1 | `10` | Ping timeout in seconds for health checks |
+| MON_PEER_FAIL_COOLDOWN | integer ≥ 0 | `300` | Seconds a failed peer stays excluded from rotation before being retried |
+| LOGROTATE_INTERVAL | integer ≥ 1 | `86400` | Seconds between log rotation runs inside the container (default: 24 h) |
+| LOGROTATE_ROTATE | integer ≥ 0 | `1` | Number of rotated log files to keep (1 = keep only the previous log) |
+| LOGROTATE_MAXAGE | integer ≥ 1 | `1` | Delete rotated log files older than this many days |
+| METRICS_ENABLED | `true`, `false` | `false` | Enable Prometheus metrics endpoint |
+| METRICS_PORT | 1–65535 | `9586` | Port to expose the `/metrics` endpoint on |
+| METRICS_INTERVAL | integer ≥ 1 | `15` | Seconds between metrics collection runs |
