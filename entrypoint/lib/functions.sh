@@ -285,9 +285,11 @@ FAILED_PEERS_STATE="${TMP_DIR}/failed_peers.state"
 
 mark_peer_failed() {
     local peer_config="$1"
-    local peer_name now tmpfile
+    local peer_name
     peer_name=$(basename "$peer_config")
+    local now
     now=$(date +%s)
+    local tmpfile
     tmpfile=$(mktemp)
     grep -v "^${peer_name}:" "$FAILED_PEERS_STATE" 2>/dev/null > "$tmpfile" || true
     echo "${peer_name}:${now}" >> "$tmpfile"
@@ -297,17 +299,21 @@ mark_peer_failed() {
 
 is_peer_failed() {
     local peer_config="$1"
-    local peer_name failed_at now elapsed tmpfile
+    local peer_name
     peer_name=$(basename "$peer_config")
     [ -f "$FAILED_PEERS_STATE" ] || return 1
+    local failed_at
     failed_at=$(grep "^${peer_name}:" "$FAILED_PEERS_STATE" 2>/dev/null | cut -d: -f2)
     [ -z "$failed_at" ] && return 1
+    local now elapsed
     now=$(date +%s)
-    elapsed=$(( now - failed_at ))
+    elapsed=$((now - failed_at))
     if [ "$elapsed" -lt "$MON_PEER_FAIL_COOLDOWN" ]; then
         debug "Peer $peer_name in cooldown (${elapsed}s / ${MON_PEER_FAIL_COOLDOWN}s elapsed)"
         return 0
     fi
+    # Cooldown expired — remove entry
+    local tmpfile
     tmpfile=$(mktemp)
     grep -v "^${peer_name}:" "$FAILED_PEERS_STATE" > "$tmpfile" || true
     mv "$tmpfile" "$FAILED_PEERS_STATE"
@@ -316,9 +322,10 @@ is_peer_failed() {
 
 clear_peer_failed() {
     local peer_config="$1"
-    local peer_name tmpfile
+    local peer_name
     peer_name=$(basename "$peer_config")
     [ -f "$FAILED_PEERS_STATE" ] || return 0
+    local tmpfile
     tmpfile=$(mktemp)
     grep -v "^${peer_name}:" "$FAILED_PEERS_STATE" > "$tmpfile" || true
     mv "$tmpfile" "$FAILED_PEERS_STATE"
