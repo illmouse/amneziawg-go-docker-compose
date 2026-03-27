@@ -49,9 +49,11 @@ success "WireGuard configuration found: $WG_DIR/$WG_IFACE.conf"
 # Main monitoring loop
 while true; do
     if check_container_health; then
+        write_tunnel_state 1
         sleep "$MON_CHECK_INTERVAL"
     else
         warn "Server is unhealthy, will retry in $MON_CHECK_INTERVAL seconds"
+        write_tunnel_state 0
         sleep "$MON_CHECK_INTERVAL"
     fi
 done

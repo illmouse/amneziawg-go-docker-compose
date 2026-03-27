@@ -44,6 +44,15 @@ if [ "${WG_MODE}" = "server" ]; then
     # Start server monitor in background
     /entrypoint/server/monitor.sh 2>/dev/null &
 
+    # Start log rotation in background
+    /entrypoint/logrotate.sh 2>/dev/null &
+
+    # Start Prometheus metrics if enabled
+    if [ "${METRICS_ENABLED}" = "true" ]; then
+        /entrypoint/metrics/collector.sh 2>/dev/null &
+        /entrypoint/metrics/server.sh 2>/dev/null &
+    fi
+
 elif [ "${WG_MODE}" = "client" ]; then
     info "=== Starting CLIENT setup process ==="
 
@@ -66,6 +75,15 @@ elif [ "${WG_MODE}" = "client" ]; then
 
     # Start client monitor in background
     /entrypoint/client/monitor.sh 2>/dev/null &
+
+    # Start log rotation in background
+    /entrypoint/logrotate.sh 2>/dev/null &
+
+    # Start Prometheus metrics if enabled
+    if [ "${METRICS_ENABLED}" = "true" ]; then
+        /entrypoint/metrics/collector.sh 2>/dev/null &
+        /entrypoint/metrics/server.sh 2>/dev/null &
+    fi
 
 else
     error "Unknown WG_MODE: $WG_MODE. Use 'server' or 'client'"

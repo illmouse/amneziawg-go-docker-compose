@@ -81,6 +81,20 @@ declare -A PROTOCOL_MAP=(
 : "${MON_PEER_FAIL_COOLDOWN:=300}"
 
 # ===============================
+# Log rotation
+# ===============================
+: "${LOGROTATE_INTERVAL:=86400}"  # seconds between rotation runs (default: 24 h)
+: "${LOGROTATE_ROTATE:=1}"        # number of rotated files to keep
+: "${LOGROTATE_MAXAGE:=1}"        # delete rotated files older than N days
+
+# ===============================
+# Prometheus metrics
+# ===============================
+: "${METRICS_ENABLED:=false}"
+: "${METRICS_PORT:=9586}"
+: "${METRICS_INTERVAL:=15}"
+
+# ===============================
 # Save original DNS server
 # ===============================
 # Captured before configure_dns overwrites /etc/resolv.conf with VPN DNS.
@@ -95,4 +109,6 @@ export WG_MODE WG_IFACE WG_ADDRESS WG_PORT WG_ENDPOINT WG_PEER_COUNT
 export PROXY_SOCKS5_ENABLED PROXY_HTTP_ENABLED PROXY_HTTP_PORT PROXY_SOCKS5_PORT PROXY_LOG_DIR PROXY_CONF_DIR PROXY_SOCKS5_AUTH_ENABLED PROXY_SOCKS5_AUTH_USER PROXY_SOCKS5_AUTH_PASSWORD PROXY_HTTP_AUTH_ENABLED PROXY_HTTP_AUTH_USER PROXY_HTTP_AUTH_PASSWORD PROXY_CUSTOM_CONFIG
 export Jc Jmin Jmax S1 S2 S3 S4 H1 H2 H3 H4 UDP_SIGNATURE
 export MON_CHECK_IP MON_CHECK_INTERVAL MON_CHECK_TIMEOUT MON_PEER_FAIL_COOLDOWN PROTOCOL_MAP
+export LOGROTATE_INTERVAL LOGROTATE_ROTATE LOGROTATE_MAXAGE
+export METRICS_ENABLED METRICS_PORT METRICS_INTERVAL
 export ORIGINAL_DNS

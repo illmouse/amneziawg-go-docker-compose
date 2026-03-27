@@ -39,6 +39,7 @@ RUN apk add --no-cache \
     ip6tables \
     jq \
     openssl \
+    logrotate \
     3proxy --repository=https://dl-cdn.alpinelinux.org/alpine/edge/testing
 
 # Copy amneziawg-go binary

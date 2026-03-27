@@ -67,10 +67,10 @@ get_next_peer_config() {
         fi
         debug "Skipping peer in cooldown: $(basename "$candidate")"
         next_index=$(( (next_index + 1) % peer_count ))
-        checked=$((checked + 1))
+        checked=$(( checked + 1 ))
     done
 
-    # All peers in cooldown — force next anyway to avoid permanent stall
+    # All peers in cooldown — force next to avoid permanent stall
     warn "All peers are in failure cooldown, forcing retry of next peer"
     echo "${sorted_files[$(( (current_index + 1) % peer_count ))]}"
 }
@@ -223,6 +223,9 @@ switch_to_peer_config() {
 # ==========================================
 info "Starting client monitor..."
 
+# Failover counter — persisted in tunnel state across loop iterations
+failover_total=0
+
 # Wait for the configuration to be created
 max_wait=120
 waited=0
@@ -278,10 +281,10 @@ while true; do
             clear_peer_failed "$current_peer_config"
         fi
 
-        # If we're on a backup peer, switch back to master only when its
-        # failure cooldown has expired (proves it had time to recover).
-        # No port/nc check here — the next health check cycle will validate
-        # actual internet connectivity through master.
+        write_tunnel_state 1 "$(basename "${current_peer_config:-}")" "$failover_total"
+
+        # Switch back to master only after its failure cooldown has expired.
+        # Actual connectivity proof comes from the ping health check next iteration.
         if [ -n "$master_peer_config" ] && [ -n "$current_peer_config" ] && [ "$current_peer_config" != "$master_peer_config" ]; then
             if ! is_peer_failed "$master_peer_config"; then
                 info "Master peer $MASTER_PEER cooldown expired, switching back"
@@ -303,12 +306,14 @@ while true; do
         fi
 
         mark_peer_failed "$current_peer_config"
+        write_tunnel_state 0 "$(basename "$current_peer_config")" "$failover_total"
 
         next_peer_config=$(get_next_peer_config "$current_peer_config")
 
         if [ -n "$next_peer_config" ] && [ -f "$next_peer_config" ]; then
             if switch_to_peer_config "$next_peer_config" "$current_peer_config"; then
                 current_peer_config="$next_peer_config"
+                failover_total=$(( failover_total + 1 ))
             else
                 error "Failed to switch to next peer configuration, will retry in $MON_CHECK_INTERVAL seconds"
             fi
