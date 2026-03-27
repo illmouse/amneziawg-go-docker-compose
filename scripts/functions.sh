@@ -80,6 +80,7 @@ prompt_user() {
     # Set default values for METRICS
     METRICS_ENABLED=${METRICS_ENABLED:-"false"}
     METRICS_PORT=${METRICS_PORT:-"9586"}
+    METRICS_INTERVAL=${METRICS_INTERVAL:-"15"}
     
     # Interactive setup for WG_MODE
     echo ""
