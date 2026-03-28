@@ -15,5 +15,5 @@ while true; do
         printf "Connection: close\r\n"
         printf "\r\n"
         cat "$METRICS_FILE" 2>/dev/null || printf "# metrics not yet available\n"
-    } | nc -l -p "$METRICS_PORT"
+    } | nc -l -p "$METRICS_PORT" > /dev/null
 done
