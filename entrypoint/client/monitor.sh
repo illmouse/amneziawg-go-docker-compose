@@ -28,16 +28,77 @@ check_tunnel_health() {
     fi
 }
 
-# Get next peer config (circular rotation), skipping peers in failure cooldown
-get_next_peer_config() {
+# Probe a peer by spinning up a temporary awg interface and waiting for a WireGuard handshake.
+# A successful handshake proves the server is reachable, WireGuard is running, and keys are valid.
+# The probe interface is always torn down on exit.
+probe_peer_tunnel() {
+    local peer_config="$1"
+    local probe_iface="awg-probe-$$"
+    local probe_conf result=1
+
+    probe_conf=$(mktemp /tmp/awg-probe-XXXXXX.conf)
+
+    if ! build_client_config "$peer_config" "$probe_conf"; then
+        debug "Failed to build probe config for $(basename "$peer_config")"
+        rm -f "$probe_conf"
+        return 1
+    fi
+
+    if ! amneziawg-go "$probe_iface" >>"$WG_LOGFILE" 2>&1; then
+        debug "Failed to create probe interface $probe_iface"
+        rm -f "$probe_conf"
+        return 1
+    fi
+
+    # Route the endpoint via physical gateway so handshake traffic bypasses the main tunnel
+    local endpoint_host endpoint_ip phys_gw phys_iface
+    endpoint_host=$(conf_get_value "Endpoint" "$peer_config" | cut -d: -f1)
+    endpoint_ip=$(resolve_host "$endpoint_host" 2>/dev/null) || endpoint_ip="$endpoint_host"
+    phys_gw=$(ip route | awk '/default/ {print $3; exit}')
+    phys_iface=$(ip route | awk '/default/ {print $5; exit}')
+    if [ -n "$endpoint_ip" ] && [ -n "$phys_gw" ] && [ -n "$phys_iface" ]; then
+        ip route add "$endpoint_ip" via "$phys_gw" dev "$phys_iface" 2>/dev/null || true
+    fi
+
+    local probe_ip
+    probe_ip=$(conf_get_value "Address" "$peer_config")
+    awg setconf "$probe_iface" "$probe_conf" 2>/dev/null
+    [ -n "$probe_ip" ] && ip addr add "$probe_ip" dev "$probe_iface" 2>/dev/null || true
+    ip link set up dev "$probe_iface" 2>/dev/null
+
+    # Poll for a successful handshake (proves server is live and keys match)
+    local deadline
+    deadline=$(( $(date +%s) + MON_CHECK_TIMEOUT ))
+    while [ "$(date +%s)" -lt "$deadline" ]; do
+        local hs_ts
+        hs_ts=$(awg show "$probe_iface" latest-handshakes 2>/dev/null | awk '{print $2}')
+        if [ -n "$hs_ts" ] && [ "$hs_ts" -gt 0 ]; then
+            debug "Probe handshake succeeded: $(basename "$peer_config")"
+            result=0
+            break
+        fi
+        sleep 1
+    done
+
+    # Cleanup — always runs regardless of result
+    ip link del "$probe_iface" 2>/dev/null || true
+    if [ -n "$endpoint_ip" ] && [ -n "$phys_gw" ] && [ -n "$phys_iface" ]; then
+        ip route del "$endpoint_ip" via "$phys_gw" dev "$phys_iface" 2>/dev/null || true
+    fi
+    rm -f "$probe_conf"
+
+    return $result
+}
+
+# Probe all peers in rotation order starting after current_config, wrapping around to include it.
+# Returns path of first peer whose probe succeeds, or empty string if none pass.
+# Cooldown state is not consulted — this is a live check.
+select_and_probe_next_peer() {
     local current_config="$1"
     local peer_files=("$CLIENT_PEERS_DIR"/*.conf)
     local peer_count=${#peer_files[@]}
 
-    if [ "$peer_count" -eq 0 ]; then
-        echo ""
-        return
-    fi
+    [ "$peer_count" -eq 0 ] && { echo ""; return 1; }
 
     IFS=$'\n' sorted_files=($(sort <<<"${peer_files[*]}"))
     unset IFS
@@ -49,30 +110,22 @@ get_next_peer_config() {
             break
         fi
     done
+    [ "$current_index" -eq -1 ] && current_index=0
 
-    if [ "$current_index" -eq -1 ]; then
-        echo "${sorted_files[0]}"
-        return
-    fi
-
-    # Walk peers in rotation order, skip those still in failure cooldown
-    local next_index checked
-    next_index=$(( (current_index + 1) % peer_count ))
-    checked=0
-    while [ $checked -lt $peer_count ]; do
-        local candidate="${sorted_files[$next_index]}"
-        if ! is_peer_failed "$candidate"; then
+    local i idx candidate
+    for (( i=1; i<=peer_count; i++ )); do
+        idx=$(( (current_index + i) % peer_count ))
+        candidate="${sorted_files[$idx]}"
+        info "Probing peer: $(basename "$candidate")"
+        if probe_peer_tunnel "$candidate"; then
             echo "$candidate"
-            return
+            return 0
         fi
-        debug "Skipping peer in cooldown: $(basename "$candidate")"
-        next_index=$(( (next_index + 1) % peer_count ))
-        checked=$(( checked + 1 ))
+        debug "Probe failed: $(basename "$candidate")"
     done
 
-    # All peers in cooldown — force next to avoid permanent stall
-    warn "All peers are in failure cooldown, forcing retry of next peer"
-    echo "${sorted_files[$(( (current_index + 1) % peer_count ))]}"
+    echo ""
+    return 1
 }
 
 # Find current peer config by matching interface IP and active endpoint
@@ -223,8 +276,9 @@ switch_to_peer_config() {
 # ==========================================
 info "Starting client monitor..."
 
-# Failover counter — persisted in tunnel state across loop iterations
+# Failover counter and last failover timestamp — persisted in tunnel state across loop iterations
 failover_total=0
+last_failover_ts=0
 
 # Wait for the configuration to be created
 max_wait=120
@@ -281,15 +335,22 @@ while true; do
             clear_peer_failed "$current_peer_config"
         fi
 
-        write_tunnel_state 1 "$(basename "${current_peer_config:-}")" "$failover_total"
+        write_tunnel_state 1 "$(basename "${current_peer_config:-}")" "$failover_total" "$last_failover_ts"
 
-        # Switch back to master only after its failure cooldown has expired.
-        # Actual connectivity proof comes from the ping health check next iteration.
+        # Switch back to master only after its failure cooldown has expired and its tunnel probe succeeds.
         if [ -n "$master_peer_config" ] && [ -n "$current_peer_config" ] && [ "$current_peer_config" != "$master_peer_config" ]; then
             if ! is_peer_failed "$master_peer_config"; then
-                info "Master peer $MASTER_PEER cooldown expired, switching back"
-                if switch_to_peer_config "$master_peer_config" "$current_peer_config"; then
-                    current_peer_config="$master_peer_config"
+                info "Master peer $MASTER_PEER cooldown expired, probing before switching back"
+                if probe_peer_tunnel "$master_peer_config"; then
+                    info "Master peer $MASTER_PEER probe succeeded, switching back"
+                    if switch_to_peer_config "$master_peer_config" "$current_peer_config"; then
+                        current_peer_config="$master_peer_config"
+                        failover_total=$(( failover_total + 1 ))
+                        last_failover_ts=$(date +%s)
+                    fi
+                else
+                    warn "Master peer $MASTER_PEER probe failed, extending cooldown"
+                    mark_peer_failed "$master_peer_config"
                 fi
             else
                 debug "Master peer $MASTER_PEER still in failure cooldown, staying on backup"
@@ -297,8 +358,8 @@ while true; do
         fi
         sleep "$MON_CHECK_INTERVAL"
     else
-        # Tunnel is down — mark current peer as failed and rotate to next
-        warn "Tunnel is down, attempting to switch to next peer configuration..."
+        # Tunnel is down — probe all peers before switching, to avoid blind disruption
+        warn "Tunnel is down, probing available peers..."
 
         if [ -z "$current_peer_config" ]; then
             current_peer_config="${sorted_files[0]}"
@@ -306,20 +367,36 @@ while true; do
         fi
 
         mark_peer_failed "$current_peer_config"
-        write_tunnel_state 0 "$(basename "$current_peer_config")" "$failover_total"
+        write_tunnel_state 0 "$(basename "$current_peer_config")" "$failover_total" "$last_failover_ts"
 
-        next_peer_config=$(get_next_peer_config "$current_peer_config")
+        probe_loop_done=false
+        while [ "$probe_loop_done" = "false" ]; do
+            next_peer=$(select_and_probe_next_peer "$current_peer_config")
 
-        if [ -n "$next_peer_config" ] && [ -f "$next_peer_config" ]; then
-            if switch_to_peer_config "$next_peer_config" "$current_peer_config"; then
-                current_peer_config="$next_peer_config"
-                failover_total=$(( failover_total + 1 ))
+            if [ -n "$next_peer" ]; then
+                if [ "$next_peer" = "$current_peer_config" ]; then
+                    # Current peer probe passed — tunnel issue was transient, stay
+                    info "Current peer probe succeeded, staying on $(basename "$current_peer_config")"
+                    clear_peer_failed "$current_peer_config"
+                elif switch_to_peer_config "$next_peer" "$current_peer_config"; then
+                    current_peer_config="$next_peer"
+                    failover_total=$(( failover_total + 1 ))
+                    last_failover_ts=$(date +%s)
+                    clear_peer_failed "$next_peer"
+                fi
+                probe_loop_done=true
             else
-                error "Failed to switch to next peer configuration, will retry in $MON_CHECK_INTERVAL seconds"
+                # All peer probes failed — re-check if current tunnel self-healed
+                if check_tunnel_health "$MON_CHECK_IP" "$MON_CHECK_TIMEOUT"; then
+                    info "Tunnel health check recovered on current peer, staying"
+                    clear_peer_failed "$current_peer_config"
+                    probe_loop_done=true
+                else
+                    warn "All peer probes failed and tunnel still down, retrying in ${MON_CHECK_INTERVAL}s..."
+                    sleep "$MON_CHECK_INTERVAL"
+                fi
             fi
-        else
-            warn "No valid next peer configuration found, will retry in $MON_CHECK_INTERVAL seconds"
-        fi
+        done
 
         sleep "$MON_CHECK_INTERVAL"
     fi

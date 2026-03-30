@@ -71,10 +71,13 @@ PROM
         cat >> "$tmp" <<'PROM'
 # HELP wg_tunnel_failover_total Total number of peer failover events since container start
 # TYPE wg_tunnel_failover_total counter
+# HELP wg_tunnel_last_failover_timestamp_seconds Unix timestamp of the most recent peer failover (0 if none since container start)
+# TYPE wg_tunnel_last_failover_timestamp_seconds gauge
 # HELP wg_tunnel_active_peer Whether this peer config is the currently active one (1=active, 0=inactive)
 # TYPE wg_tunnel_active_peer gauge
 PROM
         echo "wg_tunnel_failover_total{interface=\"${WG_IFACE}\"} $(state_get failover_total || echo 0)" >> "$tmp"
+        echo "wg_tunnel_last_failover_timestamp_seconds{interface=\"${WG_IFACE}\"} $(state_get last_failover_ts || echo 0)" >> "$tmp"
 
         local current_peer
         current_peer=$(state_get current_peer || echo "")
