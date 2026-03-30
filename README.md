@@ -130,16 +130,32 @@ In the .env file, you can specify one of the predefined UDP protocols using the 
 
 Monitoring logs are saved in `logs/amneziawg.log`.
 
-The monitoring script checks tunnel availability via ping to 9.9.9.9.
+The monitoring script checks tunnel availability via ping to `MON_CHECK_IP` (default `9.9.9.9`).
 
-* In **server mode**, health checks continue as usual.
-* In **client mode**, if the current peer is unavailable, it attempts to switch to the next available peer.
+* In **server mode**, health checks run on a fixed interval without peer switching.
+* In **client mode**, smart probe-based failover is used (see below).
 
-If the `MASTER_PEER` variable is set, the behavior changes:
+## Client Mode Failover
 
-* At container start in client mode, the specified master peer is always chosen instead of the first alphabetically.
-* The master peer is checked separately (via UDP port check using netcat).
-* If the master peer becomes available again, the tunnel switches back to it.
+When the tunnel health check fails, the monitor does **not** blindly switch to the next peer. Instead it probes each candidate peer by spinning up a temporary WireGuard interface and waiting for a successful handshake. A handshake proves the server is up, the WireGuard daemon is running, and the keys are valid end-to-end — unlike a simple ping to the endpoint IP, which only verifies host reachability.
+
+**Failover flow:**
+
+1. Current peer is marked as failed.
+2. All peers are probed in rotation order (including the current one, which may have self-healed).
+3. The first peer whose handshake succeeds is switched to immediately.
+4. If no peers respond, the current tunnel health check is re-run. If it recovers, the monitor stays on the current peer and no switch is made.
+5. If the tunnel is still down, the process repeats after `MON_CHECK_INTERVAL` seconds.
+
+The probe handshake timeout is controlled by `MON_CHECK_TIMEOUT`.
+
+## Master Peer
+
+If the `MASTER_PEER` variable is set:
+
+* At container start in client mode, the specified peer is always activated first instead of the first one alphabetically.
+* While on a backup peer and the master's failure cooldown has expired, the master peer is **probed** (temporary interface + handshake check) before switching back. If the probe fails, the cooldown is extended and the active backup connection is not disrupted.
+* Once the master peer probe succeeds, the tunnel switches back to it.
 
 # Logs
 
@@ -150,22 +166,7 @@ logs/
 logs/3proxy/
 ```
 
-The [setup.sh](setup.sh) script adds a logrotate configuration for automatic log rotation to prevent disk overflow.
-
-Logrotate settings:
-
-```ini
-daily
-missingok
-rotate 30
-compress
-delaycompress
-notifempty
-copytruncate
-dateext
-dateformat -%Y-%m-%d
-maxage 30
-```
+Log rotation runs inside the container and is configured via the `LOGROTATE_*` variables.
 
 # Full Configuration Reset
 
@@ -211,7 +212,7 @@ This will recreate:
 | LOG_LEVEL | `ERROR`, `INFO`, `WARN`, `DEBUG` | `INFO` | Logging verbosity level |
 | MON_CHECK_IP | any valid IP | `9.9.9.9` | IP address used for tunnel health check pings |
 | MON_CHECK_INTERVAL | integer ≥ 1 | `10` | Interval in seconds between monitoring checks |
-| MON_CHECK_TIMEOUT | integer ≥ 1 | `10` | Ping timeout in seconds for health checks |
+| MON_CHECK_TIMEOUT | integer ≥ 1 | `10` | Timeout in seconds for health check pings and peer handshake probes |
 | MON_PEER_FAIL_COOLDOWN | integer ≥ 0 | `300` | Seconds a failed peer stays excluded from rotation before being retried |
 | LOGROTATE_INTERVAL | integer ≥ 1 | `86400` | Seconds between log rotation runs inside the container (default: 24 h) |
 | LOGROTATE_ROTATE | integer ≥ 0 | `1` | Number of rotated log files to keep (1 = keep only the previous log) |
