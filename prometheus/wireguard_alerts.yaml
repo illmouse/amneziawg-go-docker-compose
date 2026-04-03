@@ -1,0 +1,174 @@
+groups:
+
+  # ── WireGuard tunnel & interface health ────────────────────────────────────
+  - name: wireguard_health
+    rules:
+
+      # The wg0 interface is down — no traffic can flow through the tunnel.
+      - alert: WireGuardInterfaceDown
+        expr: wg_interface_up{app="wireguard"} == 0
+        for: 0s
+        labels:
+          severity: critical
+        annotations:
+          summary: "WireGuard interface {{ $labels.interface }} is down on {{ $labels.instance }}"
+          description: >
+            wg_interface_up is 0 on {{ $labels.instance }} (interface {{ $labels.interface }}).
+            The WireGuard interface failed to come up or was brought down.
+            Check 'wg show' and system logs on the host.
+
+      # Custom tunnel health check is failing (separate from interface state).
+      - alert: WireGuardTunnelUnhealthy
+        expr: wg_tunnel_healthy{app="wireguard"} == 0
+        for: 0s
+        labels:
+          severity: critical
+        annotations:
+          summary: "WireGuard tunnel unhealthy on {{ $labels.instance }} ({{ $labels.interface }})"
+          description: >
+            The tunnel health check has been failing for more than 2 minutes on
+            {{ $labels.instance }} (interface {{ $labels.interface }}).
+            The interface may be up but traffic is not passing end-to-end.
+
+      # No successful handshake in the last 3 minutes (180s is WireGuard's own
+      # re-handshake interval — exceeding it means the session is effectively dead).
+      - alert: WireGuardHandshakeStale
+        expr: >
+          max by (instance, interface, endpoint, product) (
+            wg_peer_handshake_age_seconds{app="wireguard"}
+          ) > 180
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "WireGuard handshake stale on {{ $labels.instance }} with {{ $labels.endpoint }}"
+          description: >
+            Last successful handshake with {{ $labels.endpoint }} was
+            {{ $value | humanizeDuration }} ago on {{ $labels.instance }}
+            (interface {{ $labels.interface }}).
+            WireGuard re-handshakes every 180s; exceeding this means the peer is
+            unreachable. Check peer connectivity and firewall rules.
+
+      # Handshake is ageing toward the stale threshold — early warning.
+      - alert: WireGuardHandshakeAgeing
+        expr: >
+          max by (instance, interface, endpoint, product) (
+            wg_peer_handshake_age_seconds{app="wireguard"}
+          ) > 150
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "WireGuard handshake ageing on {{ $labels.instance }} with {{ $labels.endpoint }}"
+          description: >
+            Last handshake with {{ $labels.endpoint }} was {{ $value | humanizeDuration }} ago
+            on {{ $labels.instance }}. A new handshake should have been initiated by now —
+            watch for a follow-up critical alert if it does not recover.
+
+      # A peer failover event occurred — the active peer config switched.
+      - alert: WireGuardFailoverOccurred
+        expr: >
+          increase(wg_tunnel_failover_total{app="wireguard"}[5m]) > 0
+        for: 0s
+        labels:
+          severity: warning
+        annotations:
+          summary: "WireGuard peer failover on {{ $labels.instance }} ({{ $labels.interface }})"
+          description: >
+            {{ $value }} peer failover event(s) in the last 5 minutes on
+            {{ $labels.instance }} (interface {{ $labels.interface }}).
+            The tunnel switched its active peer config. This may indicate the
+            primary peer became unreachable.
+
+      # Tunnel health check itself has not run recently — monitoring gap.
+      - alert: WireGuardHealthCheckSilent
+        expr: >
+          time() - wg_tunnel_last_check_timestamp_seconds{app="wireguard"} > 120
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "WireGuard health check not running on {{ $labels.instance }}"
+          description: >
+            The tunnel health check on {{ $labels.instance }} (interface {{ $labels.interface }})
+            has not reported in {{ $value | humanizeDuration }}.
+            The monitoring agent may have crashed or the exporter is unreachable.
+
+
+  # ── WireGuard throughput ───────────────────────────────────────────────────
+  - name: wireguard_throughput
+    rules:
+
+      # RX throughput exceeds 100 Mbps — potential saturation or unexpected traffic.
+      - alert: WireGuardHighRxThroughput
+        expr: >
+          rate(wg_peer_rx_bytes_total{app="wireguard"}[5m]) > 12500000
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "WireGuard high RX throughput on {{ $labels.instance }} from {{ $labels.endpoint }}"
+          description: >
+            Inbound throughput from {{ $labels.endpoint }} on {{ $labels.instance }}
+            (interface {{ $labels.interface }}) is {{ $value | humanize1024 }}B/s,
+            exceeding the 100 Mbps threshold.
+            Verify this is expected traffic and the link is not saturated.
+
+      # RX throughput between 50–100 Mbps.
+      - alert: WireGuardElevatedRxThroughput
+        expr: >
+          rate(wg_peer_rx_bytes_total{app="wireguard"}[5m]) > 6250000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "WireGuard elevated RX throughput on {{ $labels.instance }} from {{ $labels.endpoint }}"
+          description: >
+            Inbound throughput from {{ $labels.endpoint }} on {{ $labels.instance }} is
+            {{ $value | humanize1024 }}B/s (above 50 Mbps warning threshold).
+
+      # TX throughput exceeds 100 Mbps.
+      - alert: WireGuardHighTxThroughput
+        expr: >
+          rate(wg_peer_tx_bytes_total{app="wireguard"}[5m]) > 12500000
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "WireGuard high TX throughput on {{ $labels.instance }} to {{ $labels.endpoint }}"
+          description: >
+            Outbound throughput to {{ $labels.endpoint }} on {{ $labels.instance }}
+            (interface {{ $labels.interface }}) is {{ $value | humanize1024 }}B/s,
+            exceeding the 100 Mbps threshold.
+
+      # TX throughput between 50–100 Mbps.
+      - alert: WireGuardElevatedTxThroughput
+        expr: >
+          rate(wg_peer_tx_bytes_total{app="wireguard"}[5m]) > 6250000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "WireGuard elevated TX throughput on {{ $labels.instance }} to {{ $labels.endpoint }}"
+          description: >
+            Outbound throughput to {{ $labels.endpoint }} on {{ $labels.instance }} is
+            {{ $value | humanize1024 }}B/s (above 50 Mbps warning threshold).
+
+      # No traffic at all for 10 minutes despite interface being up.
+      # Could mean the tunnel is up but the application stopped using it.
+      - alert: WireGuardNoTraffic
+        expr: >
+          wg_interface_up{app="wireguard"} == 1
+          and
+          rate(wg_peer_rx_bytes_total{app="wireguard"}[10m]) == 0
+          and
+          rate(wg_peer_tx_bytes_total{app="wireguard"}[10m]) == 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "No WireGuard traffic on {{ $labels.instance }} ({{ $labels.interface }})"
+          description: >
+            Interface {{ $labels.interface }} on {{ $labels.instance }} is up but has had
+            zero RX and TX bytes for 10 minutes. The tunnel may be established but the
+            application is not routing traffic through it.
