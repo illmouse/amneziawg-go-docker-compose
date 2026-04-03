@@ -1,39 +1,4 @@
 {
-  "__inputs": [
-    {
-      "name": "DS_PROMETHEUS",
-      "label": "Prometheus",
-      "type": "datasource",
-      "pluginId": "prometheus",
-      "pluginName": "Prometheus"
-    }
-  ],
-  "__requires": [
-    {
-      "type": "grafana",
-      "id": "grafana",
-      "name": "Grafana",
-      "version": "9.0.0"
-    },
-    {
-      "type": "datasource",
-      "id": "prometheus",
-      "name": "Prometheus",
-      "version": "1.0.0"
-    },
-    {
-      "type": "panel",
-      "id": "stat",
-      "name": "Stat",
-      "version": ""
-    },
-    {
-      "type": "panel",
-      "id": "timeseries",
-      "name": "Time series",
-      "version": ""
-    }
-  ],
   "annotations": {
     "list": [
       {
@@ -50,11 +15,10 @@
       }
     ]
   },
-  "description": "WireGuard tunnel monitoring \u2014 interface health, peer handshakes, throughput",
+  "description": "WireGuard tunnel monitoring — interface health, peer handshakes, throughput",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "id": null,
   "links": [],
   "panels": [
     {
@@ -66,6 +30,7 @@
         "y": 0
       },
       "id": 1,
+      "panels": [],
       "title": "WireGuard Status",
       "type": "row"
     },
@@ -74,7 +39,6 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -82,7 +46,6 @@
           },
           "mappings": [
             {
-              "type": "value",
               "options": {
                 "0": {
                   "color": "red",
@@ -94,7 +57,8 @@
                   "index": 1,
                   "text": "UP"
                 }
-              }
+              },
+              "type": "value"
             }
           ],
           "thresholds": {
@@ -102,7 +66,7 @@
             "steps": [
               {
                 "color": "red",
-                "value": null
+                "value": 0
               },
               {
                 "color": "green",
@@ -126,6 +90,7 @@
         "graphMode": "none",
         "justifyMode": "center",
         "orientation": "auto",
+        "percentChangeColorMode": "standard",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -133,15 +98,19 @@
           "fields": "",
           "values": false
         },
-        "textMode": "auto"
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
       },
+      "pluginVersion": "12.4.2",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "wg_interface_up{product=\"BO-Proxy\",app=\"wireguard\",instance=~\"$instance\"}",
+          "editorMode": "code",
+          "expr": "wg_interface_up{instance=~\"$instance\"}",
           "instant": true,
           "legendFormat": "{{instance}} {{interface}}",
           "refId": "A"
@@ -155,7 +124,6 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -163,7 +131,6 @@
           },
           "mappings": [
             {
-              "type": "value",
               "options": {
                 "0": {
                   "color": "red",
@@ -175,7 +142,8 @@
                   "index": 1,
                   "text": "Healthy"
                 }
-              }
+              },
+              "type": "value"
             }
           ],
           "thresholds": {
@@ -183,7 +151,7 @@
             "steps": [
               {
                 "color": "red",
-                "value": null
+                "value": 0
               },
               {
                 "color": "green",
@@ -207,6 +175,7 @@
         "graphMode": "none",
         "justifyMode": "center",
         "orientation": "auto",
+        "percentChangeColorMode": "standard",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -214,15 +183,19 @@
           "fields": "",
           "values": false
         },
-        "textMode": "auto"
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
       },
+      "pluginVersion": "12.4.2",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "wg_tunnel_healthy{product=\"BO-Proxy\",app=\"wireguard\",instance=~\"$instance\"}",
+          "editorMode": "code",
+          "expr": "wg_tunnel_healthy{instance=~\"$instance\"}",
           "instant": true,
           "legendFormat": "{{instance}} {{interface}}",
           "refId": "A"
@@ -248,7 +221,7 @@
             "steps": [
               {
                 "color": "green",
-                "value": null
+                "value": 0
               }
             ]
           },
@@ -258,7 +231,7 @@
       },
       "gridPos": {
         "h": 5,
-        "w": 6,
+        "w": 8,
         "x": 8,
         "y": 1
       },
@@ -268,6 +241,7 @@
         "graphMode": "none",
         "justifyMode": "center",
         "orientation": "auto",
+        "percentChangeColorMode": "standard",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -275,111 +249,25 @@
           "fields": "",
           "values": false
         },
-        "textMode": "name"
+        "showPercentChange": false,
+        "textMode": "name",
+        "wideLayout": true
       },
+      "pluginVersion": "12.4.2",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "wg_tunnel_active_peer{product=\"BO-Proxy\",app=\"wireguard\",instance=~\"$instance\"} == 1",
+          "editorMode": "code",
+          "expr": "wg_tunnel_active_peer{instance=~\"$instance\"} == 1",
           "instant": true,
           "legendFormat": "{{peer}}",
           "refId": "A"
         }
       ],
       "title": "Active Peer",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "description": "Time elapsed since the last peer failover. 'Never' means no switch has occurred since container start.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [
-            {
-              "type": "value",
-              "options": {
-                "0": {
-                  "color": "green",
-                  "index": 0,
-                  "text": "Never"
-                }
-              }
-            }
-          ],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 300
-              },
-              {
-                "color": "orange",
-                "value": 900
-              }
-            ]
-          },
-          "unit": "s"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 4,
-        "x": 14,
-        "y": 1
-      },
-      "id": 12,
-      "options": {
-        "colorMode": "background",
-        "graphMode": "none",
-        "justifyMode": "center",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "expr": "wg_tunnel_last_failover_timestamp_seconds{product=\"BO-Proxy\",app=\"wireguard\",instance=~\"$instance\"} > 0\n  and\n  time() - wg_tunnel_last_failover_timestamp_seconds{product=\"BO-Proxy\",app=\"wireguard\",instance=~\"$instance\"}",
-          "instant": true,
-          "legendFormat": "{{instance}} {{interface}}",
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "expr": "wg_tunnel_last_failover_timestamp_seconds{product=\"BO-Proxy\",app=\"wireguard\",instance=~\"$instance\"} == 0",
-          "instant": true,
-          "legendFormat": "{{instance}} {{interface}}",
-          "refId": "B"
-        }
-      ],
-      "title": "Last Failover",
       "type": "stat"
     },
     {
@@ -399,7 +287,7 @@
             "steps": [
               {
                 "color": "green",
-                "value": null
+                "value": 0
               },
               {
                 "color": "yellow",
@@ -417,8 +305,8 @@
       },
       "gridPos": {
         "h": 5,
-        "w": 3,
-        "x": 18,
+        "w": 4,
+        "x": 16,
         "y": 1
       },
       "id": 5,
@@ -427,6 +315,7 @@
         "graphMode": "none",
         "justifyMode": "center",
         "orientation": "auto",
+        "percentChangeColorMode": "standard",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -434,15 +323,19 @@
           "fields": "",
           "values": false
         },
-        "textMode": "auto"
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
       },
+      "pluginVersion": "12.4.2",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "wg_tunnel_failover_total{product=\"BO-Proxy\",app=\"wireguard\",instance=~\"$instance\"}",
+          "editorMode": "code",
+          "expr": "wg_tunnel_failover_total{instance=~\"$instance\"}",
           "instant": true,
           "legendFormat": "{{instance}} {{interface}}",
           "refId": "A"
@@ -468,7 +361,7 @@
             "steps": [
               {
                 "color": "green",
-                "value": null
+                "value": 0
               },
               {
                 "color": "yellow",
@@ -486,8 +379,8 @@
       },
       "gridPos": {
         "h": 5,
-        "w": 3,
-        "x": 21,
+        "w": 4,
+        "x": 20,
         "y": 1
       },
       "id": 6,
@@ -496,6 +389,7 @@
         "graphMode": "none",
         "justifyMode": "center",
         "orientation": "auto",
+        "percentChangeColorMode": "standard",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -503,15 +397,19 @@
           "fields": "",
           "values": false
         },
-        "textMode": "auto"
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
       },
+      "pluginVersion": "12.4.2",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "max by (instance, interface) (wg_peer_handshake_age_seconds{product=\"BO-Proxy\",app=\"wireguard\",instance=~\"$instance\"})",
+          "editorMode": "code",
+          "expr": "max by (instance, interface) (wg_peer_handshake_age_seconds{instance=~\"$instance\"})",
           "instant": true,
           "legendFormat": "{{instance}} {{interface}}",
           "refId": "A"
@@ -529,6 +427,7 @@
         "y": 6
       },
       "id": 7,
+      "panels": [],
       "title": "Throughput",
       "type": "row"
     },
@@ -544,11 +443,13 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 10,
             "gradientMode": "none",
@@ -557,6 +458,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -564,6 +466,7 @@
               "type": "linear"
             },
             "showPoints": "never",
+            "showValues": false,
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -579,7 +482,7 @@
             "steps": [
               {
                 "color": "green",
-                "value": null
+                "value": 0
               },
               {
                 "color": "yellow",
@@ -633,21 +536,26 @@
             "last"
           ],
           "displayMode": "table",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "desc"
         }
       },
+      "pluginVersion": "12.4.2",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "rate(wg_peer_rx_bytes_total{product=\"BO-Proxy\",app=\"wireguard\",instance=~\"$instance\"}[5m])",
-          "legendFormat": "{{instance}} RX \u2190 {{endpoint}}",
+          "editorMode": "code",
+          "expr": "rate(wg_peer_rx_bytes_total{instance=~\"$instance\"}[5m])",
+          "legendFormat": "{{instance}} RX ← {{endpoint}}",
+          "range": true,
           "refId": "A"
         },
         {
@@ -655,8 +563,10 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "rate(wg_peer_tx_bytes_total{product=\"BO-Proxy\",app=\"wireguard\",instance=~\"$instance\"}[5m])",
-          "legendFormat": "{{instance}} TX \u2192 {{endpoint}}",
+          "editorMode": "code",
+          "expr": "rate(wg_peer_tx_bytes_total{instance=~\"$instance\"}[5m])",
+          "legendFormat": "{{instance}} TX → {{endpoint}}",
+          "range": true,
           "refId": "B"
         }
       ],
@@ -672,6 +582,7 @@
         "y": 15
       },
       "id": 9,
+      "panels": [],
       "title": "Peer Details",
       "type": "row"
     },
@@ -680,18 +591,20 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "WireGuard re-initiates handshake every 180s. Sustained values \u2265180s indicate a broken session.",
+      "description": "WireGuard re-initiates handshake every 180s. Sustained values ≥180s indicate a broken session.",
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 10,
             "gradientMode": "none",
@@ -700,6 +613,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -707,6 +621,7 @@
               "type": "linear"
             },
             "showPoints": "never",
+            "showValues": false,
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -722,7 +637,7 @@
             "steps": [
               {
                 "color": "green",
-                "value": null
+                "value": 0
               },
               {
                 "color": "yellow",
@@ -753,21 +668,26 @@
             "last"
           ],
           "displayMode": "table",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "desc"
         }
       },
+      "pluginVersion": "12.4.2",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "wg_peer_handshake_age_seconds{product=\"BO-Proxy\",app=\"wireguard\",instance=~\"$instance\"}",
+          "editorMode": "code",
+          "expr": "wg_peer_handshake_age_seconds{instance=~\"$instance\"}",
           "legendFormat": "{{instance}} {{endpoint}}",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -786,11 +706,13 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 10,
             "gradientMode": "none",
@@ -799,6 +721,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -806,6 +729,7 @@
               "type": "linear"
             },
             "showPoints": "never",
+            "showValues": false,
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -821,7 +745,7 @@
             "steps": [
               {
                 "color": "green",
-                "value": null
+                "value": 0
               },
               {
                 "color": "orange",
@@ -848,21 +772,26 @@
             "last"
           ],
           "displayMode": "table",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "desc"
         }
       },
+      "pluginVersion": "12.4.2",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "increase(wg_tunnel_failover_total{product=\"BO-Proxy\",app=\"wireguard\",instance=~\"$instance\"}[5m])",
+          "editorMode": "code",
+          "expr": "increase(wg_tunnel_failover_total{instance=~\"$instance\"}[5m])",
           "legendFormat": "{{instance}} {{interface}}",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -870,8 +799,9 @@
       "type": "timeseries"
     }
   ],
+  "preload": false,
   "refresh": "30s",
-  "schemaVersion": 38,
+  "schemaVersion": 42,
   "tags": [
     "wireguard",
     "network",
@@ -881,10 +811,8 @@
     "list": [
       {
         "current": {},
-        "hide": 0,
         "includeAll": false,
         "label": "Datasource",
-        "multi": false,
         "name": "datasource",
         "options": [],
         "query": "prometheus",
@@ -897,17 +825,21 @@
           "type": "prometheus",
           "uid": "${datasource}"
         },
-        "definition": "label_values({product=\"BO-Proxy\", app=\"wireguard\"}, instance)",
-        "hide": 0,
+        "definition": "label_values(wg_interface_up,instance)",
+        "description": "",
         "includeAll": false,
         "label": "Instance",
         "multi": true,
         "name": "instance",
+        "options": [],
         "query": {
-          "query": "label_values({product=\"BO-Proxy\", app=\"wireguard\"}, instance)",
-          "refId": "StandardVariableQuery"
+          "qryType": 1,
+          "query": "label_values(wg_interface_up,instance)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
         },
         "refresh": 2,
+        "regex": "",
+        "regexApplyTo": "value",
         "sort": 1,
         "type": "query"
       }
@@ -921,5 +853,6 @@
   "timezone": "browser",
   "title": "WireGuard",
   "uid": "wireguard-v1",
-  "version": 1
+  "version": 1,
+  "weekStart": ""
 }

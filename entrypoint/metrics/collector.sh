@@ -8,9 +8,11 @@ METRICS_FILE="${TMP_DIR}/metrics.prom"
 TUNNEL_STATE="${TMP_DIR}/tunnel.state"
 
 state_get() {
-    local key="$1"
-    [ -f "$TUNNEL_STATE" ] || { echo ""; return 0; }
-    grep "^${key}=" "$TUNNEL_STATE" 2>/dev/null | cut -d= -f2- | head -1
+    local key="$1" val
+    [ -f "$TUNNEL_STATE" ] || return 1
+    val=$(grep "^${key}=" "$TUNNEL_STATE" 2>/dev/null | cut -d= -f2- | head -1)
+    [ -n "$val" ] || return 1
+    echo "$val"
 }
 
 collect() {
@@ -63,8 +65,11 @@ PROM
 # HELP wg_tunnel_last_check_timestamp_seconds Unix timestamp of the last health check run
 # TYPE wg_tunnel_last_check_timestamp_seconds gauge
 PROM
-    echo "wg_tunnel_healthy{interface=\"${WG_IFACE}\"} $(state_get tunnel_healthy || echo 0)" >> "$tmp"
-    echo "wg_tunnel_last_check_timestamp_seconds{interface=\"${WG_IFACE}\"} $(state_get last_check_ts || echo 0)" >> "$tmp"
+    local healthy last_check
+    healthy=$(state_get tunnel_healthy)
+    last_check=$(state_get last_check_ts)
+    echo "wg_tunnel_healthy{interface=\"${WG_IFACE}\"} ${healthy:-0}" >> "$tmp"
+    echo "wg_tunnel_last_check_timestamp_seconds{interface=\"${WG_IFACE}\"} ${last_check:-0}" >> "$tmp"
 
     # ---- Client-mode-only metrics ----
     if [ "$WG_MODE" = "client" ]; then
@@ -76,11 +81,14 @@ PROM
 # HELP wg_tunnel_active_peer Whether this peer config is the currently active one (1=active, 0=inactive)
 # TYPE wg_tunnel_active_peer gauge
 PROM
-        echo "wg_tunnel_failover_total{interface=\"${WG_IFACE}\"} $(state_get failover_total || echo 0)" >> "$tmp"
-        echo "wg_tunnel_last_failover_timestamp_seconds{interface=\"${WG_IFACE}\"} $(state_get last_failover_ts || echo 0)" >> "$tmp"
+        local failover last_failover
+        failover=$(state_get failover_total)
+        last_failover=$(state_get last_failover_ts)
+        echo "wg_tunnel_failover_total{interface=\"${WG_IFACE}\"} ${failover:-0}" >> "$tmp"
+        echo "wg_tunnel_last_failover_timestamp_seconds{interface=\"${WG_IFACE}\"} ${last_failover:-0}" >> "$tmp"
 
         local current_peer
-        current_peer=$(state_get current_peer || echo "")
+        current_peer=$(state_get current_peer)
         for peer_file in "${CLIENT_PEERS_DIR}"/*.conf; do
             [ -f "$peer_file" ] || continue
             local peer_name active=0

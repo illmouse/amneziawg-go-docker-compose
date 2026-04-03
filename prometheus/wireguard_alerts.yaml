@@ -6,7 +6,7 @@ groups:
 
       # The wg0 interface is down — no traffic can flow through the tunnel.
       - alert: WireGuardInterfaceDown
-        expr: wg_interface_up{product="BO-Proxy", app="wireguard"} == 0
+        expr: wg_interface_up{app="wireguard"} == 0
         for: 0s
         labels:
           severity: critical
@@ -19,7 +19,7 @@ groups:
 
       # Custom tunnel health check is failing (separate from interface state).
       - alert: WireGuardTunnelUnhealthy
-        expr: wg_tunnel_healthy{product="BO-Proxy", app="wireguard"} == 0
+        expr: wg_tunnel_healthy{app="wireguard"} == 0
         for: 0s
         labels:
           severity: critical
@@ -35,7 +35,7 @@ groups:
       - alert: WireGuardHandshakeStale
         expr: >
           max by (instance, interface, endpoint, product) (
-            wg_peer_handshake_age_seconds{product="BO-Proxy", app="wireguard"}
+            wg_peer_handshake_age_seconds{app="wireguard"}
           ) > 180
         for: 1m
         labels:
@@ -53,7 +53,7 @@ groups:
       - alert: WireGuardHandshakeAgeing
         expr: >
           max by (instance, interface, endpoint, product) (
-            wg_peer_handshake_age_seconds{product="BO-Proxy", app="wireguard"}
+            wg_peer_handshake_age_seconds{app="wireguard"}
           ) > 150
         for: 1m
         labels:
@@ -68,7 +68,7 @@ groups:
       # A peer failover event occurred — the active peer config switched.
       - alert: WireGuardFailoverOccurred
         expr: >
-          increase(wg_tunnel_failover_total{product="BO-Proxy", app="wireguard"}[5m]) > 0
+          increase(wg_tunnel_failover_total{app="wireguard"}[5m]) > 0
         for: 0s
         labels:
           severity: warning
@@ -83,7 +83,7 @@ groups:
       # Tunnel health check itself has not run recently — monitoring gap.
       - alert: WireGuardHealthCheckSilent
         expr: >
-          time() - wg_tunnel_last_check_timestamp_seconds{product="BO-Proxy", app="wireguard"} > 120
+          time() - wg_tunnel_last_check_timestamp_seconds{app="wireguard"} > 120
         for: 2m
         labels:
           severity: warning
@@ -102,7 +102,7 @@ groups:
       # RX throughput exceeds 100 Mbps — potential saturation or unexpected traffic.
       - alert: WireGuardHighRxThroughput
         expr: >
-          rate(wg_peer_rx_bytes_total{product="BO-Proxy", app="wireguard"}[5m]) > 12500000
+          rate(wg_peer_rx_bytes_total{app="wireguard"}[5m]) > 12500000
         for: 5m
         labels:
           severity: critical
@@ -117,7 +117,7 @@ groups:
       # RX throughput between 50–100 Mbps.
       - alert: WireGuardElevatedRxThroughput
         expr: >
-          rate(wg_peer_rx_bytes_total{product="BO-Proxy", app="wireguard"}[5m]) > 6250000
+          rate(wg_peer_rx_bytes_total{app="wireguard"}[5m]) > 6250000
         for: 5m
         labels:
           severity: warning
@@ -130,7 +130,7 @@ groups:
       # TX throughput exceeds 100 Mbps.
       - alert: WireGuardHighTxThroughput
         expr: >
-          rate(wg_peer_tx_bytes_total{product="BO-Proxy", app="wireguard"}[5m]) > 12500000
+          rate(wg_peer_tx_bytes_total{app="wireguard"}[5m]) > 12500000
         for: 5m
         labels:
           severity: critical
@@ -144,7 +144,7 @@ groups:
       # TX throughput between 50–100 Mbps.
       - alert: WireGuardElevatedTxThroughput
         expr: >
-          rate(wg_peer_tx_bytes_total{product="BO-Proxy", app="wireguard"}[5m]) > 6250000
+          rate(wg_peer_tx_bytes_total{app="wireguard"}[5m]) > 6250000
         for: 5m
         labels:
           severity: warning
@@ -158,11 +158,11 @@ groups:
       # Could mean the tunnel is up but the application stopped using it.
       - alert: WireGuardNoTraffic
         expr: >
-          wg_interface_up{product="BO-Proxy", app="wireguard"} == 1
+          wg_interface_up{app="wireguard"} == 1
           and
-          rate(wg_peer_rx_bytes_total{product="BO-Proxy", app="wireguard"}[10m]) == 0
+          rate(wg_peer_rx_bytes_total{app="wireguard"}[10m]) == 0
           and
-          rate(wg_peer_tx_bytes_total{product="BO-Proxy", app="wireguard"}[10m]) == 0
+          rate(wg_peer_tx_bytes_total{app="wireguard"}[10m]) == 0
         for: 10m
         labels:
           severity: warning
