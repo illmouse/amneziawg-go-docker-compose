@@ -15,7 +15,7 @@
       }
     ]
   },
-  "description": "WireGuard tunnel monitoring \u2014 interface health, peer handshakes, throughput",
+  "description": "WireGuard tunnel monitoring — interface health, peer handshakes, throughput",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -427,8 +427,8 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "fixed",
-            "fixedColor": "blue"
+            "fixedColor": "blue",
+            "mode": "fixed"
           },
           "mappings": [],
           "thresholds": {
@@ -486,316 +486,6 @@
       "type": "stat"
     },
     {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 9
-      },
-      "id": 7,
-      "panels": [],
-      "title": "Throughput",
-      "type": "row"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "description": "Adjust thresholds to match expected baseline traffic. Default: warn 50 Mbps, crit 100 Mbps.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "showValues": false,
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "line+area"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": 0
-              },
-              {
-                "color": "yellow",
-                "value": 6250000
-              },
-              {
-                "color": "red",
-                "value": 12500000
-              }
-            ]
-          },
-          "unit": "Bps"
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byFrameRefID",
-              "options": "B"
-            },
-            "properties": [
-              {
-                "id": "custom.fillOpacity",
-                "value": 5
-              },
-              {
-                "id": "custom.lineStyle",
-                "value": {
-                  "dash": [
-                    8,
-                    4
-                  ],
-                  "fill": "dash"
-                }
-              }
-            ]
-          }
-        ]
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 24,
-        "x": 0,
-        "y": 10
-      },
-      "id": 8,
-      "options": {
-        "legend": {
-          "calcs": [
-            "mean",
-            "max",
-            "last"
-          ],
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "pluginVersion": "12.4.2",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "editorMode": "code",
-          "expr": "rate(wg_peer_rx_bytes_total{instance=~\"$instance\"}[5m])",
-          "legendFormat": "{{instance}} RX \u2190 {{endpoint}}",
-          "range": true,
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "editorMode": "code",
-          "expr": "rate(wg_peer_tx_bytes_total{instance=~\"$instance\"}[5m])",
-          "legendFormat": "{{instance}} TX \u2192 {{endpoint}}",
-          "range": true,
-          "refId": "B"
-        }
-      ],
-      "title": "Peer Throughput (RX / TX)",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "description": "Total bytes per second through the WireGuard interface (from /proc/net/dev). Includes protocol overhead.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "showValues": false,
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "line+area"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": 0
-              },
-              {
-                "color": "yellow",
-                "value": 6250000
-              },
-              {
-                "color": "red",
-                "value": 12500000
-              }
-            ]
-          },
-          "unit": "Bps"
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byFrameRefID",
-              "options": "B"
-            },
-            "properties": [
-              {
-                "id": "custom.fillOpacity",
-                "value": 5
-              },
-              {
-                "id": "custom.lineStyle",
-                "value": {
-                  "dash": [
-                    8,
-                    4
-                  ],
-                  "fill": "dash"
-                }
-              }
-            ]
-          }
-        ]
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 24,
-        "x": 0,
-        "y": 18
-      },
-      "id": 13,
-      "options": {
-        "legend": {
-          "calcs": [
-            "mean",
-            "max",
-            "last"
-          ],
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "pluginVersion": "12.4.2",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "editorMode": "code",
-          "expr": "rate(wg_interface_rx_bytes_total{instance=~\"$instance\"}[5m])",
-          "legendFormat": "{{instance}} {{interface}} RX \u2190",
-          "range": true,
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "editorMode": "code",
-          "expr": "rate(wg_interface_tx_bytes_total{instance=~\"$instance\"}[5m])",
-          "legendFormat": "{{instance}} {{interface}} TX \u2192",
-          "range": true,
-          "refId": "B"
-        }
-      ],
-      "title": "Interface Throughput (RX / TX)",
-      "type": "timeseries"
-    },
-    {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 26
-      },
-      "id": 18,
-      "panels": [],
-      "title": "Traffic Totals",
-      "type": "row"
-    },
-    {
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -821,10 +511,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 0,
-        "y": 27
+        "h": 3,
+        "w": 8,
+        "x": 8,
+        "y": 6
       },
       "id": 19,
       "options": {
@@ -887,10 +577,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 6,
-        "y": 27
+        "h": 3,
+        "w": 8,
+        "x": 16,
+        "y": 6
       },
       "id": 20,
       "options": {
@@ -933,7 +623,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 31
+        "y": 9
       },
       "id": 9,
       "panels": [],
@@ -945,7 +635,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "WireGuard re-initiates handshake every 180s. Sustained values \u2265180s indicate a broken session.",
+      "description": "WireGuard re-initiates handshake every 180s. Sustained values ≥180s indicate a broken session.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1011,7 +701,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 32
+        "y": 10
       },
       "id": 10,
       "options": {
@@ -1115,7 +805,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 32
+        "y": 10
       },
       "id": 11,
       "options": {
@@ -1169,6 +859,9 @@
               "type": "auto"
             },
             "filterable": false,
+            "footer": {
+              "reducers": []
+            },
             "inspect": false
           },
           "mappings": [],
@@ -1189,7 +882,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 40
+        "y": 18
       },
       "id": 17,
       "options": {
@@ -1240,8 +933,11 @@
         {
           "id": "labelsToFields",
           "options": {
-            "mode": "columns",
-            "keepLabels": ["peer", "endpoint"]
+            "keepLabels": [
+              "peer",
+              "endpoint"
+            ],
+            "mode": "columns"
           }
         },
         {
@@ -1256,20 +952,20 @@
           "options": {
             "excludeByName": {
               "Time": true,
-              "wg_peer_info": true,
               "Value": true,
               "endpoint 1": true,
-              "endpoint 2": true
+              "endpoint 2": true,
+              "wg_peer_info": true
             },
             "indexByName": {
-              "peer": 0,
               "endpoint": 1,
+              "peer": 0,
               "wg_peer_rx_bytes_total": 2,
               "wg_peer_tx_bytes_total": 3
             },
             "renameByName": {
-              "peer": "Peer Name",
               "endpoint": "Endpoint",
+              "peer": "Peer Name",
               "wg_peer_rx_bytes_total": "Total RX",
               "wg_peer_tx_bytes_total": "Total TX"
             }
@@ -1277,6 +973,303 @@
         }
       ],
       "type": "table"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 26
+      },
+      "id": 7,
+      "panels": [],
+      "title": "Throughput",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "Adjust thresholds to match expected baseline traffic. Default: warn 50 Mbps, crit 100 Mbps.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "line+area"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "yellow",
+                "value": 6250000
+              },
+              {
+                "color": "red",
+                "value": 12500000
+              }
+            ]
+          },
+          "unit": "Bps"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "B"
+            },
+            "properties": [
+              {
+                "id": "custom.fillOpacity",
+                "value": 5
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "dash": [
+                    8,
+                    4
+                  ],
+                  "fill": "dash"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 27
+      },
+      "id": 8,
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max",
+            "last"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "12.4.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "rate(wg_peer_rx_bytes_total{instance=~\"$instance\"}[5m])",
+          "legendFormat": "{{instance}} RX ← {{endpoint}}",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "rate(wg_peer_tx_bytes_total{instance=~\"$instance\"}[5m])",
+          "legendFormat": "{{instance}} TX → {{endpoint}}",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "Peer Throughput (RX / TX)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "Total bytes per second through the WireGuard interface (from /proc/net/dev). Includes protocol overhead.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "line+area"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "yellow",
+                "value": 6250000
+              },
+              {
+                "color": "red",
+                "value": 12500000
+              }
+            ]
+          },
+          "unit": "Bps"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "B"
+            },
+            "properties": [
+              {
+                "id": "custom.fillOpacity",
+                "value": 5
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "dash": [
+                    8,
+                    4
+                  ],
+                  "fill": "dash"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 35
+      },
+      "id": 13,
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max",
+            "last"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "12.4.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "rate(wg_interface_rx_bytes_total{instance=~\"$instance\"}[5m])",
+          "legendFormat": "{{instance}} {{interface}} RX ←",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "rate(wg_interface_tx_bytes_total{instance=~\"$instance\"}[5m])",
+          "legendFormat": "{{instance}} {{interface}} TX →",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "Interface Throughput (RX / TX)",
+      "type": "timeseries"
     }
   ],
   "preload": false,
@@ -1290,7 +1283,10 @@
   "templating": {
     "list": [
       {
-        "current": {},
+        "current": {
+          "text": "prometheus",
+          "value": "P1809F7CD0C75ACF3"
+        },
         "includeAll": false,
         "label": "Datasource",
         "name": "datasource",
@@ -1300,7 +1296,14 @@
         "type": "datasource"
       },
       {
-        "current": {},
+        "current": {
+          "text": [
+            "192.144.12.172:9092"
+          ],
+          "value": [
+            "192.144.12.172:9092"
+          ]
+        },
         "datasource": {
           "type": "prometheus",
           "uid": "${datasource}"
@@ -1326,13 +1329,13 @@
     ]
   },
   "time": {
-    "from": "now-6h",
+    "from": "now-1h",
     "to": "now"
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "WireGuard",
-  "uid": "wireguard-v1",
-  "version": 1,
+  "title": "Wireguard Metrics",
+  "uid": "wireguard_metrics",
+  "version": 8,
   "weekStart": ""
 }
