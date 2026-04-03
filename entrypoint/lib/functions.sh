@@ -332,11 +332,12 @@ clear_peer_failed() {
 }
 
 # Write tunnel state for metrics collector
-# Usage: write_tunnel_state <healthy 0|1> [current_peer_basename] [failover_total]
+# Usage: write_tunnel_state <healthy 0|1> [current_peer_basename] [failover_total] [last_failover_ts]
 write_tunnel_state() {
     local healthy="${1:-0}"
     local current_peer="${2:-}"
     local failover_total="${3:-}"
+    local last_failover_ts="${4:-}"
     local state_file="${TMP_DIR}/tunnel.state"
     local tmpfile
     tmpfile=$(mktemp)
@@ -344,6 +345,7 @@ write_tunnel_state() {
     echo "last_check_ts=$(date +%s)" >> "$tmpfile"
     [ -n "$current_peer" ] && echo "current_peer=${current_peer}" >> "$tmpfile"
     [ -n "$failover_total" ] && echo "failover_total=${failover_total}" >> "$tmpfile"
+    [ -n "$last_failover_ts" ] && echo "last_failover_ts=${last_failover_ts}" >> "$tmpfile"
     mv "$tmpfile" "$state_file"
 }
 
