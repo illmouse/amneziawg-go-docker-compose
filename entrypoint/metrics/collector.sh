@@ -105,7 +105,7 @@ PROM
 PROM
     if [ "$WG_MODE" = "server" ] && [ -f "$CONFIG_DB" ]; then
         while IFS=$'\t' read -r p_pubkey p_name p_ip; do
-            echo "wg_peer_info{interface=\"${WG_IFACE}\",peer_name=\"${p_name}\",public_key=\"${p_pubkey}\",allowed_ip=\"${p_ip}/32\"} 1" >> "$tmp"
+            echo "wg_peer_info{interface=\"${WG_IFACE}\",peer=\"${p_name}\",public_key=\"${p_pubkey}\",allowed_ip=\"${p_ip}/32\"} 1" >> "$tmp"
         done < <(jq -r '.peers | to_entries[] | "\(.value.public_key)\t\(.key)\t\(.value.ip)"' "$CONFIG_DB" 2>/dev/null || true)
     elif [ "$WG_MODE" = "client" ]; then
         for p_file in "${CLIENT_PEERS_DIR}"/*.conf; do
@@ -113,7 +113,7 @@ PROM
             local p_name p_endpoint
             p_name=$(basename "$p_file")
             p_endpoint=$(grep -E "^Endpoint[[:space:]]*=" "$p_file" 2>/dev/null | head -1 | sed 's/^Endpoint[[:space:]]*=[[:space:]]*//' | tr -d '\r\n' || true)
-            echo "wg_peer_info{interface=\"${WG_IFACE}\",peer_name=\"${p_name}\",endpoint=\"${p_endpoint:-unknown}\"} 1" >> "$tmp"
+            echo "wg_peer_info{interface=\"${WG_IFACE}\",peer=\"${p_name}\",endpoint=\"${p_endpoint:-unknown}\"} 1" >> "$tmp"
         done
     fi
 
