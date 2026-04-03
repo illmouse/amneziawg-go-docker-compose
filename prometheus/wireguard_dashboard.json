@@ -1218,21 +1218,10 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "wg_peer_info{instance=~\"$instance\"}",
-          "instant": true,
-          "legendFormat": "_info",
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "editorMode": "code",
           "expr": "wg_peer_rx_bytes_total{instance=~\"$instance\"}",
           "instant": true,
-          "legendFormat": "RX",
-          "refId": "B"
+          "legendFormat": "__auto",
+          "refId": "A"
         },
         {
           "datasource": {
@@ -1242,8 +1231,8 @@
           "editorMode": "code",
           "expr": "wg_peer_tx_bytes_total{instance=~\"$instance\"}",
           "instant": true,
-          "legendFormat": "TX",
-          "refId": "C"
+          "legendFormat": "__auto",
+          "refId": "B"
         }
       ],
       "title": "Configured Peers",
@@ -1251,13 +1240,14 @@
         {
           "id": "labelsToFields",
           "options": {
-            "mode": "columns"
+            "mode": "columns",
+            "keepLabels": ["peer", "endpoint"]
           }
         },
         {
           "id": "joinByField",
           "options": {
-            "byField": "endpoint",
+            "byField": "peer",
             "mode": "outer"
           }
         },
@@ -1266,21 +1256,22 @@
           "options": {
             "excludeByName": {
               "Time": true,
-              "_info": true,
-              "Value": true,
-              "__name__": true,
-              "Field": true,
               "wg_peer_info": true,
-              "interface": true,
-              "instance": true,
-              "public_key": true,
-              "allowed_ip": true
+              "Value": true,
+              "endpoint 1": true,
+              "endpoint 2": true
+            },
+            "indexByName": {
+              "peer": 0,
+              "endpoint": 1,
+              "wg_peer_rx_bytes_total": 2,
+              "wg_peer_tx_bytes_total": 3
             },
             "renameByName": {
               "peer": "Peer Name",
               "endpoint": "Endpoint",
-              "RX": "Total RX",
-              "TX": "Total TX"
+              "wg_peer_rx_bytes_total": "Total RX",
+              "wg_peer_tx_bytes_total": "Total TX"
             }
           }
         }
