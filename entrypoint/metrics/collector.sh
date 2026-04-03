@@ -66,8 +66,8 @@ PROM
 # TYPE wg_tunnel_last_check_timestamp_seconds gauge
 PROM
     local healthy last_check
-    healthy=$(state_get tunnel_healthy)
-    last_check=$(state_get last_check_ts)
+    healthy=$(state_get tunnel_healthy) || true
+    last_check=$(state_get last_check_ts) || true
     echo "wg_tunnel_healthy{interface=\"${WG_IFACE}\"} ${healthy:-0}" >> "$tmp"
     echo "wg_tunnel_last_check_timestamp_seconds{interface=\"${WG_IFACE}\"} ${last_check:-0}" >> "$tmp"
 
@@ -82,13 +82,13 @@ PROM
 # TYPE wg_tunnel_active_peer gauge
 PROM
         local failover last_failover
-        failover=$(state_get failover_total)
-        last_failover=$(state_get last_failover_ts)
+        failover=$(state_get failover_total) || true
+        last_failover=$(state_get last_failover_ts) || true
         echo "wg_tunnel_failover_total{interface=\"${WG_IFACE}\"} ${failover:-0}" >> "$tmp"
         echo "wg_tunnel_last_failover_timestamp_seconds{interface=\"${WG_IFACE}\"} ${last_failover:-0}" >> "$tmp"
 
         local current_peer
-        current_peer=$(state_get current_peer)
+        current_peer=$(state_get current_peer) || true
         for peer_file in "${CLIENT_PEERS_DIR}"/*.conf; do
             [ -f "$peer_file" ] || continue
             local peer_name active=0
