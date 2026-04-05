@@ -39,13 +39,13 @@ probe_peer_tunnel() {
     probe_conf=$(mktemp /tmp/awg-probe-XXXXXX.conf)
 
     if ! build_client_config "$peer_config" "$probe_conf"; then
-        debug "Failed to build probe config for $(basename "$peer_config")"
+        warn "Failed to build probe config for $(basename "$peer_config")"
         rm -f "$probe_conf"
         return 1
     fi
 
     if ! amneziawg-go "$probe_iface" >>"$WG_LOGFILE" 2>&1; then
-        debug "Failed to create probe interface $probe_iface"
+        warn "Failed to create probe interface $probe_iface"
         rm -f "$probe_conf"
         return 1
     fi
@@ -73,7 +73,7 @@ probe_peer_tunnel() {
         local hs_ts
         hs_ts=$(awg show "$probe_iface" latest-handshakes 2>/dev/null | awk '{print $2}')
         if [ -n "$hs_ts" ] && [ "$hs_ts" -gt 0 ]; then
-            debug "Probe handshake succeeded: $(basename "$peer_config")"
+            info "Probe handshake succeeded: $(basename "$peer_config")"
             result=0
             break
         fi
@@ -81,6 +81,7 @@ probe_peer_tunnel() {
     done
 
     # Cleanup — always runs regardless of result
+    [ "$result" -ne 0 ] && debug "Probe timed out for $(basename "$peer_config"): no handshake within ${MON_CHECK_TIMEOUT}s"
     ip link del "$probe_iface" 2>/dev/null || true
     if [ -n "$endpoint_ip" ] && [ -n "$phys_gw" ] && [ -n "$phys_iface" ]; then
         ip route del "$endpoint_ip" via "$phys_gw" dev "$phys_iface" 2>/dev/null || true
@@ -121,7 +122,7 @@ select_and_probe_next_peer() {
             echo "$candidate"
             return 0
         fi
-        debug "Probe failed: $(basename "$candidate")"
+        warn "Probe failed: $(basename "$candidate")"
     done
 
     echo ""
@@ -330,30 +331,20 @@ while true; do
     debug "Current peer config: $current_peer_config"
 
     if check_tunnel_health "$MON_CHECK_IP" "$MON_CHECK_TIMEOUT"; then
-        # Tunnel is healthy — clear failure state for the working peer
-        if [ -n "$current_peer_config" ]; then
-            clear_peer_failed "$current_peer_config"
-        fi
-
         write_tunnel_state 1 "$(basename "${current_peer_config:-}")" "$failover_total" "$last_failover_ts"
 
-        # Switch back to master only after its failure cooldown has expired and its tunnel probe succeeds.
+        # Switch back to master whenever we're on a backup peer — probe first to confirm it's alive.
         if [ -n "$master_peer_config" ] && [ -n "$current_peer_config" ] && [ "$current_peer_config" != "$master_peer_config" ]; then
-            if ! is_peer_failed "$master_peer_config"; then
-                info "Master peer $MASTER_PEER cooldown expired, probing before switching back"
-                if probe_peer_tunnel "$master_peer_config"; then
-                    info "Master peer $MASTER_PEER probe succeeded, switching back"
-                    if switch_to_peer_config "$master_peer_config" "$current_peer_config"; then
-                        current_peer_config="$master_peer_config"
-                        failover_total=$(( failover_total + 1 ))
-                        last_failover_ts=$(date +%s)
-                    fi
-                else
-                    warn "Master peer $MASTER_PEER probe failed, extending cooldown"
-                    mark_peer_failed "$master_peer_config"
+            info "Probing master peer $MASTER_PEER for switchback"
+            if probe_peer_tunnel "$master_peer_config"; then
+                info "Master peer $MASTER_PEER probe succeeded, switching back"
+                if switch_to_peer_config "$master_peer_config" "$current_peer_config"; then
+                    current_peer_config="$master_peer_config"
+                    failover_total=$(( failover_total + 1 ))
+                    last_failover_ts=$(date +%s)
                 fi
             else
-                debug "Master peer $MASTER_PEER still in failure cooldown, staying on backup"
+                warn "Master peer $MASTER_PEER probe failed, staying on backup"
             fi
         fi
         sleep "$MON_CHECK_INTERVAL"
@@ -366,7 +357,6 @@ while true; do
             debug "Using initial peer config: $(basename "$current_peer_config")"
         fi
 
-        mark_peer_failed "$current_peer_config"
         write_tunnel_state 0 "$(basename "$current_peer_config")" "$failover_total" "$last_failover_ts"
 
         probe_loop_done=false
@@ -377,19 +367,16 @@ while true; do
                 if [ "$next_peer" = "$current_peer_config" ]; then
                     # Current peer probe passed — tunnel issue was transient, stay
                     info "Current peer probe succeeded, staying on $(basename "$current_peer_config")"
-                    clear_peer_failed "$current_peer_config"
                 elif switch_to_peer_config "$next_peer" "$current_peer_config"; then
                     current_peer_config="$next_peer"
                     failover_total=$(( failover_total + 1 ))
                     last_failover_ts=$(date +%s)
-                    clear_peer_failed "$next_peer"
                 fi
                 probe_loop_done=true
             else
                 # All peer probes failed — re-check if current tunnel self-healed
                 if check_tunnel_health "$MON_CHECK_IP" "$MON_CHECK_TIMEOUT"; then
                     info "Tunnel health check recovered on current peer, staying"
-                    clear_peer_failed "$current_peer_config"
                     probe_loop_done=true
                 else
                     warn "All peer probes failed and tunnel still down, retrying in ${MON_CHECK_INTERVAL}s..."

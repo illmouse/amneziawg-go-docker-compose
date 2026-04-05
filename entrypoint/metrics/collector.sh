@@ -88,7 +88,7 @@ PROM
     while IFS=$'\t' read -r iface pubkey _psk endpoint _allowed handshake rx tx _ka; do
         [ "$iface" = "$WG_IFACE" ] || continue
         local age=0
-        if [ "${handshake:-0}" != "0" ]; then
+        if [ "${handshake:-0}" != "0" ] && [[ "${handshake}" =~ ^[0-9]+$ ]]; then
             age=$(( now - handshake ))
             [ "$age" -lt 0 ] && age=0
         fi
@@ -167,9 +167,9 @@ PROM
 info "Metrics collector started (interval=${METRICS_INTERVAL}s)"
 
 # Collect immediately on startup so metrics are available before first sleep
-collect
+collect || warn "Initial metrics collection failed, will retry"
 
 while true; do
     sleep "$METRICS_INTERVAL"
-    collect
+    collect || warn "Metrics collection failed, retrying next interval"
 done
