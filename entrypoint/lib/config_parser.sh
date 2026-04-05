@@ -25,6 +25,10 @@ build_client_config() {
         error "Cannot build config from invalid peer template: $peer_config"
         return 1
     fi
+    if [ -z "$output_config" ]; then
+        error "Cannot build config: output path is empty"
+        return 1
+    fi
 
     debug "Building client config from: $(basename "$peer_config")"
 

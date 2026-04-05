@@ -36,7 +36,7 @@ probe_peer_tunnel() {
     local probe_iface="awg-probe-$$"
     local probe_conf result=1
 
-    probe_conf=$(mktemp /tmp/awg-probe-XXXXXX.conf)
+    probe_conf=$(mktemp)
 
     if ! build_client_config "$peer_config" "$probe_conf"; then
         warn "Failed to build probe config for $(basename "$peer_config")"
