@@ -94,12 +94,15 @@ probe_peer_tunnel() {
 # Probe all peers in rotation order starting after current_config, wrapping around to include it.
 # Returns path of first peer whose probe succeeds, or empty string if none pass.
 # Cooldown state is not consulted — this is a live check.
+# Result is stored in _probe_result (not stdout) to avoid capturing log messages in callers.
+_probe_result=""
 select_and_probe_next_peer() {
+    _probe_result=""
     local current_config="$1"
     local peer_files=("$CLIENT_PEERS_DIR"/*.conf)
     local peer_count=${#peer_files[@]}
 
-    [ "$peer_count" -eq 0 ] && { echo ""; return 1; }
+    [ "$peer_count" -eq 0 ] && return 1
 
     IFS=$'\n' sorted_files=($(sort <<<"${peer_files[*]}"))
     unset IFS
@@ -119,13 +122,12 @@ select_and_probe_next_peer() {
         candidate="${sorted_files[$idx]}"
         info "Probing peer: $(basename "$candidate")"
         if probe_peer_tunnel "$candidate"; then
-            echo "$candidate"
+            _probe_result="$candidate"
             return 0
         fi
         warn "Probe failed: $(basename "$candidate")"
     done
 
-    echo ""
     return 1
 }
 
@@ -361,7 +363,8 @@ while true; do
 
         probe_loop_done=false
         while [ "$probe_loop_done" = "false" ]; do
-            next_peer=$(select_and_probe_next_peer "$current_peer_config") || true
+            select_and_probe_next_peer "$current_peer_config" || true
+            next_peer="$_probe_result"
 
             if [ -n "$next_peer" ]; then
                 if [ "$next_peer" = "$current_peer_config" ]; then
