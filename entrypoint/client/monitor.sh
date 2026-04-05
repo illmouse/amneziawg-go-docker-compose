@@ -66,6 +66,12 @@ probe_peer_tunnel() {
     [ -n "$probe_ip" ] && ip addr add "$probe_ip" dev "$probe_iface" 2>/dev/null || true
     ip link set up dev "$probe_iface" 2>/dev/null || true
 
+    # WireGuard initiates a handshake lazily (only when it has data to send).
+    # Route a link-local dummy address via the probe interface and send a single
+    # ping so the kernel queues a packet, triggering immediate handshake initiation.
+    ip route add 169.254.1.1/32 dev "$probe_iface" 2>/dev/null || true
+    ping -c 1 -W 1 -q 169.254.1.1 >/dev/null 2>&1 || true
+
     # Poll for a successful handshake (proves server is live and keys match)
     local deadline
     deadline=$(( $(date +%s) + MON_CHECK_TIMEOUT ))
