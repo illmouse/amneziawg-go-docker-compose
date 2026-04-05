@@ -62,9 +62,9 @@ probe_peer_tunnel() {
 
     local probe_ip
     probe_ip=$(conf_get_value "Address" "$peer_config")
-    awg setconf "$probe_iface" "$probe_conf" 2>/dev/null
+    awg setconf "$probe_iface" "$probe_conf" 2>/dev/null || true
     [ -n "$probe_ip" ] && ip addr add "$probe_ip" dev "$probe_iface" 2>/dev/null || true
-    ip link set up dev "$probe_iface" 2>/dev/null
+    ip link set up dev "$probe_iface" 2>/dev/null || true
 
     # Poll for a successful handshake (proves server is live and keys match)
     local deadline
@@ -361,7 +361,7 @@ while true; do
 
         probe_loop_done=false
         while [ "$probe_loop_done" = "false" ]; do
-            next_peer=$(select_and_probe_next_peer "$current_peer_config")
+            next_peer=$(select_and_probe_next_peer "$current_peer_config") || true
 
             if [ -n "$next_peer" ]; then
                 if [ "$next_peer" = "$current_peer_config" ]; then
