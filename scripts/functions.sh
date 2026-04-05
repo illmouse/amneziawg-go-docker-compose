@@ -130,19 +130,11 @@ prompt_user() {
         case "$proxy_enable_choice" in
             y|Y|yes|Yes|YES)
                 PROXY_SOCKS5_ENABLED="true"
-                log "Enabled proxy"
-                ;;
-            n|N|no|No|NO)
-                PROXY_SOCKS5_ENABLED="false"
-                log "Disabled proxy"
-                ;;
-            "")
-                PROXY_SOCKS5_ENABLED="true"
-                log "No input provided, defaulting to enabled"
+                log "Enabled SOCKS5 proxy"
                 ;;
             *)
-                PROXY_SOCKS5_ENABLED="true"
-                log "Invalid choice, defaulting to enabled"
+                PROXY_SOCKS5_ENABLED="false"
+                log "Disabled SOCKS5 proxy"
                 ;;
         esac
         
@@ -164,19 +156,11 @@ prompt_user() {
         case "$proxy_enable_choice" in
             y|Y|yes|Yes|YES)
                 PROXY_HTTP_ENABLED="true"
-                log "Enabled proxy"
-                ;;
-            n|N|no|No|NO)
-                PROXY_HTTP_ENABLED="false"
-                log "Disabled proxy"
-                ;;
-            "")
-                PROXY_HTTP_ENABLED="true"
-                log "No input provided, defaulting to enabled"
+                log "Enabled HTTP proxy"
                 ;;
             *)
-                PROXY_HTTP_ENABLED="true"
-                log "Invalid choice, defaulting to enabled"
+                PROXY_HTTP_ENABLED="false"
+                log "Disabled HTTP proxy"
                 ;;
         esac
         

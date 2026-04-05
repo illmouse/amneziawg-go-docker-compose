@@ -16,6 +16,7 @@ fi
 fix_permissions "$SCRIPT_DIR"/scripts
 
 # Check if .env exists and ask for overwrite
+overwrite_choice=true
 if [ -f ".env" ]; then
     echo ""
     warn ".env file already exists!"
