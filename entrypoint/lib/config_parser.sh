@@ -44,8 +44,8 @@ build_client_config() {
     if [[ -z "${extracted_params[I1]+_}" ]]; then
         extracted_params["I1"]=$(get_protocol_value)
     fi
-    for i in {2..5}; do
-        local key="I$i"
+    for _param_i in {2..5}; do
+        local key="I$_param_i"
         if [[ -z "${extracted_params[$key]+_}" || -z "${extracted_params[$key]}" ]]; then
             extracted_params["$key"]=$(generate_cps_value)
         fi
