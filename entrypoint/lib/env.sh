@@ -77,7 +77,7 @@ declare -A PROTOCOL_MAP=(
 # ===============================
 : "${MON_CHECK_IP:=9.9.9.9}"
 : "${MON_CHECK_INTERVAL:=10}"
-: "${MON_CHECK_TIMEOUT:=5}"
+: "${MON_CHECK_TIMEOUT:=10}"
 
 # ===============================
 # Log rotation
