@@ -19,7 +19,7 @@ check_tunnel_health() {
         return 1
     fi
 
-    if ping -c 3 -W "$timeout" -I "$WG_IFACE" "$test_target" >/dev/null 2>&1; then
+    if ping -c "$MON_PING_COUNT" -W "$timeout" -I "$WG_IFACE" "$test_target" >/dev/null 2>&1; then
         debug "Tunnel health check passed: $test_target"
         return 0
     else

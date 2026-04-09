@@ -59,6 +59,7 @@ All variables are set in `.env` (copy from `.env.example`). Loaded at container 
 | `MON_CHECK_IP` | `9.9.9.9` | IP pinged through tunnel to verify health |
 | `MON_CHECK_INTERVAL` | `10` | Seconds between health checks |
 | `MON_CHECK_TIMEOUT` | `10` | Ping timeout (seconds) |
+| `MON_PING_COUNT` | `3` | Number of ping packets sent per health check. The check passes if any packet gets a response (client mode) |
 | `MON_PEER_FAIL_COOLDOWN` | `300` | Seconds before re-trying a failed peer |
 
 ### Prometheus Metrics
@@ -68,6 +69,7 @@ All variables are set in `.env` (copy from `.env.example`). Loaded at container 
 | `METRICS_ENABLED` | `false` | Enable Prometheus metrics endpoint |
 | `METRICS_PORT` | `9586` | Port to serve `/metrics` |
 | `METRICS_INTERVAL` | `15` | Collection interval (seconds) |
+| `PEER_HANDSHAKE_TIMEOUT` | `180` | Seconds since last handshake before a peer is considered disconnected (server mode) |
 
 ### Log Rotation
 

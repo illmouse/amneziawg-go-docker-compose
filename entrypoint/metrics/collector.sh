@@ -15,6 +15,39 @@ state_get() {
     echo "$val"
 }
 
+collect_server_metrics() {
+    local tmp="$1" now="$2"
+    local total=0 active=0 stale=0
+
+    cat >> "$tmp" <<'PROM'
+# HELP wg_server_peers_total Total number of configured peers on the server
+# TYPE wg_server_peers_total gauge
+# HELP wg_server_peers_active Number of peers with a handshake within PEER_HANDSHAKE_TIMEOUT seconds
+# TYPE wg_server_peers_active gauge
+# HELP wg_server_peers_stale Number of peers whose last handshake exceeds PEER_HANDSHAKE_TIMEOUT seconds (or never connected)
+# TYPE wg_server_peers_stale gauge
+PROM
+
+    while IFS=$'\t' read -r _iface _pubkey _psk _endpoint _allowed handshake _rx _tx _ka; do
+        [ "$_iface" = "$WG_IFACE" ] || continue
+        total=$(( total + 1 ))
+        if [ "${handshake:-0}" != "0" ] && [[ "${handshake}" =~ ^[0-9]+$ ]]; then
+            local age=$(( now - handshake ))
+            if [ "$age" -le "${PEER_HANDSHAKE_TIMEOUT}" ]; then
+                active=$(( active + 1 ))
+            else
+                stale=$(( stale + 1 ))
+            fi
+        else
+            stale=$(( stale + 1 ))
+        fi
+    done < <(awg show all dump 2>/dev/null | awk -F'\t' 'NF==9')
+
+    echo "wg_server_peers_total{interface=\"${WG_IFACE}\"} ${total}" >> "$tmp"
+    echo "wg_server_peers_active{interface=\"${WG_IFACE}\"} ${active}" >> "$tmp"
+    echo "wg_server_peers_stale{interface=\"${WG_IFACE}\"} ${stale}" >> "$tmp"
+}
+
 collect() {
     local now
     now=$(date +%s)
@@ -133,6 +166,11 @@ PROM
     fi
     echo "wg_interface_rx_bytes_total{interface=\"${WG_IFACE}\"} ${iface_rx:-0}" >> "$tmp"
     echo "wg_interface_tx_bytes_total{interface=\"${WG_IFACE}\"} ${iface_tx:-0}" >> "$tmp"
+
+    # ---- Server-mode-only metrics ----
+    if [ "$WG_MODE" = "server" ]; then
+        collect_server_metrics "$tmp" "$now"
+    fi
 
     # ---- Client-mode-only metrics ----
     if [ "$WG_MODE" = "client" ]; then
