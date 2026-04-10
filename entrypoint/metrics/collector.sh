@@ -16,8 +16,7 @@ state_get() {
 }
 
 collect_server_metrics() {
-    local tmp="$1" now="$2"
-    local total=0 active=0 stale=0
+    local tmp="$1" total="$2" active="$3" stale="$4"
 
     cat >> "$tmp" <<'PROM'
 # HELP wg_server_peers_total Total number of configured peers on the server
@@ -27,21 +26,6 @@ collect_server_metrics() {
 # HELP wg_server_peers_stale Number of peers whose last handshake exceeds PEER_HANDSHAKE_TIMEOUT seconds (or never connected)
 # TYPE wg_server_peers_stale gauge
 PROM
-
-    while IFS=$'\t' read -r _iface _pubkey _psk _endpoint _allowed handshake _rx _tx _ka; do
-        [ "$_iface" = "$WG_IFACE" ] || continue
-        total=$(( total + 1 ))
-        if [ "${handshake:-0}" != "0" ] && [[ "${handshake}" =~ ^[0-9]+$ ]]; then
-            local age=$(( now - handshake ))
-            if [ "$age" -le "${PEER_HANDSHAKE_TIMEOUT}" ]; then
-                active=$(( active + 1 ))
-            else
-                stale=$(( stale + 1 ))
-            fi
-        else
-            stale=$(( stale + 1 ))
-        fi
-    done < <(awg show all dump 2>/dev/null | awk -F'\t' 'NF==9')
 
     echo "wg_server_peers_total{interface=\"${WG_IFACE}\"} ${total}" >> "$tmp"
     echo "wg_server_peers_active{interface=\"${WG_IFACE}\"} ${active}" >> "$tmp"
@@ -118,6 +102,7 @@ PROM
 # HELP wg_peer_tx_bytes_total Total bytes transmitted to this peer
 # TYPE wg_peer_tx_bytes_total counter
 PROM
+    local _srv_total=0 _srv_active=0 _srv_stale=0
     while IFS=$'\t' read -r iface pubkey _psk endpoint _allowed handshake rx tx _ka; do
         [ "$iface" = "$WG_IFACE" ] || continue
         local age=0
@@ -135,6 +120,14 @@ PROM
         echo "wg_peer_handshake_age_seconds{${lbl}} ${age}" >> "$tmp"
         echo "wg_peer_rx_bytes_total{${lbl}} ${rx:-0}" >> "$tmp"
         echo "wg_peer_tx_bytes_total{${lbl}} ${tx:-0}" >> "$tmp"
+        if [ "$WG_MODE" = "server" ]; then
+            _srv_total=$(( _srv_total + 1 ))
+            if [ "${handshake:-0}" != "0" ] && [ "$age" -gt 0 ] && [ "$age" -le "${PEER_HANDSHAKE_TIMEOUT}" ]; then
+                _srv_active=$(( _srv_active + 1 ))
+            else
+                _srv_stale=$(( _srv_stale + 1 ))
+            fi
+        fi
     done < <(awg show all dump 2>/dev/null | awk -F'\t' 'NF==9')
 
     # ---- Tunnel health (from monitor state file) ----
@@ -169,7 +162,7 @@ PROM
 
     # ---- Server-mode-only metrics ----
     if [ "$WG_MODE" = "server" ]; then
-        collect_server_metrics "$tmp" "$now"
+        collect_server_metrics "$tmp" "$_srv_total" "$_srv_active" "$_srv_stale"
     fi
 
     # ---- Client-mode-only metrics ----

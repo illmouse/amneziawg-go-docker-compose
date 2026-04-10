@@ -5,10 +5,25 @@ set -eu
 . /entrypoint/lib/env.sh
 . /entrypoint/lib/functions.sh
 
+restart_wg_iface() {
+    warn "amneziawg-go appears to have crashed — attempting in-place restart..."
+    pkill -f "amneziawg-go $WG_IFACE" 2>/dev/null || true
+    sleep 1
+    start_wg_iface "$WG_IFACE"
+    ip address add dev "$WG_IFACE" "$WG_ADDRESS" 2>/dev/null || true
+    if ! awg setconf "$WG_IFACE" "$WG_DIR/$WG_CONF_FILE" 2>/dev/null; then
+        error "Failed to reload WireGuard config after restart"
+        return 1
+    fi
+    ip link set up dev "$WG_IFACE" 2>/dev/null || true
+    success "WireGuard interface $WG_IFACE restarted"
+}
+
 # Server-specific health check
+# Returns: 0 = healthy, 1 = unhealthy, 2 = wg0 interface absent
 check_container_health() {
     if ! is_wg_interface_up; then
-        return 1
+        return 2
     fi
 
     if ! has_valid_wg_config "$WG_DIR/$WG_IFACE.conf"; then
@@ -47,11 +62,30 @@ fi
 success "WireGuard configuration found: $WG_DIR/$WG_IFACE.conf"
 
 # Main monitoring loop
+_restart_failures=0
 while true; do
-    if check_container_health; then
+    health_rc=0
+    check_container_health || health_rc=$?
+    if [ "$health_rc" -eq 0 ]; then
+        _restart_failures=0
         write_tunnel_state 1
         sleep "$MON_CHECK_INTERVAL"
+    elif [ "$health_rc" -eq 2 ]; then
+        # wg0 is absent — attempt in-place restart
+        if restart_wg_iface; then
+            _restart_failures=0
+        else
+            _restart_failures=$(( _restart_failures + 1 ))
+            error "WireGuard restart failed (attempt ${_restart_failures}/3)"
+            if [ "$_restart_failures" -ge 3 ]; then
+                error "Exhausted restart attempts — forcing container restart"
+                kill 1
+            fi
+        fi
+        write_tunnel_state 0
+        sleep "$MON_CHECK_INTERVAL"
     else
+        _restart_failures=0
         warn "Server is unhealthy, will retry in $MON_CHECK_INTERVAL seconds"
         write_tunnel_state 0
         sleep "$MON_CHECK_INTERVAL"

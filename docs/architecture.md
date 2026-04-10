@@ -34,6 +34,18 @@ Entrypoint flow (`entrypoint/main.sh`):
 
 Peer configs are stored in `config/server_peers/` (one `.conf` per peer).
 
+#### Server monitor watchdog
+
+`server/monitor.sh` runs `check_container_health` on each iteration. Exit codes:
+
+| Code | Meaning |
+|------|---------|
+| 0 | Healthy |
+| 1 | Unhealthy — ping, config, or listen failure |
+| 2 | `wg0` interface absent (`amneziawg-go` crashed) |
+
+On exit code 2, the monitor calls `restart_wg_iface()` to attempt an in-place interface restart without touching the container. After **3 consecutive failed restart attempts** it sends `kill 1` to force a full container restart; Docker's `restart: always` policy then brings the container back up cleanly.
+
 ### Client mode (`WG_MODE=client`)
 
 Entrypoint flow:
@@ -54,7 +66,7 @@ Entrypoint flow:
 - Switches to first available peer.
 - If `MASTER_PEER` is set, switches back to the master peer as soon as it recovers.
 
-Probe interval: `MON_CHECK_INTERVAL` (default 10 s). Failed peer cooldown: `MON_PEER_FAIL_COOLDOWN` (default 300 s).
+Probe interval: `MON_CHECK_INTERVAL` (default 10 s).
 
 ## UDP Obfuscation
 
@@ -81,7 +93,7 @@ Ports (expose in docker-compose.yaml if needed):
 
 Enabled with `METRICS_ENABLED=true`. Two background processes start:
 
-- `metrics/collector.sh` — polls `awg show all dump` every `METRICS_INTERVAL` seconds, writes Prometheus-format data to `/tmp/amneziawg/metrics.prom`
+- `metrics/collector.sh` — polls `awg show all dump` every `METRICS_INTERVAL` seconds, writes Prometheus-format data to `/tmp/amneziawg/metrics.prom`. In server mode, peer-count metrics (`wg_server_peers_total`, `wg_server_peers_active`, `wg_server_peers_stale`) are computed inline inside the per-peer loop of that single `awg show all dump` call.
 - `metrics/server.sh` — serves metrics on `METRICS_PORT` (default 9586) at `/metrics`
 
 Key metrics exposed:

@@ -214,7 +214,6 @@ This will recreate:
 | MON_CHECK_INTERVAL | integer ≥ 1 | `10` | Interval in seconds between monitoring checks |
 | MON_CHECK_TIMEOUT | integer ≥ 1 | `10` | Timeout in seconds for health check pings and peer handshake probes |
 | MON_PING_COUNT | integer ≥ 1 | `3` | Number of ping packets sent per health check. The check passes if any packet gets a response (client mode) |
-| MON_PEER_FAIL_COOLDOWN | integer ≥ 0 | `300` | Seconds a failed peer stays excluded from rotation before being retried |
 | LOGROTATE_INTERVAL | integer ≥ 1 | `86400` | Seconds between log rotation runs inside the container (default: 24 h) |
 | LOGROTATE_ROTATE | integer ≥ 0 | `1` | Number of rotated log files to keep (1 = keep only the previous log) |
 | LOGROTATE_MAXAGE | integer ≥ 1 | `1` | Delete rotated log files older than this many days |
