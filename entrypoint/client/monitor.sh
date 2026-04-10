@@ -19,7 +19,7 @@ check_tunnel_health() {
         return 1
     fi
 
-    if ping -c 3 -W "$timeout" -I "$WG_IFACE" "$test_target" >/dev/null 2>&1; then
+    if ping -c "$MON_PING_COUNT" -W "$timeout" -I "$WG_IFACE" "$test_target" >/dev/null 2>&1; then
         debug "Tunnel health check passed: $test_target"
         return 0
     else
@@ -51,13 +51,15 @@ probe_peer_tunnel() {
     fi
 
     # Route the endpoint via physical gateway so handshake traffic bypasses the main tunnel
-    local endpoint_host endpoint_ip phys_gw phys_iface
+    local endpoint_host endpoint_ip phys_gw phys_iface route_added=false
     endpoint_host=$(conf_get_value "Endpoint" "$peer_config" | cut -d: -f1)
     endpoint_ip=$(resolve_host "$endpoint_host" 2>/dev/null) || endpoint_ip="$endpoint_host"
     phys_gw=$(ip route | awk '/default/ {print $3; exit}')
     phys_iface=$(ip route | awk '/default/ {print $5; exit}')
     if [ -n "$endpoint_ip" ] && [ -n "$phys_gw" ] && [ -n "$phys_iface" ]; then
-        ip route add "$endpoint_ip" via "$phys_gw" dev "$phys_iface" 2>/dev/null || true
+        if ip route add "$endpoint_ip" via "$phys_gw" dev "$phys_iface" 2>/dev/null; then
+            route_added=true
+        fi
     fi
 
     local probe_ip
@@ -89,7 +91,7 @@ probe_peer_tunnel() {
     # Cleanup — always runs regardless of result
     [ "$result" -ne 0 ] && debug "Probe timed out for $(basename "$peer_config"): no handshake within ${MON_CHECK_TIMEOUT}s"
     ip link del "$probe_iface" 2>/dev/null || true
-    if [ -n "$endpoint_ip" ] && [ -n "$phys_gw" ] && [ -n "$phys_iface" ]; then
+    if [ "$route_added" = "true" ]; then
         ip route del "$endpoint_ip" via "$phys_gw" dev "$phys_iface" 2>/dev/null || true
     fi
     rm -f "$probe_conf"
