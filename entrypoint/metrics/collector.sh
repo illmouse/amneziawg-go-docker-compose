@@ -15,6 +15,23 @@ state_get() {
     echo "$val"
 }
 
+collect_server_metrics() {
+    local tmp="$1" total="$2" active="$3" stale="$4"
+
+    cat >> "$tmp" <<'PROM'
+# HELP wg_server_peers_total Total number of configured peers on the server
+# TYPE wg_server_peers_total gauge
+# HELP wg_server_peers_active Number of peers with a handshake within PEER_HANDSHAKE_TIMEOUT seconds
+# TYPE wg_server_peers_active gauge
+# HELP wg_server_peers_stale Number of peers whose last handshake exceeds PEER_HANDSHAKE_TIMEOUT seconds (or never connected)
+# TYPE wg_server_peers_stale gauge
+PROM
+
+    echo "wg_server_peers_total{interface=\"${WG_IFACE}\"} ${total}" >> "$tmp"
+    echo "wg_server_peers_active{interface=\"${WG_IFACE}\"} ${active}" >> "$tmp"
+    echo "wg_server_peers_stale{interface=\"${WG_IFACE}\"} ${stale}" >> "$tmp"
+}
+
 collect() {
     local now
     now=$(date +%s)
@@ -85,6 +102,7 @@ PROM
 # HELP wg_peer_tx_bytes_total Total bytes transmitted to this peer
 # TYPE wg_peer_tx_bytes_total counter
 PROM
+    local _srv_total=0 _srv_active=0 _srv_stale=0
     while IFS=$'\t' read -r iface pubkey _psk endpoint _allowed handshake rx tx _ka; do
         [ "$iface" = "$WG_IFACE" ] || continue
         local age=0
@@ -102,6 +120,14 @@ PROM
         echo "wg_peer_handshake_age_seconds{${lbl}} ${age}" >> "$tmp"
         echo "wg_peer_rx_bytes_total{${lbl}} ${rx:-0}" >> "$tmp"
         echo "wg_peer_tx_bytes_total{${lbl}} ${tx:-0}" >> "$tmp"
+        if [ "$WG_MODE" = "server" ]; then
+            _srv_total=$(( _srv_total + 1 ))
+            if [ "${handshake:-0}" != "0" ] && [ "$age" -gt 0 ] && [ "$age" -le "${PEER_HANDSHAKE_TIMEOUT}" ]; then
+                _srv_active=$(( _srv_active + 1 ))
+            else
+                _srv_stale=$(( _srv_stale + 1 ))
+            fi
+        fi
     done < <(awg show all dump 2>/dev/null | awk -F'\t' 'NF==9')
 
     # ---- Tunnel health (from monitor state file) ----
@@ -133,6 +159,11 @@ PROM
     fi
     echo "wg_interface_rx_bytes_total{interface=\"${WG_IFACE}\"} ${iface_rx:-0}" >> "$tmp"
     echo "wg_interface_tx_bytes_total{interface=\"${WG_IFACE}\"} ${iface_tx:-0}" >> "$tmp"
+
+    # ---- Server-mode-only metrics ----
+    if [ "$WG_MODE" = "server" ]; then
+        collect_server_metrics "$tmp" "$_srv_total" "$_srv_active" "$_srv_stale"
+    fi
 
     # ---- Client-mode-only metrics ----
     if [ "$WG_MODE" = "client" ]; then
