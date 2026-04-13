@@ -155,25 +155,14 @@ generate_cps_value() {
 }
 
 get_protocol_value() {
-    debug "Setting CSP protocol for peer" >&2
-    local code="$UDP_SIGNATURE"
-    local default_value="${PROTOCOL_MAP[DEFAULT]}"
-    local value
-
-    if [[ -z "$code" ]]; then
-        value="$default_value"
-        debug "No protocol code provided. Using default: $value" >&2
+    debug "Setting CSP protocol for peer: $UDP_SIGNATURE" >&2
+    if [[ -n "${PROTOCOL_MAP[$UDP_SIGNATURE]+_}" ]]; then
+        info "Using UDP signature protocol: $UDP_SIGNATURE" >&2
+        echo "${PROTOCOL_MAP[$UDP_SIGNATURE]}"
     else
-        if [[ -n "${PROTOCOL_MAP[$code]}" ]]; then
-            value="${PROTOCOL_MAP[$code]}"
-            debug "Found protocol '$code'" >&2
-        else
-            value="$default_value"
-            warn "Protocol code '$code' not found. Using default." >&2
-        fi
+        warn "Protocol '$UDP_SIGNATURE' not found in PROTOCOL_MAP, falling back to QUIC" >&2
+        echo "${PROTOCOL_MAP[QUIC]}"
     fi
-
-    echo "$value"
 }
 
 # ===============================
