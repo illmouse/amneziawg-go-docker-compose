@@ -15,22 +15,6 @@ state_get() {
     echo "$val"
 }
 
-collect_server_metrics() {
-    local tmp="$1" total="$2" active="$3" stale="$4"
-
-    cat >> "$tmp" <<'PROM'
-# HELP wg_server_peers_total Total number of configured peers on the server
-# TYPE wg_server_peers_total gauge
-# HELP wg_server_peers_active Number of peers with a handshake within PEER_HANDSHAKE_TIMEOUT seconds
-# TYPE wg_server_peers_active gauge
-# HELP wg_server_peers_stale Number of peers whose last handshake exceeds PEER_HANDSHAKE_TIMEOUT seconds (or never connected)
-# TYPE wg_server_peers_stale gauge
-PROM
-
-    echo "wg_server_peers_total{interface=\"${WG_IFACE}\"} ${total}" >> "$tmp"
-    echo "wg_server_peers_active{interface=\"${WG_IFACE}\"} ${active}" >> "$tmp"
-    echo "wg_server_peers_stale{interface=\"${WG_IFACE}\"} ${stale}" >> "$tmp"
-}
 
 collect() {
     local now
@@ -59,15 +43,18 @@ PROM
     awg_version="${awg_version:-unknown}"
     echo "wg_build_info{interface=\"${WG_IFACE}\",awg_version=\"${awg_version}\"} 1" >> "$tmp"
 
-    # ---- Peer configuration info + endpoint→name map (client mode) ----
-    # Built before the per-peer metrics loop so the map can enrich traffic metrics with peer names.
-    declare -A _peer_map
+    # ---- Peer configuration info + name maps ----
+    # _peer_map[endpoint]=name  (client mode)
+    # _pubkey_map[pubkey]=name  (server mode)
+    # Both are used below to add peer= label to per-peer traffic metrics.
+    declare -A _peer_map _pubkey_map
     cat >> "$tmp" <<'PROM'
 # HELP wg_peer_info Configured peer info (always 1); use label fields for identification
 # TYPE wg_peer_info gauge
 PROM
     if [ "$WG_MODE" = "server" ] && [ -f "$CONFIG_DB" ]; then
         while IFS=$'\t' read -r p_pubkey p_name p_ip; do
+            _pubkey_map["$p_pubkey"]="$p_name"
             echo "wg_peer_info{interface=\"${WG_IFACE}\",peer=\"${p_name}\",public_key=\"${p_pubkey}\",allowed_ip=\"${p_ip}/32\"} 1" >> "$tmp"
         done < <(jq -r '.peers | to_entries[] | "\(.value.public_key)\t\(.key)\t\(.value.ip)"' "$CONFIG_DB" 2>/dev/null || true)
     elif [ "$WG_MODE" = "client" ]; then
@@ -85,7 +72,7 @@ PROM
                 p_endpoint="unknown"
             fi
             _peer_map["$p_endpoint"]="$p_name"
-            echo "wg_peer_info{interface=\"${WG_IFACE}\",peer=\"${p_name}\",endpoint=\"${p_endpoint}\"} 1" >> "$tmp"
+            echo "wg_peer_info{interface=\"${WG_IFACE}\",peer=\"${p_name}\",endpoint=\"${p_endpoint%:*}\"} 1" >> "$tmp"
         done
     fi
 
@@ -102,7 +89,7 @@ PROM
 # HELP wg_peer_tx_bytes_total Total bytes transmitted to this peer
 # TYPE wg_peer_tx_bytes_total counter
 PROM
-    local _srv_total=0 _srv_active=0 _srv_stale=0
+    local _peers_total=0 _peers_active=0 _peers_stale=0
     while IFS=$'\t' read -r iface pubkey _psk endpoint _allowed handshake rx tx _ka; do
         [ "$iface" = "$WG_IFACE" ] || continue
         local age=0
@@ -110,23 +97,23 @@ PROM
             age=$(( now - handshake ))
             [ "$age" -lt 0 ] && age=0
         fi
-        local peer_lbl=""
+        local peer_lbl="" mapped_peer=""
         if [ "$WG_MODE" = "client" ]; then
-            local mapped_peer="${_peer_map[$endpoint]:-}"
-            [ -n "$mapped_peer" ] && peer_lbl=",peer=\"${mapped_peer}\""
+            mapped_peer="${_peer_map[$endpoint]:-}"
+        elif [ "$WG_MODE" = "server" ]; then
+            mapped_peer="${_pubkey_map[$pubkey]:-}"
         fi
-        local lbl="interface=\"${iface}\",public_key=\"${pubkey}\",endpoint=\"${endpoint}\"${peer_lbl}"
+        [ -n "$mapped_peer" ] && peer_lbl=",peer=\"${mapped_peer}\""
+        local lbl="interface=\"${iface}\",public_key=\"${pubkey}\",endpoint=\"${endpoint%:*}\"${peer_lbl}"
         echo "wg_peer_last_handshake_timestamp_seconds{${lbl}} ${handshake:-0}" >> "$tmp"
         echo "wg_peer_handshake_age_seconds{${lbl}} ${age}" >> "$tmp"
         echo "wg_peer_rx_bytes_total{${lbl}} ${rx:-0}" >> "$tmp"
         echo "wg_peer_tx_bytes_total{${lbl}} ${tx:-0}" >> "$tmp"
-        if [ "$WG_MODE" = "server" ]; then
-            _srv_total=$(( _srv_total + 1 ))
-            if [ "${handshake:-0}" != "0" ] && [ "$age" -gt 0 ] && [ "$age" -le "${PEER_HANDSHAKE_TIMEOUT}" ]; then
-                _srv_active=$(( _srv_active + 1 ))
-            else
-                _srv_stale=$(( _srv_stale + 1 ))
-            fi
+        _peers_total=$(( _peers_total + 1 ))
+        if [ "${handshake:-0}" != "0" ] && [ "$age" -gt 0 ] && [ "$age" -le "${PEER_HANDSHAKE_TIMEOUT}" ]; then
+            _peers_active=$(( _peers_active + 1 ))
+        else
+            _peers_stale=$(( _peers_stale + 1 ))
         fi
     done < <(awg show all dump 2>/dev/null | awk -F'\t' 'NF==9')
 
@@ -160,10 +147,18 @@ PROM
     echo "wg_interface_rx_bytes_total{interface=\"${WG_IFACE}\"} ${iface_rx:-0}" >> "$tmp"
     echo "wg_interface_tx_bytes_total{interface=\"${WG_IFACE}\"} ${iface_tx:-0}" >> "$tmp"
 
-    # ---- Server-mode-only metrics ----
-    if [ "$WG_MODE" = "server" ]; then
-        collect_server_metrics "$tmp" "$_srv_total" "$_srv_active" "$_srv_stale"
-    fi
+    # ---- Unified peer count metrics (both modes) ----
+    cat >> "$tmp" <<'PROM'
+# HELP wg_peers_total Total number of configured peers
+# TYPE wg_peers_total gauge
+# HELP wg_peers_active Number of peers with a handshake within PEER_HANDSHAKE_TIMEOUT seconds
+# TYPE wg_peers_active gauge
+# HELP wg_peers_stale Number of peers whose last handshake exceeds PEER_HANDSHAKE_TIMEOUT or never connected
+# TYPE wg_peers_stale gauge
+PROM
+    echo "wg_peers_total{interface=\"${WG_IFACE}\"} ${_peers_total}" >> "$tmp"
+    echo "wg_peers_active{interface=\"${WG_IFACE}\"} ${_peers_active}" >> "$tmp"
+    echo "wg_peers_stale{interface=\"${WG_IFACE}\"} ${_peers_stale}" >> "$tmp"
 
     # ---- Client-mode-only metrics ----
     if [ "$WG_MODE" = "client" ]; then
@@ -172,24 +167,12 @@ PROM
 # TYPE wg_tunnel_failover_total counter
 # HELP wg_tunnel_last_failover_timestamp_seconds Unix timestamp of the most recent peer failover (0 if none since container start)
 # TYPE wg_tunnel_last_failover_timestamp_seconds gauge
-# HELP wg_tunnel_active_peer Whether this peer config is the currently active one (1=active, 0=inactive)
-# TYPE wg_tunnel_active_peer gauge
 PROM
         local failover last_failover
         failover=$(state_get failover_total) || true
         last_failover=$(state_get last_failover_ts) || true
         echo "wg_tunnel_failover_total{interface=\"${WG_IFACE}\"} ${failover:-0}" >> "$tmp"
         echo "wg_tunnel_last_failover_timestamp_seconds{interface=\"${WG_IFACE}\"} ${last_failover:-0}" >> "$tmp"
-
-        local current_peer
-        current_peer=$(state_get current_peer) || true
-        for peer_file in "${CLIENT_PEERS_DIR}"/*.conf; do
-            [ -f "$peer_file" ] || continue
-            local peer_name active=0
-            peer_name=$(basename "$peer_file")
-            [ "$peer_name" = "$current_peer" ] && active=1
-            echo "wg_tunnel_active_peer{interface=\"${WG_IFACE}\",peer=\"${peer_name}\"} ${active}" >> "$tmp"
-        done
     fi
 
     mv "$tmp" "$METRICS_FILE"

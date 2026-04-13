@@ -70,6 +70,8 @@ All variables are set in `.env` (copy from `.env.example`). Loaded at container 
 | `METRICS_INTERVAL` | `15` | Collection interval (seconds) |
 | `PEER_HANDSHAKE_TIMEOUT` | `180` | Seconds since last handshake before a peer is considered disconnected (server mode) |
 
+> See [`prometheus/`](../prometheus/) for a ready-to-use Grafana dashboard, alert rules, and Prometheus scrape job.
+
 ### Log Rotation
 
 | Variable | Default | Description |

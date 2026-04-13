@@ -11,6 +11,7 @@
 * Автоматическая конфигурация пиров и генерация конфигурационных файлов для клиентов
 * Прозрачный прокси-сервер [3proxy](https://3proxy.ru/) для проксирования запросов через контейнер в клиентском режиме (HTTP(S)/SOCKS5)
 * Мониторинг и автоматическое переключение между пирами в случае отказа туннеля
+* Экспортер метрик Prometheus с дашбордом Grafana, правилами алертов и примером конфигурации scrape job
 
 # Использование
 
@@ -184,6 +185,20 @@ sudo ./setup.sh
 * Конфигурации пиров
 * База данных
 * `.env`
+
+## Мониторинг (Prometheus)
+
+Контейнер предоставляет эндпоинт метрик Prometheus (порт `9586` по умолчанию, включается через `METRICS_ENABLE=true`).
+
+Готовые к использованию файлы находятся в [`prometheus/`](prometheus/):
+
+| Файл | Описание |
+|------|----------|
+| [`wireguard_combined_dashboard.json`](prometheus/wireguard_combined_dashboard.json) | Дашборд Grafana — работает в серверном и клиентском режимах, совместим с Grafana 9+ |
+| [`wireguard_alerts.yaml`](prometheus/wireguard_alerts.yaml) | Правила алертов Prometheus для отслеживания состояния туннеля, возраста handshake и доступности пиров |
+| [`wireguard_scrape_job.yaml`](prometheus/wireguard_scrape_job.yaml) | Пример конфигурации scrape job для Prometheus |
+
+Импорт дашборда: Grafana → Dashboards → Import. Для доступа к метрикам снаружи контейнера раскомментируйте соответствующий порт в `docker-compose.yml`.
 
 # Описание переменных
 
