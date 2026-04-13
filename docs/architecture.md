@@ -77,7 +77,7 @@ AmneziaWG obfuscation params are passed to the WireGuard config:
 | `Jc`, `Jmin`, `Jmax` | Junk packet count and size range |
 | `S1`, `S2`, `S3`, `S4` | Init/response packet size adjustments |
 | `H1`–`H4` | Magic header values |
-| `UDP_SIGNATURE` | Protocol signature (`DEFAULT` / `DNS` / `QUIC`) |
+| `UDP_SIGNATURE` | Protocol signature (`SIP` / `DNS` / `QUIC` / `STUN-WEBRTC`) |
 
 `UDP_SIGNATURE` injects a pre-built packet header to disguise traffic as the chosen protocol.
 

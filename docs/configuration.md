@@ -26,7 +26,7 @@ All variables are set in `.env` (copy from `.env.example`). Loaded at container 
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `UDP_SIGNATURE` | `DEFAULT` | Protocol disguise: `DEFAULT` (SIP-like), `DNS`, `QUIC` |
+| `UDP_SIGNATURE` | `QUIC` | Protocol disguise: `SIP`, `DNS`, `QUIC`, `STUN-WEBRTC` |
 | `Jc` | `3` | Number of junk packets per handshake |
 | `Jmin` | `1` | Minimum junk packet size (bytes) |
 | `Jmax` | `50` | Maximum junk packet size (bytes) |
