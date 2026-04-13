@@ -157,7 +157,7 @@ generate_cps_value() {
 get_protocol_value() {
     debug "Setting CSP protocol for peer: $UDP_SIGNATURE" >&2
     if [[ -n "${PROTOCOL_MAP[$UDP_SIGNATURE]+_}" ]]; then
-        info "Using UDP signature protocol: $UDP_SIGNATURE" >&2
+        debug "Using UDP signature protocol: $UDP_SIGNATURE" >&2
         echo "${PROTOCOL_MAP[$UDP_SIGNATURE]}"
     else
         warn "Protocol '$UDP_SIGNATURE' not found in PROTOCOL_MAP, falling back to QUIC" >&2
