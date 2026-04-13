@@ -11,6 +11,7 @@ Automation for running **AmneziaWG** using Docker Compose. The project aims to r
 * Automatic peer configuration and generation of client configuration files
 * Transparent [3proxy](https://3proxy.ru/) proxy for routing requests through the container in client mode (HTTP(S)/SOCKS5)
 * Monitoring and automatic failover between peers if a tunnel fails
+* Prometheus metrics exporter with Grafana dashboard, alert rules, and scrape job example
 
 # Usage
 
@@ -184,6 +185,20 @@ This will recreate:
 * Peer configurations
 * Database
 * `.env`
+
+## Monitoring
+
+The container exposes a Prometheus metrics endpoint (port `9586` by default, enable with `METRICS_ENABLE=true`).
+
+Ready-to-use files are in [`prometheus/`](prometheus/):
+
+| File | Description |
+|------|-------------|
+| [`wireguard_combined_dashboard.json`](prometheus/wireguard_combined_dashboard.json) | Grafana dashboard — works for both server and client modes, compatible with Grafana 9+ |
+| [`wireguard_alerts.yaml`](prometheus/wireguard_alerts.yaml) | Prometheus alert rules for tunnel health, handshake age, and peer availability |
+| [`wireguard_scrape_job.yaml`](prometheus/wireguard_scrape_job.yaml) | Example Prometheus scrape job configuration |
+
+Import the dashboard via Grafana → Dashboards → Import. Uncomment the metrics port in `docker-compose.yml` to expose it outside the container.
 
 # Variable Description
 

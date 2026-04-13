@@ -1,0 +1,11 @@
+- job_name: awg-docker-compose
+  metrics_path: '/metrics'
+  static_configs:
+    - targets: ['<ip_address>:<port>']
+      labels:
+        app: 'wireguard'
+        instance: '<instance_name_1>'
+    - targets: ['<ip_address>:<port>']
+      labels:
+        app: 'wireguard'
+        instance: '<instance_name>_2'

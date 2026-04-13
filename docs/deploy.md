@@ -63,6 +63,14 @@ ports:
   - ${WG_PORT}:${WG_PORT}/udp
 ```
 
+### Prometheus Monitoring
+
+1. Set `METRICS_ENABLE=true` in `.env`
+2. Uncomment the metrics port (`9586`) in `docker-compose.yml`
+3. Add the scrape job from [`prometheus/wireguard_scrape_job.yaml`](../prometheus/wireguard_scrape_job.yaml) to your Prometheus config
+4. Import [`prometheus/wireguard_combined_dashboard.json`](../prometheus/wireguard_combined_dashboard.json) into Grafana
+5. Optionally load [`prometheus/wireguard_alerts.yaml`](../prometheus/wireguard_alerts.yaml) as a Prometheus alert rule file
+
 ## Log Rotation (host-side)
 
 An example logrotate config is provided at `amneziawg.logrotate.example`. Copy and adapt it for host-level rotation of `./logs/`.

@@ -106,6 +106,8 @@ Key metrics exposed:
 Dashboard: `prometheus/wireguard_dashboard.json` (Grafana-compatible).
 Alerts: `prometheus/wireguard_alerts.yaml`.
 
+See [`prometheus/`](../prometheus/) for the Grafana dashboard, alert rules, and scrape job example.
+
 ## Log Rotation
 
 `logrotate.sh` runs every `LOGROTATE_INTERVAL` seconds (default 86400 = 24 h), keeping `LOGROTATE_ROTATE` rotated files and deleting files older than `LOGROTATE_MAXAGE` days.
