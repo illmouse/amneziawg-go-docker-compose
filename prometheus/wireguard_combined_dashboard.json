@@ -564,7 +564,7 @@
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
           "editorMode": "code",
           "expr": "wg_peer_handshake_age_seconds{instance=~\"$instance\"}",
-          "legendFormat": "{{instance}} {{endpoint}}",
+          "legendFormat": "{{peer}}",
           "range": true,
           "refId": "A"
         }
@@ -658,7 +658,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "sum by(peer, endpoint) (wg_peer_rx_bytes_total{instance=~\"$instance\"})",
+          "expr": "sum by(instance, peer, endpoint) (wg_peer_rx_bytes_total{instance=~\"$instance\"})",
           "format": "table",
           "instant": true,
           "legendFormat": "",
@@ -666,7 +666,7 @@
         },
         {
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "sum by(peer, endpoint) (wg_peer_tx_bytes_total{instance=~\"$instance\"})",
+          "expr": "sum by(instance, peer, endpoint) (wg_peer_tx_bytes_total{instance=~\"$instance\"})",
           "format": "table",
           "instant": true,
           "legendFormat": "",
@@ -674,7 +674,7 @@
         },
         {
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "sum by(peer) (wg_peer_handshake_age_seconds{instance=~\"$instance\"})",
+          "expr": "sum by(instance, peer) (wg_peer_handshake_age_seconds{instance=~\"$instance\"})",
           "format": "table",
           "instant": true,
           "legendFormat": "",
@@ -683,17 +683,28 @@
       ],
       "title": "Configured Peers",
       "transformations": [
-        { "id": "merge", "options": {} }
+        { "id": "merge", "options": {} },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": { "Time": true },
+            "indexByName": {
+              "peer": 0,
+              "endpoint": 1,
+              "instance": 2,
+              "Value #A": 3,
+              "Value #B": 4,
+              "Value #C": 5
+            },
+            "renameByName": {}
+          }
+        }
       ],
       "fieldConfig": {
         "defaults": {
           "custom": { "align": "auto", "cellOptions": { "type": "auto" }, "inspect": false }
         },
         "overrides": [
-          {
-            "matcher": { "id": "byName", "options": "Time" },
-            "properties": [{ "id": "custom.hidden", "value": true }]
-          },
           {
             "matcher": { "id": "byName", "options": "peer" },
             "properties": [{ "id": "displayName", "value": "Peer" }]
@@ -722,6 +733,10 @@
               { "id": "displayName", "value": "Handshake Age" },
               { "id": "unit", "value": "s" }
             ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "instance" },
+            "properties": [{ "id": "displayName", "value": "Instance" }]
           }
         ]
       },
@@ -802,7 +817,7 @@
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
           "editorMode": "code",
           "expr": "rate(wg_peer_rx_bytes_total{instance=~\"$instance\"}[5m])",
-          "legendFormat": "{{instance}} RX <- {{endpoint}}",
+          "legendFormat": "{{peer}} RX",
           "range": true,
           "refId": "A"
         },
@@ -810,7 +825,7 @@
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
           "editorMode": "code",
           "expr": "rate(wg_peer_tx_bytes_total{instance=~\"$instance\"}[5m])",
-          "legendFormat": "{{instance}} TX -> {{endpoint}}",
+          "legendFormat": "{{peer}} TX",
           "range": true,
           "refId": "B"
         }

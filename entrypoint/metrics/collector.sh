@@ -72,7 +72,7 @@ PROM
                 p_endpoint="unknown"
             fi
             _peer_map["$p_endpoint"]="$p_name"
-            echo "wg_peer_info{interface=\"${WG_IFACE}\",peer=\"${p_name}\",endpoint=\"${p_endpoint}\"} 1" >> "$tmp"
+            echo "wg_peer_info{interface=\"${WG_IFACE}\",peer=\"${p_name}\",endpoint=\"${p_endpoint%:*}\"} 1" >> "$tmp"
         done
     fi
 
@@ -104,7 +104,7 @@ PROM
             mapped_peer="${_pubkey_map[$pubkey]:-}"
         fi
         [ -n "$mapped_peer" ] && peer_lbl=",peer=\"${mapped_peer}\""
-        local lbl="interface=\"${iface}\",public_key=\"${pubkey}\",endpoint=\"${endpoint}\"${peer_lbl}"
+        local lbl="interface=\"${iface}\",public_key=\"${pubkey}\",endpoint=\"${endpoint%:*}\"${peer_lbl}"
         echo "wg_peer_last_handshake_timestamp_seconds{${lbl}} ${handshake:-0}" >> "$tmp"
         echo "wg_peer_handshake_age_seconds{${lbl}} ${age}" >> "$tmp"
         echo "wg_peer_rx_bytes_total{${lbl}} ${rx:-0}" >> "$tmp"
