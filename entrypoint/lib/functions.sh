@@ -396,12 +396,6 @@ start_wg_iface() {
         iface_wait=$((iface_wait + 1))
     done
 
-    debug "Verifying WireGuard configuration..."
-    if awg show "$iface" >>"$WG_LOGFILE" 2>&1; then
-        success "WireGuard configuration verified"
-    else
-        warn "Could not verify configuration with 'awg show'"
-    fi
 }
 
 is_wg_interface_up() {

@@ -12,6 +12,13 @@ if ! awg setconf "$WG_IFACE" "$WG_DIR/$WG_CONF_FILE" >>"$WG_LOGFILE" 2>&1; then
     error "Failed to load WireGuard configuration"
 fi
 
+debug "Verifying WireGuard configuration..."
+if awg show "$WG_IFACE" >>"$WG_LOGFILE" 2>&1; then
+    success "WireGuard configuration verified"
+else
+    warn "Could not verify configuration with 'awg show'"
+fi
+
 debug "Bringing interface up..."
 ip link set up dev "$WG_IFACE" >>"$WG_LOGFILE" 2>&1
 
