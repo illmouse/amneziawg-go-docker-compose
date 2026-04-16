@@ -128,6 +128,25 @@ select_and_probe_next_peer() {
     for (( i=1; i<=peer_count; i++ )); do
         idx=$(( (current_index + i) % peer_count ))
         candidate="${sorted_files[$idx]}"
+
+        if [ "$candidate" = "$current_config" ]; then
+            # Check wg0's handshake directly — creating a probe interface with
+            # the same key would steal the server session from wg0.
+            local hs_ts hs_age max_hs_age
+            hs_ts=$(awg show "$WG_IFACE" latest-handshakes 2>/dev/null | awk '{print $2}')
+            max_hs_age=$(( MON_CHECK_TIMEOUT * 4 ))
+            if [ -n "$hs_ts" ] && [ "$hs_ts" -gt 0 ]; then
+                hs_age=$(( $(date +%s) - hs_ts ))
+                if [ "$hs_age" -le "$max_hs_age" ]; then
+                    info "Probe handshake succeeded: $(basename "$candidate")"
+                    _probe_result="$candidate"
+                    return 0
+                fi
+            fi
+            warn "Probe failed: $(basename "$candidate")"
+            continue
+        fi
+
         info "Probing peer: $(basename "$candidate")"
         if probe_peer_tunnel "$candidate"; then
             _probe_result="$candidate"
