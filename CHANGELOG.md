@@ -38,8 +38,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `AWG_TOOLS_VERSION`) with OCI image labels.
 - Release CI: tag pushes of `vX.Y.Z`/`vX.Y.Zb` now create a GitHub release
   (marked pre-release for beta `b` suffix) with the release description taken
-  from this changelog. Release runbook in `llm_wiki/release.md`, referenced
-  from `AGENTS.md`.
+  from this changelog. Beta tags never receive the `latest` image tag —
+  `latest` always points at the newest stable release. Release runbook in
+  `llm_wiki/release.md`, referenced from `AGENTS.md`.
 - This changelog file.
 
 ### Fixed

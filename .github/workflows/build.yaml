@@ -28,12 +28,18 @@ jobs:
           TAG_NAME=${GITHUB_REF#refs/tags/}
           echo "build_type=tag" >> $GITHUB_OUTPUT
           echo "tag_name=${TAG_NAME}" >> $GITHUB_OUTPUT
-          echo "Building for TAG: ${TAG_NAME}"
+          # Beta releases (b suffix) must not receive the 'latest' tag
+          case "$TAG_NAME" in
+            *b) echo "is_beta=true" >> $GITHUB_OUTPUT ;;
+            *)  echo "is_beta=false" >> $GITHUB_OUTPUT ;;
+          esac
+          echo "Building for TAG: ${TAG_NAME} (beta: ${{ steps.vars.outputs.is_beta }})"
         else
           # Branch push - use branch naming
           BRANCH_NAME=$(echo "${GITHUB_REF#refs/heads/}" | sed 's/[^a-zA-Z0-9._-]/-/g')
           echo "build_type=branch" >> $GITHUB_OUTPUT
           echo "branch_name=${BRANCH_NAME}" >> $GITHUB_OUTPUT
+          echo "is_beta=false" >> $GITHUB_OUTPUT
           echo "Building for BRANCH: ${BRANCH_NAME}"
         fi
 
@@ -44,11 +50,17 @@ jobs:
     - name: Build image
       run: |
         if [ "${{ steps.vars.outputs.build_type }}" == "tag" ]; then
-          # Build for tag/release
-          buildah bud \
-            --tag ghcr.io/${{ github.repository_owner }}/amneziawg-go:${{ steps.vars.outputs.tag_name }} \
-            --tag ghcr.io/${{ github.repository_owner }}/amneziawg-go:latest \
-            .
+          # Build for tag/release; 'latest' only for stable releases
+          if [ "${{ steps.vars.outputs.is_beta }}" == "true" ]; then
+            buildah bud \
+              --tag ghcr.io/${{ github.repository_owner }}/amneziawg-go:${{ steps.vars.outputs.tag_name }} \
+              .
+          else
+            buildah bud \
+              --tag ghcr.io/${{ github.repository_owner }}/amneziawg-go:${{ steps.vars.outputs.tag_name }} \
+              --tag ghcr.io/${{ github.repository_owner }}/amneziawg-go:latest \
+              .
+          fi
         else
           # Build for branch
           buildah bud \
@@ -60,12 +72,18 @@ jobs:
     - name: Push image
       run: |
         if [ "${{ steps.vars.outputs.build_type }}" == "tag" ]; then
-          # Push tag/release images
-          echo "Pushing release images:"
-          echo "- ${{ steps.vars.outputs.tag_name }}"
-          echo "- latest"
-          buildah push ghcr.io/${{ github.repository_owner }}/amneziawg-go:${{ steps.vars.outputs.tag_name }}
-          buildah push ghcr.io/${{ github.repository_owner }}/amneziawg-go:latest
+          # Push tag/release images; 'latest' only for stable releases
+          if [ "${{ steps.vars.outputs.is_beta }}" == "true" ]; then
+            echo "Pushing beta release image (no 'latest' tag):"
+            echo "- ${{ steps.vars.outputs.tag_name }}"
+            buildah push ghcr.io/${{ github.repository_owner }}/amneziawg-go:${{ steps.vars.outputs.tag_name }}
+          else
+            echo "Pushing release images:"
+            echo "- ${{ steps.vars.outputs.tag_name }}"
+            echo "- latest"
+            buildah push ghcr.io/${{ github.repository_owner }}/amneziawg-go:${{ steps.vars.outputs.tag_name }}
+            buildah push ghcr.io/${{ github.repository_owner }}/amneziawg-go:latest
+          fi
         else
           # Push branch images
           echo "Pushing branch images:"

@@ -71,6 +71,8 @@ Versioning: `X.0.0` = major/breaking, `X.Y.0` = feature, `X.Y.Z` = fix,
 - On tag push CI (`.github/workflows/build.yaml`) builds and pushes
   `ghcr.io/<owner>/amneziawg-go:{tag,latest}`, then creates the GitHub release
   from the changelog section (skipped if the release already exists).
+  **Beta tags (`X.Y.Zb`) never receive the `latest` image tag** — `latest`
+  always points at the newest stable release.
 - Breaking changes (config format, peer config regen required, client app
   upgrade required) demand a major version bump and explicit upgrade notes in
   `docs/deploy.md`.

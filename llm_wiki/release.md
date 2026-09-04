@@ -15,7 +15,8 @@ Tags are `vX.Y.Z` with an optional `b` beta suffix.
 | Preview / testing build                   | append `b`      | `v5.0.0b`  |
 
 Tags ending in `b` are beta releases and are published on GitHub as
-**pre-releases**.
+**pre-releases**. Beta images are pushed to GHCR **without** the `latest`
+tag — `latest` always points at the newest stable release.
 
 ## Sync before committing
 
@@ -53,13 +54,14 @@ information:
 Version:        5.0.0b
 Tag:            v5.0.0b (annotated, on commit <sha>)
 Pre-release:    yes (b suffix)
+GHCR tags:      v5.0.0b (beta — no 'latest' tag)
 Release notes:  the CHANGELOG section below - it becomes the GitHub release body:
 
   ## [5.0.0b] - 2026-09-04
   ... (section content)
 
 CI will:
-  1. build and push ghcr.io/<owner>/amneziawg-go:v5.0.0b and :latest
+  1. build and push ghcr.io/<owner>/amneziawg-go:v5.0.0b (no :latest for beta)
   2. create GitHub release v5.0.0b from the changelog section (pre-release)
 ```
 
@@ -82,7 +84,9 @@ Push the specific tag only. Never use `--force` and never blanket-push with
 `.github/workflows/build.yaml`:
 
 1. **build** — buildah builds the image and pushes
-   `ghcr.io/<owner>/amneziawg-go:{tag,latest}`.
+   `ghcr.io/<owner>/amneziawg-go:{tag,latest}`. Exception: beta tags
+   (`vX.Y.Zb`) are pushed with **only** their version tag — they never
+   receive `latest`.
 2. **release** (runs after build, only for `vX.Y.Z` / `vX.Y.Zb` tags) —
    extracts the `## [X.Y.Z]` section from `CHANGELOG.md` and creates the GitHub
    release with it as the description. `b`-suffixed tags are marked
