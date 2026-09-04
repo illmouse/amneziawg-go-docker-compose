@@ -1,0 +1,115 @@
+# Release process
+
+Runbook for preparing and pushing a new release. Follow it in order and
+never skip the confirmation step.
+
+## Versioning
+
+Tags are `vX.Y.Z` with an optional `b` beta suffix.
+
+| Change                                    | Bump           | Tag example |
+|-------------------------------------------|----------------|-------------|
+| Breaking (config format, peer config regen required, client app upgrade) | major  `X.0.0` | `v5.0.0` |
+| New functionality, backward compatible    | feature `X.Y.0` | `v4.10.0`  |
+| Bug fixes only                            | fix     `X.Y.Z` | `v5.0.1`   |
+| Preview / testing build                   | append `b`      | `v5.0.0b`  |
+
+Tags ending in `b` are beta releases and are published on GitHub as
+**pre-releases**.
+
+## Sync before committing
+
+Before every commit, make sure local work sits on top of the current
+`origin` state — this avoids divergence between the local repo and origin:
+
+```bash
+git stash && git pull --rebase && git stash pop
+git add -A
+git commit -m "..."
+```
+
+If `git stash pop` reports conflicts, resolve them, then continue.
+
+## Pre-flight checklist
+
+Before tagging, verify:
+
+1. `CHANGELOG.md` has a section for the new version at the top, keepachangelog
+   format (`## [X.Y.Z] - YYYY-MM-DD`), with today's date and accurate content.
+   The CI release job takes the release description from this section.
+2. Both READMEs (en + ru) and the relevant `docs/*.md` are updated for every
+   user-visible change.
+3. Breaking changes require a major bump and explicit upgrade notes in
+   `docs/deploy.md`.
+4. `bash -n` passes on every touched script.
+5. The working tree is committed; the tag will point at the current `HEAD`.
+
+## Confirmation (mandatory, never skip)
+
+**Never push a tag without explicit user approval.** First output ALL release
+information:
+
+```
+Version:        5.0.0b
+Tag:            v5.0.0b (annotated, on commit <sha>)
+Pre-release:    yes (b suffix)
+Release notes:  the CHANGELOG section below - it becomes the GitHub release body:
+
+  ## [5.0.0b] - 2026-09-04
+  ... (section content)
+
+CI will:
+  1. build and push ghcr.io/<owner>/amneziawg-go:v5.0.0b and :latest
+  2. create GitHub release v5.0.0b from the changelog section (pre-release)
+```
+
+Ask the user to confirm. Only after an explicit approval perform the tag push.
+If the user requests changes, update `CHANGELOG.md` and repeat.
+
+## Pushing the tag
+
+```bash
+git fetch origin
+git tag -a vX.Y.Z -m "Release vX.Y.Z"
+git push origin vX.Y.Z
+```
+
+Push the specific tag only. Never use `--force` and never blanket-push with
+`--tags`.
+
+## What CI does on tag push
+
+`.github/workflows/build.yaml`:
+
+1. **build** — buildah builds the image and pushes
+   `ghcr.io/<owner>/amneziawg-go:{tag,latest}`.
+2. **release** (runs after build, only for `vX.Y.Z` / `vX.Y.Zb` tags) —
+   extracts the `## [X.Y.Z]` section from `CHANGELOG.md` and creates the GitHub
+   release with it as the description. `b`-suffixed tags are marked
+   pre-release. If a release for the tag already exists, CI leaves it
+   untouched.
+
+## Never replace an existing successful tag
+
+- Before re-creating a tag, check the state of the existing one:
+
+  ```bash
+  gh release view vX.Y.Z                # does a release already exist?
+  gh run list --workflow "Build All"    # did the tag build pass?
+  ```
+
+- If the tag's build succeeded (release exists) — **do not delete or re-push
+  the tag.** Cut a NEW version instead (bump the patch, or the next
+  feature/fix version).
+- Deleting and re-pushing a tag is allowed **only** when the previous CI build
+  for that tag failed.
+- The CI release job enforces the same rule: it skips creation if a release
+  already exists and never overwrites one.
+
+## Failure handling
+
+- Build fails after the tag push: fix on a branch until the build is green,
+  then either re-create the tag (allowed — previous build failed) or cut a new
+  version.
+- Release job fails with "No '## [X.Y.Z]' section found in CHANGELOG.md": add
+  the missing section and re-run the failed job from the Actions UI.

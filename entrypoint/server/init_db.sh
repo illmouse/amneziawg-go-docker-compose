@@ -26,7 +26,16 @@ init_config_db() {
       "h1": "$H1",
       "h2": "$H2",
       "h3": "$H3",
-      "h4": "$H4"
+      "h4": "$H4",
+      "header_protection_key": "$HeaderProtectionKey",
+      "content_padding_addition": "$ContentPaddingAddition",
+      "rekey_after_time": "$RekeyAfterTime",
+      "rekey_timeout": "$RekeyTimeout",
+      "reject_after_time": "$RejectAfterTime",
+      "keepalive_timeout": "$KeepaliveTimeout",
+      "max_handshake_attempts": "$MaxHandshakeAttempts",
+      "random_trailers": "$RandomTrailers",
+      "disable_cookies": "$DisableCookies"
     },
     "keys": {
       "private_key": "",
@@ -87,6 +96,15 @@ update_config_db() {
         --arg h2 "$H2" \
         --arg h3 "$H3" \
         --arg h4 "$H4" \
+        --arg hpk "$HeaderProtectionKey" \
+        --arg cpa "$ContentPaddingAddition" \
+        --arg rat "$RekeyAfterTime" \
+        --arg rto "$RekeyTimeout" \
+        --arg rej "$RejectAfterTime" \
+        --arg kat "$KeepaliveTimeout" \
+        --arg mha "$MaxHandshakeAttempts" \
+        --arg rt "$RandomTrailers" \
+        --arg dc "$DisableCookies" \
         --arg timestamp "$(date -Iseconds)" \
     '
     .server.interface = $iface |
@@ -104,6 +122,15 @@ update_config_db() {
     .server.junk.h2 = $h2 |
     .server.junk.h3 = $h3 |
     .server.junk.h4 = $h4 |
+    .server.junk.header_protection_key = $hpk |
+    .server.junk.content_padding_addition = $cpa |
+    .server.junk.rekey_after_time = $rat |
+    .server.junk.rekey_timeout = $rto |
+    .server.junk.reject_after_time = $rej |
+    .server.junk.keepalive_timeout = $kat |
+    .server.junk.max_handshake_attempts = $mha |
+    .server.junk.random_trailers = $rt |
+    .server.junk.disable_cookies = $dc |
     .meta.last_updated = $timestamp
     ' "$CONFIG_DB" > "$TMP_FILE"
 

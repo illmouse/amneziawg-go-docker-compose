@@ -91,6 +91,8 @@ probe_peer_tunnel() {
     # Cleanup — always runs regardless of result
     [ "$result" -ne 0 ] && debug "Probe timed out for $(basename "$peer_config"): no handshake within ${MON_CHECK_TIMEOUT}s"
     ip link del "$probe_iface" 2>/dev/null || true
+    # Remove the probe daemon's UAPI socket in case it was killed before cleanup
+    rm -f "/var/run/amneziawg/$probe_iface.sock" 2>/dev/null || true
     if [ "$route_added" = "true" ]; then
         ip route del "$endpoint_ip" via "$phys_gw" dev "$phys_iface" 2>/dev/null || true
     fi
@@ -301,6 +303,68 @@ switch_to_peer_config() {
     fi
 }
 
+# Detect the amneziawg-go daemon for the main interface (dead / zombie / absent)
+# and revive it in place. After revival the current peer config is re-applied
+# (rebuild + setconf + IP + routing table + rule + 3proxy source) so the
+# tunnel returns to the exact state it had before the crash.
+# Usage: revive_client_wg_iface [current_peer_config]
+# Sets REVIVED_PEER_CONFIG to the re-applied peer config path ("" if none).
+revive_client_wg_iface() {
+    local active_peer="${1:-}"
+    local re_applied=""
+
+    warn "amneziawg-go client daemon issue detected — attempting in-place revival..."
+
+    # Remember which peer endpoint the dead interface was using so the
+    # correct config can be re-applied after revival.
+    if [ -z "$active_peer" ]; then
+        local built_endpoint
+        built_endpoint=$(conf_get_value "Endpoint" "$WG_DIR/$WG_IFACE.conf")
+        if [ -n "$built_endpoint" ]; then
+            local peer_files=("$CLIENT_PEERS_DIR"/*.conf)
+            for peer_file in "${peer_files[@]}"; do
+                [ -f "$peer_file" ] || continue
+                local peer_endpoint
+                peer_endpoint=$(conf_get_value "Endpoint" "$peer_file")
+                if [ "$peer_endpoint" = "$built_endpoint" ]; then
+                    active_peer="$peer_file"
+                    break
+                fi
+            done
+        fi
+    fi
+
+    if ! revive_wg_iface "$WG_IFACE" reload_client_wg_conf; then
+        error "Client WireGuard revival failed"
+        return 1
+    fi
+
+    # Re-apply the current peer config to fully restore IP, routes and proxy.
+    if [ -n "$active_peer" ] && [ -f "$active_peer" ]; then
+        if build_client_config "$active_peer" "$WG_DIR/$WG_IFACE.conf" \
+           && awg setconf "$WG_IFACE" "$WG_DIR/$WG_IFACE.conf" 2>>"$WG_LOGFILE"; then
+            local active_ip
+            active_ip=$(conf_get_value "Address" "$active_peer")
+            if [ -n "$active_ip" ]; then
+                ip addr add "$active_ip" dev "$WG_IFACE" 2>/dev/null || true
+                ip route replace default dev "$WG_IFACE" table 200 2>/dev/null || true
+                ip rule del from "${active_ip%/*}" table 200 2>/dev/null || true
+                ip rule add from "${active_ip%/*}" table 200 priority 100 2>/dev/null || true
+            fi
+            if [ "$PROXY_SOCKS5_ENABLED" = "true" ] || [ "$PROXY_HTTP_ENABLED" = "true" ]; then
+                proxy_update_external "${active_ip%/*}" 2>/dev/null || true
+            fi
+            re_applied="$active_peer"
+            success "Re-applied peer config after revival: $(basename "$active_peer")"
+        else
+            error "Failed to re-apply peer config after revival: $(basename "$active_peer")"
+        fi
+    fi
+
+    REVIVED_PEER_CONFIG="$re_applied"
+    return 0
+}
+
 # ==========================================
 # Main monitoring loop
 # ==========================================
@@ -327,6 +391,22 @@ fi
 success "WireGuard configuration found: $WG_DIR/$WG_IFACE.conf"
 
 while true; do
+    # Daemon health first: a dead/zombie amneziawg-go (OOM kill, crash)
+    # must be revived before any peer probing can work. Revival re-applies
+    # the current peer config (IP, routes, rule, 3proxy source).
+    if ! is_wg_daemon_alive || is_wg_daemon_dead; then
+        REVIVED_PEER_CONFIG=""
+        if revive_client_wg_iface "$current_peer_config"; then
+            if [ -n "$REVIVED_PEER_CONFIG" ]; then
+                current_peer_config="$REVIVED_PEER_CONFIG"
+            fi
+        else
+            write_tunnel_state 0 "$(basename "${current_peer_config:-}")" "$failover_total" "$last_failover_ts"
+            sleep "$MON_CHECK_INTERVAL"
+            continue
+        fi
+    fi
+
     if [ ! -d "$CLIENT_PEERS_DIR" ]; then
         warn "No peer configuration directory found in $CLIENT_PEERS_DIR"
         sleep "$MON_CHECK_INTERVAL"

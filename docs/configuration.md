@@ -36,6 +36,24 @@ All variables are set in `.env` (copy from `.env.example`). Loaded at container 
 | `S4` | `76` | Additional size adjustment |
 | `H1`–`H4` | _(set)_ | Magic header constants for obfuscation |
 
+### AmneziaWG 3.1 Obfuscation (optional)
+
+All variables are empty by default (= disabled, standard 2.x behavior). Enable by setting values in `.env`; the setup wizard also offers a 3.1 profile. Range variables accept a fixed value (`a`) or a range (`a-b`).
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `HeaderProtectionKey` | _(empty)_ | Base64-encoded 32-byte key; encrypts packet header service fields (ChaCha20, nonce from S-prefix). **Requires S1–S4 ≥ 12**; with it enabled leave H1–H4 at standard values `1`/`2`/`3`/`4`. Server-side: written to `wg0.conf` **and** all peer configs — must match on both ends. |
+| `ContentPaddingAddition` | _(empty)_ | Random bytes added to the transport payload, e.g. `16-64` (client-side, peer configs only) |
+| `RekeyAfterTime` | _(empty)_ | Seconds before re-handshake, e.g. `3000-4000` (client-side) |
+| `RekeyTimeout` | _(empty)_ | Handshake timeout in seconds, e.g. `5-10` (client-side) |
+| `RejectAfterTime` | _(empty)_ | Seconds after which a new handshake is forced if no data received, e.g. `180-190` (client-side) |
+| `KeepaliveTimeout` | _(empty)_ | Keepalive interval in seconds, e.g. `8-15` (client-side) |
+| `MaxHandshakeAttempts` | _(empty)_ | Maximum handshake retries, e.g. `10-20` (client-side) |
+| `RandomTrailers` | _(empty)_ | `on` / `off` — random trailing bytes on packets (server + peers) |
+| `DisableCookies` | _(empty)_ | `on` / `off` — suppress Cookie Reply packets (server + peers) |
+
+Invalid values (bad base64/key length, S1–S4 < 12 with HeaderProtectionKey, malformed ranges) are rejected at container start with an explicit error.
+
 ### Proxy (client mode)
 
 | Variable | Default | Description |
@@ -100,7 +118,7 @@ config/
 
 ### Peer config format (`client_peers/*.conf`)
 
-Standard WireGuard `[Interface]` + `[Peer]` sections with AmneziaWG obfuscation fields (`Jc`, `Jmin`, `Jmax`, `S1`–`S4`, `H1`–`H4`) added to `[Interface]`.
+Standard WireGuard `[Interface]` + `[Peer]` sections with AmneziaWG obfuscation fields (`Jc`, `Jmin`, `Jmax`, `S1`–`S4`, `H1`–`H4`, optional I1–I5) added to `[Interface]`. If 3.1 params are enabled, they appear in `[Interface]` as well (`HeaderProtectionKey`, `ContentPaddingAddition`, `RekeyAfterTime`, `RekeyTimeout`, `RejectAfterTime`, `KeepaliveTimeout`, `MaxHandshakeAttempts`, `RandomTrailers`, `DisableCookies`).
 
 ## Ports (docker-compose.yaml)
 

@@ -98,6 +98,15 @@ docker compose up -d
 
 The container is stateless for keys/configs (all in `./config/`), so pull-and-restart is safe. Existing peer configs are preserved.
 
+### Upgrading to v5.0.0b (AmneziaWG 3.1)
+
+v5.0.0b upgrades the bundled AmneziaWG core to **3.1** (amneziawg-go v3.1.20260828, tools v3.1.20260812). Notes:
+
+- **Breaking:** generated peer configs now include the previously missing `I5` obfuscation parameter. Existing peer configs on disk are **not** touched by the upgrade; they keep working. New peer configs (fresh generation or peer count changes) gain `I5` — old AmneziaWG 2.x client apps may reject it, so distribute new configs together with an updated client app.
+- **3.1 obfuscation params are opt-in.** With the new variables unset, server and peer configs are generated exactly as before (except `I5`) and 2.x clients keep connecting.
+- To enable 3.1 obfuscation (Header Protection, content padding, randomized timings, random trailers): re-run the setup wizard (`sudo ./setup.sh`, answer "y" to the 3.1 profile) or set the variables from `.env.example` manually. Then re-download and redistribute peer configs from `config/server_peers/` — clients need an **AmneziaWG 3.1-capable app** (3.1 params in configs are ignored/rejected by older apps).
+- The crash-revival rework means the monitor now self-heals a dead daemon (e.g. after an OOM kill, including stale UAPI socket) in place, continuously, instead of restarting the container after 3 failures. No action needed — behavior change is only visible in logs.
+
 ## Useful Commands
 
 ```bash

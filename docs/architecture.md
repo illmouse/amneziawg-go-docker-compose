@@ -41,10 +41,12 @@ Peer configs are stored in `config/server_peers/` (one `.conf` per peer).
 | Code | Meaning |
 |------|---------|
 | 0 | Healthy |
-| 1 | Unhealthy — ping, config, or listen failure |
-| 2 | `wg0` interface absent (`amneziawg-go` crashed) |
+| 1 | Unhealthy — config missing or not listening |
+| 2 | `wg0` interface absent, or zombie state: interface exists but the `amneziawg-go` daemon is dead (e.g. OOM kill) or its UAPI socket is gone |
 
-On exit code 2, the monitor calls `restart_wg_iface()` to attempt an in-place interface restart without touching the container. After **3 consecutive failed restart attempts** it sends `kill 1` to force a full container restart; Docker's `restart: always` policy then brings the container back up cleanly.
+On any non-zero code the monitor calls `revive_wg_iface()` for an **in-place revival**: stop leftover daemon (SIGTERM → SIGKILL), remove the stale interface and UAPI socket (`/var/run/amneziawg/wg0.sock`), restart `amneziawg-go` with a PID file, re-apply address/`awg setconf`/link-up, and verify the daemon is listening again. iptables rules are kernel-level and survive daemon death, so they are not re-applied.
+
+Revival is **continuous and unbounded**: the monitor retries every `MON_CHECK_INTERVAL` seconds forever and never restarts or kills the container. A crash of the daemon (including OOM kill with a stale UAPI socket left behind) is fully self-healed in place.
 
 ### Client mode (`WG_MODE=client`)
 
@@ -68,6 +70,8 @@ Entrypoint flow:
 
 Probe interval: `MON_CHECK_INTERVAL` (default 10 s).
 
+Before the health check, the monitor verifies the `amneziawg-go` daemon itself is alive (PID file + UAPI socket). If the daemon crashed (OOM kill, stale socket), it is revived in place with `revive_wg_iface()` and the active peer config is re-applied — same continuous-retry semantics as server mode, no container restart.
+
 ## UDP Obfuscation
 
 AmneziaWG obfuscation params are passed to the WireGuard config:
@@ -80,6 +84,21 @@ AmneziaWG obfuscation params are passed to the WireGuard config:
 | `UDP_SIGNATURE` | Protocol signature (`SIP` / `DNS` / `QUIC` / `STUN-WEBRTC`) |
 
 `UDP_SIGNATURE` injects a pre-built packet header to disguise traffic as the chosen protocol.
+
+### AmneziaWG 3.1 obfuscation (opt-in)
+
+The image is built from AmneziaWG **3.1** (core `amneziawg-go` v3.1.20260828, tools v3.1.20260812). On top of the 2.x junk/size/header params, 3.1 adds statistical-analysis resistance. All new params are optional (empty = disabled, 2.x-compatible):
+
+| Param | Side | Purpose |
+|-------|------|---------|
+| `HeaderProtectionKey` | server + peers | ChaCha20 encryption of packet header service fields; nonce from the first 12 bytes of the S-prefix → **requires S1–S4 ≥ 12**. With it enabled, leave H1–H4 at standard values `1`/`2`/`3`/`4`. |
+| `ContentPaddingAddition` | peers | Random padding added to the transport payload |
+| `RekeyAfterTime` / `RekeyTimeout` / `RejectAfterTime` | peers | Randomized re-handshake / handshake-timeout / forced-rekey intervals (seconds) |
+| `KeepaliveTimeout` / `MaxHandshakeAttempts` | peers | Randomized keepalive interval and handshake retry count |
+| `RandomTrailers` | server + peers | Random trailing bytes on packets |
+| `DisableCookies` | server + peers | Suppress Cookie Reply packets |
+
+All range params accept a fixed value (`a`) or a range (`a-b`); the daemon picks a random value from the range per packet/interval. Server-side params are written to both `wg0.conf` and every generated peer config; client-side params go into generated peer configs only. See [configuration.md](configuration.md).
 
 ## 3proxy Integration (client mode only)
 

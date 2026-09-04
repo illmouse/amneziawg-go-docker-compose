@@ -5,24 +5,24 @@ set -eu
 . /entrypoint/lib/env.sh
 . /entrypoint/lib/functions.sh
 
-restart_wg_iface() {
-    warn "amneziawg-go appears to have crashed — attempting in-place restart..."
-    pkill -f "amneziawg-go $WG_IFACE" 2>/dev/null || true
-    sleep 1
-    start_wg_iface "$WG_IFACE"
-    ip address add dev "$WG_IFACE" "$WG_ADDRESS" 2>/dev/null || true
-    if ! awg setconf "$WG_IFACE" "$WG_DIR/$WG_CONF_FILE" 2>/dev/null; then
-        error "Failed to reload WireGuard config after restart"
-        return 1
-    fi
-    ip link set up dev "$WG_IFACE" 2>/dev/null || true
-    success "WireGuard interface $WG_IFACE restarted"
+# In-place revival of the amneziawg-go daemon: stop (sweeps stale UAPI
+# socket and leftover interface), start with PID tracking, re-apply
+# address/config, verify listening. Never gives up — the monitor calls
+# this forever until the tunnel is back.
+revive_server_wg_iface() {
+    revive_wg_iface "$WG_IFACE" reload_server_wg_conf
 }
 
 # Server-specific health check
 # Returns: 0 = healthy, 1 = unhealthy, 2 = wg0 interface absent
 check_container_health() {
     if ! is_wg_interface_up; then
+        return 2
+    fi
+
+    # Zombie state: interface exists but daemon is dead (e.g. OOM kill)
+    # or its UAPI socket is gone — treat like a crash, needs revival.
+    if is_wg_daemon_dead; then
         return 2
     fi
 
@@ -56,33 +56,38 @@ fi
 
 success "WireGuard configuration found: $WG_DIR/$WG_IFACE.conf"
 
-# Main monitoring loop
-_restart_failures=0
+# Main monitoring loop — continuous, indefinite self-healing.
+# Any unhealthy state triggers an in-place revival attempt; the loop
+# never exits and never restarts the container.
+_revive_attempts=0
 while true; do
     health_rc=0
     check_container_health || health_rc=$?
     if [ "$health_rc" -eq 0 ]; then
-        _restart_failures=0
+        if [ "$_revive_attempts" -gt 0 ]; then
+            success "Server recovered after ${_revive_attempts} revival attempt(s)"
+        fi
+        _revive_attempts=0
         write_tunnel_state 1
         sleep "$MON_CHECK_INTERVAL"
-    elif [ "$health_rc" -eq 2 ]; then
-        # wg0 is absent — attempt in-place restart
-        if restart_wg_iface; then
-            _restart_failures=0
-        else
-            _restart_failures=$(( _restart_failures + 1 ))
-            error "WireGuard restart failed (attempt ${_restart_failures}/3)"
-            if [ "$_restart_failures" -ge 3 ]; then
-                error "Exhausted restart attempts — forcing container restart"
-                kill 1
-            fi
-        fi
-        write_tunnel_state 0
-        sleep "$MON_CHECK_INTERVAL"
     else
-        _restart_failures=0
-        warn "Server is unhealthy, will retry in $MON_CHECK_INTERVAL seconds"
-        write_tunnel_state 0
+        case "$health_rc" in
+            2)
+                warn "amneziawg-go crashed or interface lost — reviving in place"
+                ;;
+            *)
+                warn "Server is unhealthy (rc=$health_rc) — reviving in place"
+                ;;
+        esac
+        _revive_attempts=$(( _revive_attempts + 1 ))
+        if revive_server_wg_iface; then
+            success "Revival succeeded after ${_revive_attempts} attempt(s)"
+            _revive_attempts=0
+            write_tunnel_state 1
+        else
+            error "Revival failed (attempt ${_revive_attempts}) — will keep retrying"
+            write_tunnel_state 0
+        fi
         sleep "$MON_CHECK_INTERVAL"
     fi
 done

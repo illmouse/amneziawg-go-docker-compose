@@ -48,6 +48,17 @@ get_random_junk_size() {
     get_random_int 1 15
 }
 
+# S1-S4 size compatible with HeaderProtectionKey (nonce = first 12 bytes
+# of the prefix, so the prefix must be at least 12 bytes; max 64 per spec)
+get_random_junk_size_31() {
+    get_random_int 12 64
+}
+
+# 32-byte base64 key for Header Protection (AmneziaWG 3.1)
+generate_header_protection_key() {
+    openssl rand -base64 32 | tr -d '\n'
+}
+
 get_random_header() {
     get_random_int 1 2147483647
 }
@@ -176,6 +187,28 @@ prompt_user() {
                 log "Invalid input, defaulting to PROXY_HTTP_PORT=3128"
             fi
         fi
+    fi
+
+    # Interactive setup for AmneziaWG 3.1 obfuscation profile (server mode only)
+    AWG31_ENABLED=${AWG31_ENABLED:-"false"}
+    if [ "$WG_MODE" = "server" ]; then
+        echo ""
+        log "Configure AmneziaWG 3.1 obfuscation profile:"
+        echo "Adds Header Protection, content padding, randomized rekey timings"
+        echo "and random trailers (resists statistical DPI analysis)."
+        echo "NOTE: generated peer configs will require AmneziaWG 3.1-capable client apps."
+        echo -n "Enable 3.1 profile? (y/n, default: n): "
+        read -r awg31_choice
+        case "$awg31_choice" in
+            y|Y|yes|Yes|YES)
+                AWG31_ENABLED="true"
+                log "Enabled AmneziaWG 3.1 profile"
+                ;;
+            *)
+                AWG31_ENABLED="false"
+                log "Disabled AmneziaWG 3.1 profile (2.x-compatible defaults)"
+                ;;
+        esac
     fi
 
     # Interactive setup for Prometheus metrics (available in both server and client mode)

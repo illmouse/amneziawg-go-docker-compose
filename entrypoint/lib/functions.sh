@@ -383,19 +383,174 @@ proxy_update_external() {
 # ===============================
 # WireGuard interface helpers
 # ===============================
+# PID file of the amneziawg-go daemon (started with -f so it does not fork).
+wg_pid_file() {
+    echo "$TMP_DIR/amneziawg-$WG_IFACE.pid"
+}
+
+# UAPI control socket of the amneziawg-go daemon (per-upstream convention).
+wg_uapi_socket() {
+    echo "/var/run/amneziawg/$WG_IFACE.sock"
+}
+
+# Read the daemon PID from the pid file; empty if absent.
+wg_daemon_pid() {
+    local pid_file
+    pid_file=$(wg_pid_file)
+    [ -f "$pid_file" ] || return 0
+    local pid
+    pid=$(cat "$pid_file" 2>/dev/null)
+    [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null || pid=""
+    echo "$pid"
+}
+
+# True if the amneziawg-go daemon process is alive.
+is_wg_daemon_alive() {
+    [ -n "$(wg_daemon_pid)" ]
+}
+
+# Start amneziawg-go in the foreground (no fork) under shell background job
+# control, record its PID, and wait for iface + UAPI socket + process liveness.
+# Returns 0 only when the daemon verifiably came up.
 start_wg_iface() {
     local iface="$1"
+    local pid_file
+    pid_file=$(wg_pid_file)
+    local uapi_socket
+    uapi_socket=$(wg_uapi_socket)
 
     debug "Starting amneziawg-go on $iface..."
-    amneziawg-go "$iface" >>"$WG_LOGFILE" 2>&1 &
+    rm -f "$pid_file"
+    amneziawg-go -f "$iface" >>"$WG_LOGFILE" 2>&1 &
+    local daemon_pid=$!
+    echo "$daemon_pid" > "$pid_file"
 
-    local iface_wait=0
-    while [ $iface_wait -lt 25 ]; do
-        ip link show "$iface" >/dev/null 2>&1 && break
+    # Wait up to 10s for: process alive + iface created + UAPI socket bound
+    local wait=0
+    while [ $wait -lt 50 ]; do
+        if ! kill -0 "$daemon_pid" 2>/dev/null; then
+            error "amneziawg-go exited immediately during startup on $iface"
+            rm -f "$pid_file"
+            return 1
+        fi
+        if ip link show "$iface" >/dev/null 2>&1 && [ -S "$uapi_socket" ]; then
+            success "amneziawg-go started on $iface (PID: $daemon_pid)"
+            return 0
+        fi
         sleep 0.2
-        iface_wait=$((iface_wait + 1))
+        wait=$((wait + 1))
     done
 
+    error "amneziawg-go did not come up on $iface within 10s"
+    kill "$daemon_pid" 2>/dev/null || true
+    rm -f "$pid_file"
+    return 1
+}
+
+# Stop the amneziawg-go daemon: SIGTERM (graceful) -> SIGKILL fallback.
+# Also sweeps orphans matching "amneziawg-go <iface>", removes the interface
+# and the stale UAPI socket (the 2026-09-03 crash-revival root cause).
+stop_wg_iface() {
+    local iface="$1"
+    local pid_file
+    pid_file=$(wg_pid_file)
+    local uapi_socket
+    uapi_socket=$(wg_uapi_socket)
+
+    debug "Stopping amneziawg-go on $iface..."
+
+    local pid
+    pid=$(wg_daemon_pid)
+    if [ -n "$pid" ]; then
+        kill "$pid" 2>/dev/null || true
+    else
+        # Daemon not tracked (e.g. pid file lost) — sweep any orphans
+        pkill -f "amneziawg-go -f $iface" 2>/dev/null || true
+        pkill -f "amneziawg-go $iface" 2>/dev/null || true
+    fi
+
+    # Wait up to 5s for graceful exit
+    local term_wait=0
+    while pgrep -f "amneziawg-go (-f )?$iface" >/dev/null 2>&1 && [ $term_wait -lt 25 ]; do
+        sleep 0.2
+        term_wait=$((term_wait + 1))
+    done
+
+    # Escalate to SIGKILL if still alive
+    if pgrep -f "amneziawg-go (-f )?$iface" >/dev/null 2>&1; then
+        warn "amneziawg-go on $iface did not exit after SIGTERM, sending SIGKILL"
+        pkill -9 -f "amneziawg-go (-f )?$iface" 2>/dev/null || true
+        sleep 0.5
+    fi
+
+    rm -f "$pid_file"
+
+    # Remove leftover interface (dead daemon leaves it behind)
+    if ip link show "$iface" >/dev/null 2>&1; then
+        ip link del "$iface" 2>/dev/null || true
+    fi
+
+    # Remove stale UAPI socket so a restarted daemon can bind it
+    [ -S "$uapi_socket" ] || [ -e "$uapi_socket" ] && rm -f "$uapi_socket"
+
+    debug "amneziawg-go on $iface stopped"
+    return 0
+}
+
+# Full in-place revival: stop (idempotent) -> start -> re-apply config.
+# Config re-application is mode-specific and passed as the second argument:
+# a callback invoked once the daemon is back up (e.g. reload_server_wg_conf).
+# Returns 0 when the tunnel is verifiably listening again.
+revive_wg_iface() {
+    local iface="$1"
+    local reapply_fn="${2:-}"
+
+    warn "Reviving amneziawg-go on $iface..."
+
+    stop_wg_iface "$iface"
+
+    if ! start_wg_iface "$iface"; then
+        error "Failed to restart amneziawg-go on $iface"
+        return 1
+    fi
+
+    if [ -n "$reapply_fn" ] && ! "$reapply_fn"; then
+        error "Failed to re-apply WireGuard configuration on $iface after revival"
+        return 1
+    fi
+
+    if ! is_wg_listening; then
+        error "amneziawg-go on $iface is not listening after revival"
+        return 1
+    fi
+
+    success "amneziawg-go on $iface revived successfully"
+    return 0
+}
+
+# Re-apply the server config after revival: address, setconf, link up.
+# iptables rules live in the kernel and survive daemon death — not re-applied.
+reload_server_wg_conf() {
+    ip address add dev "$WG_IFACE" "$WG_ADDRESS" 2>/dev/null || true
+    if ! awg setconf "$WG_IFACE" "$WG_DIR/$WG_CONF_FILE" 2>>"$WG_LOGFILE"; then
+        error "Failed to reload WireGuard config after restart"
+        return 1
+    fi
+    ip link set up dev "$WG_IFACE" 2>/dev/null || true
+    return 0
+}
+
+# Re-apply the client config after revival: setconf, link up, address.
+reload_client_wg_conf() {
+    if ! awg setconf "$WG_IFACE" "$WG_DIR/$WG_CONF_FILE" 2>>"$WG_LOGFILE"; then
+        error "Failed to reload client WireGuard config after restart"
+        return 1
+    fi
+    ip link set up dev "$WG_IFACE" 2>/dev/null || true
+    if [ -n "$WG_ADDRESS" ]; then
+        ip address add dev "$WG_IFACE" "$WG_ADDRESS" 2>/dev/null || true
+    fi
+    return 0
 }
 
 is_wg_interface_up() {
@@ -408,7 +563,7 @@ is_wg_interface_up() {
 
 has_valid_wg_config() {
     local config_file="$1"
-    if [ ! -f "$config_file" ]; then
+    if [ ! -f "$config_file" ];        then
         error "No WireGuard configuration found at $config_file"
         return 1
     fi
@@ -418,6 +573,79 @@ has_valid_wg_config() {
 is_wg_listening() {
     if ! awg show "$WG_IFACE" 2>/dev/null | grep -q "listening"; then
         error "WireGuard is not listening on $WG_IFACE"
+        return 1
+    fi
+    return 0
+}
+
+# Zombie detection: iface exists but daemon process is dead (OOM-kill etc.)
+# or its UAPI socket is gone/stale.
+is_wg_daemon_dead() {
+    # No iface -> daemon cannot be alive for our purposes; let rc=2 path handle
+    ip link show "$WG_IFACE" >/dev/null 2>&1 || return 1
+    # Iface exists but daemon process gone -> zombie
+    if ! is_wg_daemon_alive; then
+        return 0
+    fi
+    # Iface + daemon alive but socket missing -> stale state
+    local uapi_socket
+    uapi_socket=$(wg_uapi_socket)
+    [ -S "$uapi_socket" ] || return 0
+    return 1
+}
+
+# ===============================
+# AmneziaWG 3.1 parameter validation
+# ===============================
+# Validates opt-in 3.1 params. All have empty defaults (pre-3.1 behavior).
+validate_awg31_params() {
+    local errors=0
+
+    # HeaderProtectionKey: server-side, 32-byte base64, requires S1-S4 >= 12
+    if [ -n "$HeaderProtectionKey" ]; then
+        local decoded_len
+        decoded_len=$(printf '%s' "$HeaderProtectionKey" | openssl base64 -d -A 2>/dev/null | wc -c)
+        if [ "$decoded_len" -ne 32 ] 2>/dev/null; then
+            error "HeaderProtectionKey must be a base64-encoded 32-byte key (got $decoded_len bytes after decode)"
+            errors=$((errors + 1))
+        fi
+        local s_param
+        for s_param in S1 S2 S3 S4; do
+            if [ "${!s_param}" -lt 12 ]; then
+                error "HeaderProtectionKey requires $s_param >= 12 (current: ${!s_param})"
+                errors=$((errors + 1))
+            fi
+        done
+    fi
+
+    # Range params: single value 'a' or inclusive range 'a-b'
+    local range_param
+    for range_param in ContentPaddingAddition RekeyAfterTime RekeyTimeout \
+                      RejectAfterTime KeepaliveTimeout MaxHandshakeAttempts; do
+        local value="${!range_param}"
+        [ -z "$value" ] && continue
+        if ! printf '%s' "$value" | grep -qE '^[0-9]+(-[0-9]+)?$'; then
+            error "$range_param must be a number or range 'a-b' (current: $value)"
+            errors=$((errors + 1))
+        fi
+    done
+
+    # on/off params
+    local toggle_param
+    for toggle_param in RandomTrailers DisableCookies; do
+        local value="${!toggle_param}"
+        [ -z "$value" ] && continue
+        case "$value" in
+            on|off) ;;
+            *)
+                error "$toggle_param must be 'on' or 'off' (current: $value)"
+                errors=$((errors + 1))
+                ;;
+        esac
+    done
+
+    if [ "$errors" -gt 0 ]; then
+        error "AmneziaWG 3.1 parameter validation failed with $errors error(s)"
         return 1
     fi
     return 0
