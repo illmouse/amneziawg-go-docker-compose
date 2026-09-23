@@ -48,10 +48,13 @@ get_random_junk_size() {
     get_random_int 1 15
 }
 
-# S1-S4 size compatible with HeaderProtectionKey (nonce = first 12 bytes
-# of the prefix, so the prefix must be at least 12 bytes; max 64 per spec)
+# S1-S4 size compatible with HeaderProtectionKey: 12 = the header-protection
+# nonce minimum (nonce = first 12 bytes of the prefix), and 20 keeps the
+# worst-case data packet (outer IP+UDP 28 + S4 + WG header 32 + inner 1420
+# + tag 16 = 1480 + S4 bytes) at <= 1500, so no IPv4 fragmentation occurs
+# on standard Ethernet paths (values above 20 fragment every full-size packet)
 get_random_junk_size_31() {
-    get_random_int 12 64
+    get_random_int 12 20
 }
 
 # 32-byte base64 key for Header Protection (AmneziaWG 3.1)

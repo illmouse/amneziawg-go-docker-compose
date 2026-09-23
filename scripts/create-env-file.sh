@@ -27,8 +27,10 @@ setup_env() {
     H4=$(get_random_header_range 60000 70000)
 
     # AmneziaWG 3.1 profile (opt-in): Header Protection + content padding +
-    # randomized timings + random trailers. S prefixes must be >= 12 bytes
-    # (they carry the header-protection nonce); H1-H4 fall back to standard
+    # randomized timings + random trailers. S prefixes are drawn 12-20 — 12 is
+    # the header-protection nonce minimum and 20 keeps the worst-case data
+    # packet (1480 + S4 bytes) within a 1500-byte path MTU, preventing
+    # fragmentation-induced slowdowns; H1-H4 fall back to standard
     # compatibility values (1/2/3/4) since headers are cipher-protected.
     AWG31_ENABLED=${AWG31_ENABLED:-"false"}
     HeaderProtectionKey=""

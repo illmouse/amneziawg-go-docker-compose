@@ -107,6 +107,16 @@ v5.0.0b upgrades the bundled AmneziaWG core to **3.1** (amneziawg-go v3.1.202608
 - To enable 3.1 obfuscation (Header Protection, content padding, randomized timings, random trailers): re-run the setup wizard (`sudo ./setup.sh`, answer "y" to the 3.1 profile) or set the variables from `.env.example` manually. Then re-download and redistribute peer configs from `config/server_peers/` — clients need an **AmneziaWG 3.1-capable app** (3.1 params in configs are ignored/rejected by older apps).
 - The crash-revival rework means the monitor now self-heals a dead daemon (e.g. after an OOM kill, including stale UAPI socket) in place, continuously, instead of restarting the container after 3 failures. No action needed — behavior change is only visible in logs.
 
+### Upgrading to v5.0.1b
+
+v5.0.0b wizard users with **slow tunnels** should upgrade:
+
+1. Re-run the wizard (`sudo ./setup.sh`, answer "y" to the 3.1 profile) so `S1`–`S4` are regenerated within **12–20** — or edit `.env` by hand so `S1`–`S4` ≤ 20 (values above 20 made every full-size data packet, `1480 + S4` bytes, exceed a 1500-byte path MTU and fragment, causing severe throughput degradation).
+2. Recreate containers on **both server and client** (`docker compose up -d --force-recreate` or `docker compose pull && docker compose up -d`).
+3. Redistribute peer configs from `config/server_peers/` to all clients.
+
+For constrained paths (PPPoE 1492, IPv6 outer, nested tunnels) the new optional `WG_MTU` env var can lower the tunnel MTU (e.g. `WG_MTU=1360`) — set it on both server and clients.
+
 ## Useful Commands
 
 ```bash

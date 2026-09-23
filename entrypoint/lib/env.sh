@@ -33,6 +33,8 @@ fi
 : "${WG_PORT:=13440}"
 : "${WG_ENDPOINT:=}"
 : "${WG_PEER_COUNT:=1}"
+# Optional tunnel MTU override (empty = upstream default 1420)
+: "${WG_MTU:=}"
 
 # ===============================
 # Proxy defaults
@@ -122,7 +124,7 @@ ORIGINAL_DNS=$(awk '/^nameserver/ {print $2; exit}' /etc/resolv.conf 2>/dev/null
 # Export all variables
 # ===============================
 export WG_DIR TMP_DIR CLIENT_PEERS_DIR SERVER_PEERS_DIR CONFIG_DB WG_CONF_FILE WG_LOGFILE KEYS_DIR LOG_LEVEL
-export WG_MODE WG_IFACE WG_ADDRESS WG_PORT WG_ENDPOINT WG_PEER_COUNT
+export WG_MODE WG_IFACE WG_ADDRESS WG_PORT WG_ENDPOINT WG_PEER_COUNT WG_MTU
 export PROXY_SOCKS5_ENABLED PROXY_HTTP_ENABLED PROXY_HTTP_PORT PROXY_SOCKS5_PORT PROXY_LOG_DIR PROXY_CONF_DIR PROXY_SOCKS5_AUTH_ENABLED PROXY_SOCKS5_AUTH_USER PROXY_SOCKS5_AUTH_PASSWORD PROXY_HTTP_AUTH_ENABLED PROXY_HTTP_AUTH_USER PROXY_HTTP_AUTH_PASSWORD PROXY_CUSTOM_CONFIG
 export Jc Jmin Jmax S1 S2 S3 S4 H1 H2 H3 H4 UDP_SIGNATURE
 export HeaderProtectionKey ContentPaddingAddition RekeyAfterTime RekeyTimeout RejectAfterTime KeepaliveTimeout MaxHandshakeAttempts RandomTrailers DisableCookies

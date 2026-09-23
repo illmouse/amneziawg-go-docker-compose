@@ -4,6 +4,21 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [5.0.1b] - 2026-09-23
+
+### Fixed
+
+- Wizard 3.1 profile now generates `S1`–`S4` within **12–20** (was 12–64):
+  values above 20 made every full-size data packet (`1480 + S4` bytes)
+  exceed a 1500-byte path MTU, causing IPv4 fragmentation and severe
+  throughput degradation (observed with v5.0.0b).
+
+### Added
+
+- Optional `WG_MTU` env var (default empty = 1420) for constrained paths
+  (PPPoE, IPv6 outer, nested tunnels); startup warning when `S4 > 20`
+  (fragmentation risk).
+
 ## [5.0.0b] - 2026-09-04
 
 ### ⚠️ Breaking

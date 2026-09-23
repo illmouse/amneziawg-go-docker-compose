@@ -19,6 +19,7 @@ All variables are set in `.env` (copy from `.env.example`). Loaded at container 
 | `WG_ADDRESS` | `10.100.0.1/24` | Server VPN IP and subnet |
 | `WG_PORT` | `13440` | UDP port to listen on (server) / connect to (client) |
 | `WG_PEER_COUNT` | `1` | Number of peer configs to generate (server mode) |
+| `WG_MTU` | _(empty = `1420`)_ | Optional tunnel MTU override, e.g. `1360`. Lower it for constrained paths (PPPoE 1492, IPv6 outer, nested tunnels); remember data packets are `1480 + S4` bytes outer — keep that plus path-MTU margin in mind |
 | `MASTER_PEER` | `peer1.conf` | Client mode: preferred peer filename; switched back to when it recovers |
 | `LOG_LEVEL` | `INFO` | Log verbosity: `ERROR`, `WARN`, `INFO`, `DEBUG` |
 
@@ -53,6 +54,8 @@ All variables are empty by default (= disabled, standard 2.x behavior). Enable b
 | `DisableCookies` | _(empty)_ | `on` / `off` — suppress Cookie Reply packets (server + peers) |
 
 Invalid values (bad base64/key length, S1–S4 < 12 with HeaderProtectionKey, malformed ranges) are rejected at container start with an explicit error.
+
+> **Note:** Wizard-generated S1–S4 values are capped at **20** to avoid fragmentation — a worst-case data packet is `1480 + S4` bytes outer, so values above 20 exceed a 1500-byte path MTU. Values above 20 require lowering `WG_MTU` accordingly (a startup warning is emitted when `S4 > 20`).
 
 ### Proxy (client mode)
 

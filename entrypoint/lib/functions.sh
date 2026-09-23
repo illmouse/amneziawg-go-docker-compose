@@ -435,6 +435,9 @@ start_wg_iface() {
         fi
         if ip link show "$iface" >/dev/null 2>&1 && [ -S "$uapi_socket" ]; then
             success "amneziawg-go started on $iface (PID: $daemon_pid)"
+            if [ -n "$WG_MTU" ]; then
+                ip link set dev "$iface" mtu "$WG_MTU" 2>/dev/null || warn "Failed to set MTU $WG_MTU on $iface"
+            fi
             return 0
         fi
         sleep 0.2
@@ -643,6 +646,11 @@ validate_awg31_params() {
                 ;;
         esac
     done
+
+    # Non-fatal: S4 > 20 makes worst-case data packets exceed a 1500-byte path MTU
+    if [ "${S4:-0}" -gt 20 ]; then
+        warn "S4=${S4} makes worst-case data packets ${S4} bytes larger than standard WireGuard (1480 + S4 = $((1480 + S4)) bytes outer) — they will exceed a 1500-byte path MTU and fragment. Consider S4 <= 20 or set WG_MTU lower (e.g. $((1472 - S4)) or less) on both server and clients."
+    fi
 
     if [ "$errors" -gt 0 ]; then
         error "AmneziaWG 3.1 parameter validation failed with $errors error(s)"
