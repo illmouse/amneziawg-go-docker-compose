@@ -117,6 +117,12 @@ v5.0.0b wizard users with **slow tunnels** should upgrade:
 
 For constrained paths (PPPoE 1492, IPv6 outer, nested tunnels) the new optional `WG_MTU` env var can lower the tunnel MTU (e.g. `WG_MTU=1360`) — set it on both server and clients.
 
+### Upgrading to v5.0.2
+
+Wizard 3.1 profile now generates `RejectAfterTime=9000-10000` (was 180-190) — long randomized sessions; handshakes now occur every ~50-67 min, which is expected. Monitoring based on handshake age must switch to rx-activity metrics (`wg_peers_rx_active` / `wg_peers_rx_idle`) or transfer counters.
+
+To apply: re-run the wizard (`sudo ./setup.sh`, answer "y" to the 3.1 profile), recreate containers (`docker compose pull && docker compose up -d`), and redistribute peer configs.
+
 ## Useful Commands
 
 ```bash

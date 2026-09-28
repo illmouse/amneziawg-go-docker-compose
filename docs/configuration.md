@@ -45,9 +45,9 @@ All variables are empty by default (= disabled, standard 2.x behavior). Enable b
 |----------|---------|-------------|
 | `HeaderProtectionKey` | _(empty)_ | Base64-encoded 32-byte key; encrypts packet header service fields (ChaCha20, nonce from S-prefix). **Requires S1–S4 ≥ 12**; with it enabled leave H1–H4 at standard values `1`/`2`/`3`/`4`. Server-side: written to `wg0.conf` **and** all peer configs — must match on both ends. |
 | `ContentPaddingAddition` | _(empty)_ | Random bytes added to the transport payload, e.g. `16-64` (client-side, peer configs only) |
-| `RekeyAfterTime` | _(empty)_ | Seconds before re-handshake, e.g. `3000-4000` (client-side) |
+| `RekeyAfterTime` | _(empty)_ | Seconds before re-handshake; with `RejectAfterTime=9000-10000` handshakes occur every ~50-67 min, randomized (client-side) |
 | `RekeyTimeout` | _(empty)_ | Handshake timeout in seconds, e.g. `5-10` (client-side) |
-| `RejectAfterTime` | _(empty)_ | Seconds after which a new handshake is forced if no data received, e.g. `180-190` (client-side) |
+| `RejectAfterTime` | _(empty)_ | Hard session lifetime cap, seconds; must exceed RekeyAfterTime. Long values (e.g. 9000-10000) make handshakes rare and randomized (client-side) |
 | `KeepaliveTimeout` | _(empty)_ | Keepalive interval in seconds, e.g. `8-15` (client-side) |
 | `MaxHandshakeAttempts` | _(empty)_ | Maximum handshake retries, e.g. `10-20` (client-side) |
 | `RandomTrailers` | _(empty)_ | `on` / `off` — random trailing bytes on packets (server + peers) |
@@ -90,6 +90,8 @@ Invalid values (bad base64/key length, S1–S4 < 12 with HeaderProtectionKey, ma
 | `METRICS_PORT` | `9586` | Port to serve `/metrics` |
 | `METRICS_INTERVAL` | `15` | Collection interval (seconds) |
 | `PEER_HANDSHAKE_TIMEOUT` | `180` | Seconds since last handshake before a peer is considered disconnected (server mode) |
+
+> **Note:** With the wizard's 3.1 profile (long randomized sessions, handshakes every ~50-67 min), handshake-based liveness (`wg_peers_active` / `wg_peers_stale`) shows sessions as "stale" between rekeys. Use the handshake-independent `wg_peers_rx_active` / `wg_peers_rx_idle` metrics instead — rx counters grow at least every ~25 s via PersistentKeepalive.
 
 > See [`prometheus/`](../prometheus/) for a ready-to-use Grafana dashboard, alert rules, and Prometheus scrape job.
 

@@ -15,6 +15,12 @@ state_get() {
     echo "$val"
 }
 
+peer_rx_state_file() {  # $1 = pubkey (sanitized for filesystem safety)
+    local safe_key
+    safe_key=$(printf '%s' "$1" | tr '/+' '_-')
+    echo "${TMP_DIR}/metrics-peer-rx-${safe_key}.state"
+}
+
 
 collect() {
     local now
@@ -89,7 +95,7 @@ PROM
 # HELP wg_peer_tx_bytes_total Total bytes transmitted to this peer
 # TYPE wg_peer_tx_bytes_total counter
 PROM
-    local _peers_total=0 _peers_active=0 _peers_stale=0
+    local _peers_total=0 _peers_active=0 _peers_stale=0 _peers_rx_active=0
     while IFS=$'\t' read -r iface pubkey _psk endpoint _allowed handshake rx tx _ka; do
         [ "$iface" = "$WG_IFACE" ] || continue
         local age=0
@@ -109,6 +115,12 @@ PROM
         echo "wg_peer_handshake_age_seconds{${lbl}} ${age}" >> "$tmp"
         echo "wg_peer_rx_bytes_total{${lbl}} ${rx:-0}" >> "$tmp"
         echo "wg_peer_tx_bytes_total{${lbl}} ${tx:-0}" >> "$tmp"
+        # rx-activity liveness: a live session delivers at least the client's
+        # PersistentKeepalive packets, so rx grows at least every ~25 s
+        local prev_rx
+        prev_rx=$(cat "$(peer_rx_state_file "$pubkey")" 2>/dev/null || echo 0)
+        [ "${rx:-0}" -gt "${prev_rx:-0}" ] 2>/dev/null && _peers_rx_active=$(( _peers_rx_active + 1 )) || true
+        echo "${rx:-0}" > "$(peer_rx_state_file "$pubkey")"
         _peers_total=$(( _peers_total + 1 ))
         if [ "${handshake:-0}" != "0" ] && [ "$age" -gt 0 ] && [ "$age" -le "${PEER_HANDSHAKE_TIMEOUT}" ]; then
             _peers_active=$(( _peers_active + 1 ))
@@ -151,14 +163,20 @@ PROM
     cat >> "$tmp" <<'PROM'
 # HELP wg_peers_total Total number of configured peers
 # TYPE wg_peers_total gauge
-# HELP wg_peers_active Number of peers with a handshake within PEER_HANDSHAKE_TIMEOUT seconds
+# HELP wg_peers_active Number of peers with a handshake within PEER_HANDSHAKE_TIMEOUT seconds (handshake-based; with long session timings use wg_peers_rx_active)
 # TYPE wg_peers_active gauge
-# HELP wg_peers_stale Number of peers whose last handshake exceeds PEER_HANDSHAKE_TIMEOUT or never connected
+# HELP wg_peers_stale Number of peers whose last handshake exceeds PEER_HANDSHAKE_TIMEOUT or never connected (handshake-based; with long session timings use wg_peers_rx_idle)
 # TYPE wg_peers_stale gauge
+# HELP wg_peers_rx_active Number of peers with received traffic since the last metrics scrape (liveness not based on handshakes; requires PersistentKeepalive)
+# TYPE wg_peers_rx_active gauge
+# HELP wg_peers_rx_idle Number of peers without received traffic since the last scrape
+# TYPE wg_peers_rx_idle gauge
 PROM
     echo "wg_peers_total{interface=\"${WG_IFACE}\"} ${_peers_total}" >> "$tmp"
     echo "wg_peers_active{interface=\"${WG_IFACE}\"} ${_peers_active}" >> "$tmp"
     echo "wg_peers_stale{interface=\"${WG_IFACE}\"} ${_peers_stale}" >> "$tmp"
+    echo "wg_peers_rx_active{interface=\"${WG_IFACE}\"} ${_peers_rx_active}" >> "$tmp"
+    echo "wg_peers_rx_idle{interface=\"${WG_IFACE}\"} $(( _peers_total - _peers_rx_active ))" >> "$tmp"
 
     # ---- Client-mode-only metrics ----
     if [ "$WG_MODE" = "client" ]; then

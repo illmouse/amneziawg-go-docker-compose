@@ -32,6 +32,10 @@ setup_env() {
     # packet (1480 + S4 bytes) within a 1500-byte path MTU, preventing
     # fragmentation-induced slowdowns; H1-H4 fall back to standard
     # compatibility values (1/2/3/4) since headers are cipher-protected.
+    # Session timings are randomized for anti-fingerprinting: rekey fires at
+    # 50-67 min (RekeyAfterTime=3000-4000) with a session cap of ~2.5-2.8 h
+    # (RejectAfterTime=9000-10000), so handshakes are rare and never on a
+    # fixed cadence.
     AWG31_ENABLED=${AWG31_ENABLED:-"false"}
     HeaderProtectionKey=""
     ContentPaddingAddition=""
@@ -55,7 +59,7 @@ setup_env() {
         ContentPaddingAddition=$(get_random_range 16 64)
         RekeyAfterTime=$(get_random_range 3000 4000)
         RekeyTimeout=$(get_random_range 5 10)
-        RejectAfterTime=$(get_random_range 180 190)
+        RejectAfterTime=$(get_random_range 9000 10000)
         KeepaliveTimeout=$(get_random_range 8 15)
         MaxHandshakeAttempts=$(get_random_int 10 20)
         RandomTrailers="on"

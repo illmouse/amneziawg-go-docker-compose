@@ -119,6 +119,7 @@ Key metrics exposed:
 - `wg_interface_up` — interface operational status
 - `wg_peer_last_handshake_timestamp_seconds` — last handshake per peer
 - `wg_peer_handshake_age_seconds` — seconds since last handshake
+- `wg_peers_rx_active` / `wg_peers_rx_idle` — handshake-independent liveness (peers with/without received traffic since the last scrape; rx grows at least every ~25 s via PersistentKeepalive)
 - Transfer bytes (rx/tx) per peer
 - Active peer and tunnel state (client mode)
 

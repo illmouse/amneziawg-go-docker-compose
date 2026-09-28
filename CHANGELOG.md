@@ -4,6 +4,16 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [5.0.2] - 2026-09-23
+
+### Changed
+
+- Wizard 3.1 profile: session timings now produce long randomized sessions — `RejectAfterTime=9000-10000` (was 180-190, which made the `RekeyAfterTime=3000-4000` value unreachable and forced rekeys every ~3 min). Handshakes now occur every ~50-67 min on a randomized cadence (anti-fingerprinting).
+
+### Added
+
+- Handshake-independent liveness metrics: `wg_peers_rx_active` / `wg_peers_rx_idle` (peers with/without received traffic since the last scrape; rx grows at least every ~25 s via PersistentKeepalive). Handshake metrics (`wg_peer_last_handshake_timestamp_seconds`, `wg_peers_active`, `wg_peers_stale`) are kept unchanged for compatibility.
+
 ## [5.0.1b] - 2026-09-23
 
 ### Fixed

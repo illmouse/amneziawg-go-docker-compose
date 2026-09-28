@@ -141,7 +141,7 @@ HeaderProtectionKey=<base64 32-byte key>
 ContentPaddingAddition=16-64
 RekeyAfterTime=3000-4000
 RekeyTimeout=5-10
-RejectAfterTime=180-190
+RejectAfterTime=9000-10000
 KeepaliveTimeout=8-15
 MaxHandshakeAttempts=15
 RandomTrailers=on
@@ -151,6 +151,8 @@ RandomTrailers=on
 Range values (`a-b`) are randomized by the daemon per packet/interval. After enabling, re-download peer configs from `config/server_peers/` — clients need an **AmneziaWG 3.1-capable app**. Full parameter reference: [docs.amnezia.org](https://docs.amnezia.org/documentation/amnezia-wg/).
 
 Generated S values stay within **12-20**, so packets never exceed a 1500-byte path MTU (a worst-case data packet is `1480 + S4` bytes outer). For constrained paths (PPPoE, IPv6 outer, nested tunnels) use the optional `WG_MTU` variable to lower the tunnel MTU.
+
+Wizard timings produce long sessions: rekey at 50-67 min, session cap ~2.5-2.8 h — handshakes are rare and randomized, so handshake-age is not a liveness signal; check the rx-activity metrics (`wg_peers_rx_active`) instead.
 
 # Internal Monitoring
 
@@ -262,4 +264,4 @@ Import the dashboard via Grafana → Dashboards → Import. Uncomment the metric
 | METRICS_ENABLED | `true`, `false` | `false` | Enable Prometheus metrics endpoint |
 | METRICS_PORT | 1–65535 | `9586` | Port to expose the `/metrics` endpoint on |
 | METRICS_INTERVAL | integer ≥ 1 | `15` | Seconds between metrics collection runs |
-| PEER_HANDSHAKE_TIMEOUT | integer ≥ 1 | `180` | Seconds since last handshake before a peer is considered disconnected (server mode) |
+| PEER_HANDSHAKE_TIMEOUT | integer ≥ 1 | `180` | Seconds since last handshake before a peer is considered disconnected (server mode); with long 3.1 session timings prefer rx-activity metrics (wg_peers_rx_active / wg_peers_rx_idle) |
