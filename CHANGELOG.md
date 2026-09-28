@@ -6,13 +6,82 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [5.0.2] - 2026-09-23
 
-### Changed
+Complete changes since the previous stable release (v4.9.1). Includes
+everything from the beta builds 5.0.0b and 5.0.1b.
 
-- Wizard 3.1 profile: session timings now produce long randomized sessions — `RejectAfterTime=9000-10000` (was 180-190, which made the `RekeyAfterTime=3000-4000` value unreachable and forced rekeys every ~3 min). Handshakes now occur every ~50-67 min on a randomized cadence (anti-fingerprinting).
+### ⚠️ Breaking
+
+- AmneziaWG core upgraded from 2.x to **3.1** (amneziawg-go `v3.1.20260828`,
+  amneziawg-tools `v3.1.20260812`). Newly generated peer configs include the
+  previously missing `I5` obfuscation parameter; AmneziaWG 2.x client apps
+  may reject it. Existing configs on disk are not modified by the upgrade.
+- Enabling the new 3.1 parameters requires AmneziaWG **3.1-capable client
+  apps** and re-distribution of peer configs.
 
 ### Added
 
-- Handshake-independent liveness metrics: `wg_peers_rx_active` / `wg_peers_rx_idle` (peers with/without received traffic since the last scrape; rx grows at least every ~25 s via PersistentKeepalive). Handshake metrics (`wg_peer_last_handshake_timestamp_seconds`, `wg_peers_active`, `wg_peers_stale`) are kept unchanged for compatibility.
+- AmneziaWG 3.1 obfuscation parameters (opt-in, empty = disabled, 2.x-compatible):
+  `HeaderProtectionKey` (base64 32-byte key; encrypts packet headers, requires
+  `S1`–`S4` ≥ 12), `ContentPaddingAddition`, `RekeyAfterTime`, `RekeyTimeout`,
+  `RejectAfterTime`, `KeepaliveTimeout`, `MaxHandshakeAttempts` (ranges `a` or
+  `a-b`), `RandomTrailers`, `DisableCookies` (`on`/`off`). Validated at
+  container start; persisted in `config.json`; written to generated configs
+  per server/client side.
+- Setup wizard: optional "3.1 profile" — generates `HeaderProtectionKey`,
+  S1–S4 within the fragmentation-safe 12–20 range (header-protection nonce
+  requirement at the low end, no IPv4 fragmentation of full-size data packets
+  at the high end), standard H1–H4 compatibility values (1/2/3/4), randomized
+  padding/rekey ranges and `RandomTrailers=on`.
+- Wizard 3.1 profile: long randomized sessions — `RejectAfterTime=9000-10000`
+  (session cap) with `RekeyAfterTime=3000-4000`; handshakes occur every
+  ~50-67 min on a randomized cadence (anti-fingerprinting). Older clients
+  ignore the parameters and keep their own cadence.
+- Optional `WG_MTU` env var (default empty = 1420) for constrained paths
+  (PPPoE, IPv6 outer, nested tunnels); startup warning when `S4 > 20`
+  (fragmentation risk).
+- Daemon crash revival (server and client modes): the monitor now detects a
+  dead/zombie `amneziawg-go` process (OOM kill, missing UAPI socket) and
+  revives it **in place** — SIGTERM→SIGKILL, stale interface and UAPI socket
+  removal, PID-tracked restart, config re-apply, listen verification.
+  Revival is continuous and unbounded: the monitor retries forever and no
+  longer kills/restarts the container after repeated failures.
+- Handshake-independent liveness metrics: `wg_peers_rx_active` /
+  `wg_peers_rx_idle` (peers with/without received traffic since the last
+  scrape; rx grows at least every ~25 s via PersistentKeepalive). Handshake
+  metrics (`wg_peer_last_handshake_timestamp_seconds`, `wg_peers_active`,
+  `wg_peers_stale`) are kept unchanged for compatibility.
+- Upstream versions pinned in the Dockerfile (`AWG_GO_VERSION`,
+  `AWG_TOOLS_VERSION`) with OCI image labels.
+- Release CI: tag pushes of `vX.Y.Z`/`vX.Y.Zb` now create a GitHub release
+  (marked pre-release for beta `b` suffix) with the release description taken
+  from this changelog. Beta tags never receive the `latest` image tag —
+  `latest` always points at the newest stable release.
+
+### Fixed
+
+- Wizard 3.1 profile generated `S1`–`S4` up to 64: values above 20 made every
+  full-size data packet (`1480 + S4` bytes) exceed a 1500-byte path MTU,
+  causing IPv4 fragmentation and severe throughput degradation. The wizard
+  now caps the range at 12–20.
+- Crash-revival failure observed 2026-09-03 (`awg setconf` failing after
+  daemon restart): a stale UAPI socket left behind by the killed daemon was
+  never removed, so the restarted daemon could not bind it. The socket is now
+  swept on every stop/revival.
+- Server monitor ignored the "zombie" state (interface present, daemon dead),
+  looping forever without a recovery attempt. It is now detected and revived.
+- Client monitor did not react to `amneziawg-go` process death at all; the
+  daemon is now revived in place with the active peer config re-applied.
+- `start_wg_iface` returned success even when the daemon exited immediately
+  during startup; it now waits for process + interface + UAPI socket and
+  reports failure.
+- Generated peer configs were missing the `I5` obfuscation packet parameter.
+
+### Changed
+
+- `amneziawg-go` is now started with `-f` (foreground) under a PID file,
+  making the daemon trackable for health checks and revival.
+- `docker compose pull && docker compose up -d` remains the upgrade path;
+  server keys and peer configs in `./config/` are preserved.
 
 ## [5.0.1b] - 2026-09-23
 

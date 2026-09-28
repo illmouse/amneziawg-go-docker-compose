@@ -18,6 +18,16 @@ Tags ending in `b` are beta releases and are published on GitHub as
 **pre-releases**. Beta images are pushed to GHCR **without** the `latest`
 tag — `latest` always points at the newest stable release.
 
+### Stable releases roll up beta changes
+
+The `## [X.Y.Z]` section of a **stable** release must contain **every change
+since the previous stable release** — everything shipped in the intermediate
+beta builds included. Users upgrade stable-to-stable and must see the full
+picture (especially breaking changes) without reading beta sections. Beta
+sections remain in `CHANGELOG.md` as history, but the stable section must be
+complete and self-contained: never write only the delta since the previous
+beta.
+
 ## Sync before committing
 
 Before every commit, make sure local work sits on top of the current
@@ -38,6 +48,9 @@ Before tagging, verify:
 1. `CHANGELOG.md` has a section for the new version at the top, keepachangelog
    format (`## [X.Y.Z] - YYYY-MM-DD`), with today's date and accurate content.
    The CI release job takes the release description from this section.
+   For a **stable** release this section must roll up all changes since the
+   last stable release (see "Stable releases roll up beta changes" above);
+   a delta-only section since the previous beta is not acceptable.
 2. Both READMEs (en + ru) and the relevant `docs/*.md` are updated for every
    user-visible change.
 3. Breaking changes require a major bump and explicit upgrade notes in

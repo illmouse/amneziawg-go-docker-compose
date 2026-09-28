@@ -63,7 +63,10 @@ Versioning: `X.0.0` = major/breaking, `X.Y.0` = feature, `X.Y.Z` = fix,
 `X.Y.Zb` = beta (published as a pre-release). Key rules from the runbook:
 
 - Update `CHANGELOG.md` (new version section at top, keepachangelog format);
-  CI takes the GitHub release description from that section.
+  CI takes the GitHub release description from that section. A **stable**
+  release section must roll up **all changes since the previous stable
+  release**, including everything from intermediate betas — never just the
+  delta since the last beta.
 - **Always show the user the full release info (version, tag, pre-release
   flag, changelog section) and get explicit confirmation before pushing.**
 - **Never delete or re-push a tag whose build succeeded** — cut a new version
