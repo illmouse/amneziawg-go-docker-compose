@@ -4,6 +4,24 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [5.0.3] - 2026-09-28
+
+### Fixed
+
+- Handshakes still occurred every ~3 minutes despite long session timings
+  (`RekeyAfterTime=3000-4000`, `RejectAfterTime=9000-10000`). Root cause: the
+  server's `wg0.conf` never received the timing parameters — the upstream
+  daemon then applies its built-in default `RejectAfterTime=180s` on the
+  server, silently dropping client data after 180 s and forcing a
+  re-handshake. The server config now also receives the 3.1 timing params
+  (`RekeyAfterTime`, `RekeyTimeout`, `RejectAfterTime`, `KeepaliveTimeout`,
+  `MaxHandshakeAttempts`) when set; the effective session lifetime is the
+  minimum of both ends' `RejectAfterTime`, so long sessions now actually
+  take effect (rekey every ~50-67 min, session cap ~2.5-2.8 h).
+- `ContentPaddingAddition` is now also written to the server config for
+  symmetric padding of server-to-client bulk traffic (opt-in, empty = not
+  emitted = vanilla behavior).
+
 ## [5.0.2] - 2026-09-23
 
 Complete changes since the previous stable release (v4.9.1). Includes

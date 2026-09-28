@@ -44,12 +44,12 @@ All variables are empty by default (= disabled, standard 2.x behavior). Enable b
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `HeaderProtectionKey` | _(empty)_ | Base64-encoded 32-byte key; encrypts packet header service fields (ChaCha20, nonce from S-prefix). **Requires S1–S4 ≥ 12**; with it enabled leave H1–H4 at standard values `1`/`2`/`3`/`4`. Server-side: written to `wg0.conf` **and** all peer configs — must match on both ends. |
-| `ContentPaddingAddition` | _(empty)_ | Random bytes added to the transport payload, e.g. `16-64` (client-side, peer configs only) |
-| `RekeyAfterTime` | _(empty)_ | Seconds before re-handshake; with `RejectAfterTime=9000-10000` handshakes occur every ~50-67 min, randomized (client-side) |
-| `RekeyTimeout` | _(empty)_ | Handshake timeout in seconds, e.g. `5-10` (client-side) |
-| `RejectAfterTime` | _(empty)_ | Hard session lifetime cap, seconds; must exceed RekeyAfterTime. Long values (e.g. 9000-10000) make handshakes rare and randomized (client-side) |
-| `KeepaliveTimeout` | _(empty)_ | Keepalive interval in seconds, e.g. `8-15` (client-side) |
-| `MaxHandshakeAttempts` | _(empty)_ | Maximum handshake retries, e.g. `10-20` (client-side) |
+| `ContentPaddingAddition` | _(empty)_ | Random bytes added to the transport payload, e.g. `16-64` (server + peers) |
+| `RekeyAfterTime` | _(empty)_ | Seconds before re-handshake; with `RejectAfterTime=9000-10000` handshakes occur every ~50-67 min, randomized (server + peers) |
+| `RekeyTimeout` | _(empty)_ | Handshake timeout in seconds, e.g. `5-10` (server + peers) |
+| `RejectAfterTime` | _(empty)_ | Hard session lifetime cap, seconds; must exceed RekeyAfterTime. Long values (e.g. 9000-10000) make handshakes rare and randomized. Applied on both ends — the effective session lifetime is the minimum of both ends' values (server + peers) |
+| `KeepaliveTimeout` | _(empty)_ | Keepalive interval in seconds, e.g. `8-15` (server + peers) |
+| `MaxHandshakeAttempts` | _(empty)_ | Maximum handshake retries, e.g. `10-20` (server + peers) |
 | `RandomTrailers` | _(empty)_ | `on` / `off` — random trailing bytes on packets (server + peers) |
 | `DisableCookies` | _(empty)_ | `on` / `off` — suppress Cookie Reply packets (server + peers) |
 

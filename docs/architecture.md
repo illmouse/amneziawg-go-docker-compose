@@ -92,13 +92,15 @@ The image is built from AmneziaWG **3.1** (core `amneziawg-go` v3.1.20260828, to
 | Param | Side | Purpose |
 |-------|------|---------|
 | `HeaderProtectionKey` | server + peers | ChaCha20 encryption of packet header service fields; nonce from the first 12 bytes of the S-prefix → **requires S1–S4 ≥ 12**. With it enabled, leave H1–H4 at standard values `1`/`2`/`3`/`4`. |
-| `ContentPaddingAddition` | peers | Random padding added to the transport payload |
-| `RekeyAfterTime` / `RekeyTimeout` / `RejectAfterTime` | peers | Randomized re-handshake / handshake-timeout / forced-rekey intervals (seconds) |
-| `KeepaliveTimeout` / `MaxHandshakeAttempts` | peers | Randomized keepalive interval and handshake retry count |
+| `ContentPaddingAddition` | server + peers | Random padding added to the transport payload |
+| `RekeyAfterTime` / `RekeyTimeout` / `RejectAfterTime` | server + peers | Randomized re-handshake / handshake-timeout / forced-rekey intervals (seconds) |
+| `KeepaliveTimeout` / `MaxHandshakeAttempts` | server + peers | Randomized keepalive interval and handshake retry count |
 | `RandomTrailers` | server + peers | Random trailing bytes on packets |
 | `DisableCookies` | server + peers | Suppress Cookie Reply packets |
 
-All range params accept a fixed value (`a`) or a range (`a-b`); the daemon picks a random value from the range per packet/interval. Server-side params are written to both `wg0.conf` and every generated peer config; client-side params go into generated peer configs only. See [configuration.md](configuration.md).
+All range params accept a fixed value (`a`) or a range (`a-b`); the daemon picks a random value from the range per packet/interval. When set, all 3.1 params are written to both the server's `wg0.conf` and every generated peer config; empty values are not emitted (vanilla behavior). See [configuration.md](configuration.md).
+
+**Session lifetime:** each side independently drops transport packets on keypairs older than its own `RejectAfterTime` (the daemon default is 180 s), so the effective session lifetime is the **minimum of both ends' `RejectAfterTime`**. Long randomized sessions therefore require the long timings on the server as well as in the peer configs — the wizard writes both. `RekeyAfterTime`'s proactive rekey path is initiator-gated (normally the client), but it is emitted on the server too for stall-recovery symmetry.
 
 ## 3proxy Integration (client mode only)
 

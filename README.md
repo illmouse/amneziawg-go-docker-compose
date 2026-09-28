@@ -152,7 +152,7 @@ Range values (`a-b`) are randomized by the daemon per packet/interval. After ena
 
 Generated S values stay within **12-20**, so packets never exceed a 1500-byte path MTU (a worst-case data packet is `1480 + S4` bytes outer). For constrained paths (PPPoE, IPv6 outer, nested tunnels) use the optional `WG_MTU` variable to lower the tunnel MTU.
 
-Wizard timings produce long sessions: rekey at 50-67 min, session cap ~2.5-2.8 h — handshakes are rare and randomized, so handshake-age is not a liveness signal; check the rx-activity metrics (`wg_peers_rx_active`) instead.
+Wizard timings produce long sessions: rekey at 50-67 min, session cap ~2.5-2.8 h — handshakes are rare and randomized, so handshake-age is not a liveness signal; check the rx-activity metrics (`wg_peers_rx_active`) instead. Timing params are written to the server config as well as peer configs — the effective session lifetime is the minimum of both ends' `RejectAfterTime`.
 
 # Internal Monitoring
 

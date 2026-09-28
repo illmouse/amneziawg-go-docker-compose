@@ -123,6 +123,12 @@ Wizard 3.1 profile now generates `RejectAfterTime=9000-10000` (was 180-190) — 
 
 To apply: re-run the wizard (`sudo ./setup.sh`, answer "y" to the 3.1 profile), recreate containers (`docker compose pull && docker compose up -d`), and redistribute peer configs.
 
+### Upgrading to v5.0.3
+
+Server timing fix: the server's `wg0.conf` now also receives the 3.1 timing params (`RekeyAfterTime`, `RekeyTimeout`, `RejectAfterTime`, `KeepaliveTimeout`, `MaxHandshakeAttempts`) and `ContentPaddingAddition` when set. Previously the server ran its built-in default `RejectAfterTime=180s`, silently capping sessions at ~3 minutes regardless of the longer client-side values.
+
+To apply: recreate the server container (`docker compose pull && docker compose up -d`) — the config regenerates automatically. Peer config content is unchanged, but redistributing them is harmless. Old (vanilla-default) clients are unaffected: they keep their own rekey cadence.
+
 ## Useful Commands
 
 ```bash

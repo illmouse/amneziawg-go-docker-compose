@@ -61,10 +61,21 @@ H4 = $server_h4
 
 EOF
 
-# AmneziaWG 3.1 optional parameters (server-side subset)
+# AmneziaWG 3.1 optional parameters (server-side subset).
+# Timing params are also emitted here: the upstream daemon applies its own
+# built-in defaults (RejectAfterTime=180s) on the server otherwise, which
+# silently caps session lifetime at ~3 minutes regardless of client values
+# (effective session = min of both ends' RejectAfterTime). Empty values are
+# not emitted, preserving vanilla behavior for non-3.1 setups.
 emit_awg31_param "$TMP_CONF" "HeaderProtectionKey" "$server_hpk"
 emit_awg31_param "$TMP_CONF" "RandomTrailers" "$server_rt"
 emit_awg31_param "$TMP_CONF" "DisableCookies" "$server_dc"
+emit_awg31_param "$TMP_CONF" "ContentPaddingAddition" "$server_cpa"
+emit_awg31_param "$TMP_CONF" "RekeyAfterTime" "$server_rat"
+emit_awg31_param "$TMP_CONF" "RekeyTimeout" "$server_rto"
+emit_awg31_param "$TMP_CONF" "RejectAfterTime" "$server_rej"
+emit_awg31_param "$TMP_CONF" "KeepaliveTimeout" "$server_kat"
+emit_awg31_param "$TMP_CONF" "MaxHandshakeAttempts" "$server_mha"
 
 # Add peers to server config
 peers_count=$(jq '.peers | keys | length' "$CONFIG_DB")
