@@ -9,7 +9,7 @@ groups:
         expr: wg_interface_up{app="wireguard"} == 0
         for: 30s
         labels:
-          severity: critical
+          severity: high
         annotations:
           summary: "WireGuard interface {{ $labels.interface }} is down on {{ $labels.instance }}"
           description: >
@@ -22,47 +22,36 @@ groups:
         expr: wg_tunnel_healthy{app="wireguard"} == 0
         for: 30s
         labels:
-          severity: critical
+          severity: high
         annotations:
           summary: "WireGuard tunnel down on {{ $labels.instance }} ({{ $labels.interface }})"
           description: >
             wg_tunnel_healthy is 0 on {{ $labels.instance }} (interface {{ $labels.interface }})
             for at least 30 seconds. The health check is reporting the tunnel as down.
 
-      # No successful handshake in the last 3 minutes (180s is WireGuard's own
-      # re-handshake interval — exceeding it means the session is effectively dead).
-      - alert: WireGuardHandshakeStale
+      # A connected peer stopped receiving traffic. Rx-based liveness works for
+      # both session profiles: a live session always delivers keepalives (client
+      # PersistentKeepalive=25 s in legacy mode, server-side sendKeepalive 10-15 s
+      # under 3.1), so zero rx growth means the session is effectively dead.
+      # The handshake-timestamp clause excludes peers that never connected.
+      - alert: WireGuardPeerUnreachable
         expr: >
-          max by (instance, interface, endpoint, product) (
-            wg_peer_handshake_age_seconds{app="wireguard"}
-          ) > 180
-        for: 1m
+          sum by (instance, interface, endpoint, peer) (
+            increase(wg_peer_rx_bytes_total{app="wireguard"}[2m])
+          ) == 0
+          and on (instance, interface, endpoint, peer)
+          wg_peer_last_handshake_timestamp_seconds{app="wireguard"} > 0
+        for: 3m
         labels:
-          severity: critical
+          severity: high
         annotations:
-          summary: "WireGuard handshake stale on {{ $labels.instance }} with {{ $labels.endpoint }}"
+          summary: "WireGuard peer unreachable on {{ $labels.instance }}: {{ $labels.peer | default $labels.endpoint }}"
           description: >
-            Last successful handshake with {{ $labels.endpoint }} was
-            {{ $value | humanizeDuration }} ago on {{ $labels.instance }}
-            (interface {{ $labels.interface }}).
-            WireGuard re-handshakes every 180s; exceeding this means the peer is
-            unreachable. Check peer connectivity and firewall rules.
-
-      # Handshake is ageing toward the stale threshold — early warning.
-      - alert: WireGuardHandshakeAgeing
-        expr: >
-          max by (instance, interface, endpoint, product) (
-            wg_peer_handshake_age_seconds{app="wireguard"}
-          ) > 150
-        for: 1m
-        labels:
-          severity: warning
-        annotations:
-          summary: "WireGuard handshake ageing on {{ $labels.instance }} with {{ $labels.endpoint }}"
-          description: >
-            Last handshake with {{ $labels.endpoint }} was {{ $value | humanizeDuration }} ago
-            on {{ $labels.instance }}. A new handshake should have been initiated by now —
-            watch for a follow-up critical alert if it does not recover.
+            Peer {{ $labels.peer | default $labels.endpoint }} on {{ $labels.instance }}
+            (interface {{ $labels.interface }}) has received no traffic for over 3 minutes
+            despite having an established session. Rx liveness is handshake-cadence
+            independent (keepalives: ~25 s legacy, 10-15 s with 3.1 timings).
+            Check peer connectivity and firewall rules.
 
       # A peer failover event occurred — the active peer config switched.
       - alert: WireGuardFailoverOccurred
@@ -104,7 +93,7 @@ groups:
           rate(wg_peer_rx_bytes_total{app="wireguard"}[5m]) > 12500000
         for: 5m
         labels:
-          severity: critical
+          severity: high
         annotations:
           summary: "WireGuard high RX throughput on {{ $labels.instance }} from {{ $labels.endpoint }}"
           description: >
@@ -132,7 +121,7 @@ groups:
           rate(wg_peer_tx_bytes_total{app="wireguard"}[5m]) > 12500000
         for: 5m
         labels:
-          severity: critical
+          severity: high
         annotations:
           summary: "WireGuard high TX throughput on {{ $labels.instance }} to {{ $labels.endpoint }}"
           description: >

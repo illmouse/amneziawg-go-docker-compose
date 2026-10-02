@@ -221,8 +221,8 @@ sudo ./setup.sh
 
 | Файл | Описание |
 |------|----------|
-| [`wireguard_combined_dashboard.json`](prometheus/wireguard_combined_dashboard.json) | Дашборд Grafana — работает в серверном и клиентском режимах, совместим с Grafana 9+ |
-| [`wireguard_alerts.yaml`](prometheus/wireguard_alerts.yaml) | Правила алертов Prometheus для отслеживания состояния туннеля, возраста handshake и доступности пиров |
+| [`wireguard_dashboard.json`](prometheus/wireguard_dashboard.json) | Дашборд Grafana — работает в серверном и клиентском режимах, совместим с Grafana 9+ |
+| [`wireguard_alerts.yaml`](prometheus/wireguard_alerts.yaml) | Правила алертов Prometheus для отслеживания состояния туннеля, жизнеспособности пиров (rx-активность) и трафика |
 | [`wireguard_scrape_job.yaml`](prometheus/wireguard_scrape_job.yaml) | Пример конфигурации scrape job для Prometheus |
 
 Импорт дашборда: Grafana → Dashboards → Import. Для доступа к метрикам снаружи контейнера раскомментируйте соответствующий порт в `docker-compose.yml`.

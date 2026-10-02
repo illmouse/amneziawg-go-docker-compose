@@ -127,7 +127,9 @@ Key metrics exposed:
 - Active peer and tunnel state (client mode)
 
 Dashboard: `prometheus/wireguard_dashboard.json` (Grafana-compatible).
-Alerts: `prometheus/wireguard_alerts.yaml`.
+Alerts: `prometheus/wireguard_alerts.yaml` — peer liveness alerting is rx-based
+(`WireGuardPeerUnreachable`), independent of the handshake cadence, so it works
+with both legacy and 3.1 long-session timings.
 
 See [`prometheus/`](../prometheus/) for the Grafana dashboard, alert rules, and scrape job example.
 

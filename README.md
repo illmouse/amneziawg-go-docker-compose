@@ -221,8 +221,8 @@ Ready-to-use files are in [`prometheus/`](prometheus/):
 
 | File | Description |
 |------|-------------|
-| [`wireguard_combined_dashboard.json`](prometheus/wireguard_combined_dashboard.json) | Grafana dashboard — works for both server and client modes, compatible with Grafana 9+ |
-| [`wireguard_alerts.yaml`](prometheus/wireguard_alerts.yaml) | Prometheus alert rules for tunnel health, handshake age, and peer availability |
+| [`wireguard_dashboard.json`](prometheus/wireguard_dashboard.json) | Grafana dashboard — works for both server and client modes, compatible with Grafana 9+ |
+| [`wireguard_alerts.yaml`](prometheus/wireguard_alerts.yaml) | Prometheus alert rules for tunnel health, rx-based peer liveness, and throughput |
 | [`wireguard_scrape_job.yaml`](prometheus/wireguard_scrape_job.yaml) | Example Prometheus scrape job configuration |
 
 Import the dashboard via Grafana → Dashboards → Import. Uncomment the metrics port in `docker-compose.yml` to expose it outside the container.

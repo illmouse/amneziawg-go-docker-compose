@@ -315,18 +315,14 @@
     },
     {
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "description": "Seconds since last successful WireGuard handshake. >180s means no active session.",
+      "description": "Seconds since last successful WireGuard handshake. Handshake cadence is ~2 min (legacy) or 50-67 min (AmneziaWG 3.1 timings) — a high value alone is not a failure signal. Use the rx-activity panels for liveness.",
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "thresholds" },
+          "color": { "fixedColor": "blue", "mode": "fixed" },
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": 0 },
-              { "color": "yellow", "value": 150 },
-              { "color": "red", "value": 180 }
-            ]
+            "steps": [{ "color": "blue", "value": 0 }]
           },
           "unit": "s"
         },
@@ -382,7 +378,7 @@
         },
         "overrides": []
       },
-      "gridPos": { "h": 4, "w": 8, "x": 0, "y": 11 },
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 11 },
       "id": 12,
       "options": {
         "colorMode": "background",
@@ -411,7 +407,7 @@
     },
     {
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "description": "Peers with a recent handshake (active sessions)",
+      "description": "Peers with a handshake within PEER_HANDSHAKE_TIMEOUT seconds. The threshold auto-scales to the AmneziaWG 3.1 RekeyAfterTime when 3.1 timings are set (legacy default 180 s).",
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "thresholds" },
@@ -424,7 +420,7 @@
         },
         "overrides": []
       },
-      "gridPos": { "h": 4, "w": 8, "x": 8, "y": 11 },
+      "gridPos": { "h": 4, "w": 5, "x": 4, "y": 11 },
       "id": 13,
       "options": {
         "colorMode": "background",
@@ -453,7 +449,7 @@
     },
     {
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "description": "Peers with stale or missing handshake (inactive sessions)",
+      "description": "Peers whose last handshake exceeds PEER_HANDSHAKE_TIMEOUT or that never connected. The threshold auto-scales with 3.1 timings — for precise liveness prefer Peers RX Idle.",
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "thresholds" },
@@ -470,7 +466,7 @@
         },
         "overrides": []
       },
-      "gridPos": { "h": 4, "w": 8, "x": 16, "y": 11 },
+      "gridPos": { "h": 4, "w": 5, "x": 9, "y": 11 },
       "id": 14,
       "options": {
         "colorMode": "background",
@@ -498,6 +494,94 @@
       "type": "stat"
     },
     {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "description": "Peers that received traffic since the previous scrape (rx counter grew). Handshake-independent: a live session always delivers keepalives (~25 s legacy, 10-15 s with 3.1 timings).",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "green", "value": 0 }]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 5, "x": 14, "y": 11 },
+      "id": 22,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "9.5.0",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "editorMode": "code",
+          "expr": "wg_peers_rx_active{instance=~\"$instance\"}",
+          "instant": true,
+          "legendFormat": "{{instance}} {{interface}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Peers RX Active",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "description": "Peers with no received traffic since the previous scrape. The most precise liveness signal under AmneziaWG 3.1 long session timings.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": 0 },
+              { "color": "yellow", "value": 1 },
+              { "color": "red", "value": 5 }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 5, "x": 19, "y": 11 },
+      "id": 23,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "9.5.0",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "editorMode": "code",
+          "expr": "wg_peers_rx_idle{instance=~\"$instance\"}",
+          "instant": true,
+          "legendFormat": "{{instance}} {{interface}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Peers RX Idle",
+      "type": "stat"
+    },
+    {
       "collapsed": false,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 15 },
       "id": 15,
@@ -507,7 +591,7 @@
     },
     {
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "description": "WireGuard re-initiates handshake every 180s. Sustained values >=180s indicate a broken session.",
+      "description": "Seconds since last successful handshake per peer. Handshake cadence is ~2 min (legacy) or 50-67 min (AmneziaWG 3.1 timings) — sustained high values are normal under 3.1 and do not indicate a broken session. Use rx traffic for liveness.",
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
@@ -532,16 +616,12 @@
             "showValues": false,
             "spanNulls": false,
             "stacking": { "group": "A", "mode": "none" },
-            "thresholdsStyle": { "mode": "line+area" }
+            "thresholdsStyle": { "mode": "off" }
           },
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": 0 },
-              { "color": "yellow", "value": 150 },
-              { "color": "red", "value": 180 }
-            ]
+            "steps": [{ "color": "green", "value": 0 }]
           },
           "unit": "s"
         },

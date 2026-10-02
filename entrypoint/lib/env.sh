@@ -120,26 +120,53 @@ declare -A PROTOCOL_MAP=(
 # 50-67 min between handshakes, which would mark it stale almost all the time.
 # When 3.1 timings are configured and the user did not pin the value explicitly,
 # derive the threshold from the rekey interval so the metric stays meaningful.
+#
+# 3.1 timing values may be ranges ("3000-4000") as produced by the setup wizard.
+# Take the upper bound of each range so the threshold covers the worst case;
+# bash arithmetic would otherwise read "3000-4000" as 3000 minus 4000 = -1000.
+_awg31_range_max() {  # $1 = value or "min-max" range; prints 0 for garbage/empty
+    case "$1" in
+        [0-9]*) ;;
+        *) echo 0; return ;;
+    esac
+    if [[ "$1" =~ ^([0-9]+)-([0-9]+)$ ]]; then
+        echo "${BASH_REMATCH[2]}"
+    elif [[ "$1" =~ ^[0-9]+$ ]]; then
+        echo "$1"
+    else
+        echo 0
+    fi
+}
+
 _PEER_HANDSHAKE_TIMEOUT_USER_SET=false
 if [ -n "${PEER_HANDSHAKE_TIMEOUT:-}" ]; then
     _PEER_HANDSHAKE_TIMEOUT_USER_SET=true
 fi
 : "${PEER_HANDSHAKE_TIMEOUT:=180}"
 
-if [ "$_PEER_HANDSHAKE_TIMEOUT_USER_SET" = "false" ] && { [ -n "${RekeyAfterTime:-}" ] || [ -n "${RejectAfterTime:-}" ]; }; then
-    _base="${RekeyAfterTime:-}"
-    [ -n "$_base" ] || _base="${RejectAfterTime:-0}"
-    _keepalive="${KeepaliveTimeout:-0}"
-    _rekey_timeout="${RekeyTimeout:-0}"
-    # One full rekey interval + one handshake attempt window + keepalive slack,
-    # so a peer stays "active" for its whole session instead of 3 minutes.
-    PEER_HANDSHAKE_TIMEOUT=$(( _base + _rekey_timeout + _keepalive + 60 ))
-    # Guard against pathological inputs; 2 h comfortably covers the 3.1 defaults.
-    if [ "$PEER_HANDSHAKE_TIMEOUT" -gt 7200 ]; then
-        PEER_HANDSHAKE_TIMEOUT=7200
+if [ "$_PEER_HANDSHAKE_TIMEOUT_USER_SET" = "false" ]; then
+    _base=$(_awg31_range_max "${RekeyAfterTime:-}")
+    if [ "$_base" -eq 0 ]; then
+        _base=$(_awg31_range_max "${RejectAfterTime:-}")
+    fi
+    if [ "$_base" -gt 0 ]; then
+        _attempts=$(_awg31_range_max "${MaxHandshakeAttempts:-}")
+        _rekey_timeout=$(_awg31_range_max "${RekeyTimeout:-}")
+        _keepalive=$(_awg31_range_max "${KeepaliveTimeout:-}")
+        # One full rekey interval + the retry window (MaxHandshakeAttempts ×
+        # RekeyTimeout) + keepalive slack + 60 s buffer, so a peer stays
+        # "active" for its whole session instead of 3 minutes.
+        PEER_HANDSHAKE_TIMEOUT=$(( _base + _attempts * _rekey_timeout + _keepalive + 60 ))
+        # Guard against pathological inputs; 2 h comfortably covers the 3.1 defaults.
+        if [ "$PEER_HANDSHAKE_TIMEOUT" -gt 7200 ]; then
+            PEER_HANDSHAKE_TIMEOUT=7200
+        fi
+        if [ "$PEER_HANDSHAKE_TIMEOUT" -lt 180 ]; then
+            PEER_HANDSHAKE_TIMEOUT=180
+        fi
     fi
 fi
-unset _PEER_HANDSHAKE_TIMEOUT_USER_SET _base _keepalive _rekey_timeout
+unset _PEER_HANDSHAKE_TIMEOUT_USER_SET _base _attempts _rekey_timeout _keepalive
 
 # ===============================
 # Save original DNS server

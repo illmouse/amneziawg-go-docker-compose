@@ -4,6 +4,40 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [5.0.5] - 2026-10-02
+
+### Fixed
+
+- `wg_peers_active` / `wg_peers_stale` regression from v5.0.4: the setup wizard
+  writes 3.1 timings as literal ranges (e.g. `RekeyAfterTime=3000-4000`), which
+  bash arithmetic evaluated as subtraction (`3000-4000 = -1000`), producing a
+  negative staleness threshold and counting every healthy peer as stale. The
+  threshold now takes the upper bound of each range and adds the rekey retry
+  window (`MaxHandshakeAttempts × RekeyTimeout`), floored at 180 s and capped
+  at 7200 s. Explicit `PEER_HANDSHAKE_TIMEOUT` values still win.
+- Handshake-age alerts (`WireGuardHandshakeStale`, `WireGuardHandshakeAgeing`)
+  fired permanently under AmneziaWG 3.1 long session timings, where a healthy
+  peer goes 50-67 min between handshakes by design. Replaced with the rx-based
+  `WireGuardPeerUnreachable` (see Added).
+- Grafana dashboard handshake panels used hardcoded 180 s red thresholds
+  (stat and timeseries "Handshake Age"), which painted healthy 3.1 sessions
+  red. Panels are now neutral; descriptions explain the cadence difference.
+- READMEs referenced a non-existent `wireguard_combined_dashboard.json`; the
+  actual file is `wireguard_dashboard.json`.
+
+### Changed
+
+- Alert severity label `critical` renamed to `high` across all rules — update
+  notification routing that matches on the old value.
+
+### Added
+
+- `WireGuardPeerUnreachable` alert: fires when a peer with an established
+  session receives no traffic for ~5 minutes (rx-based, handshake-cadence
+  independent; keepalives deliver rx at ~25 s legacy / 10-15 s under 3.1).
+- Grafana dashboard panels "Peers RX Active" / "Peers RX Idle" in the Peer
+  Status row, showing handshake-independent peer liveness.
+
 ## [5.0.4] - 2026-10-02
 
 ### Fixed

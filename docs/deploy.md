@@ -140,6 +140,17 @@ Alerting on handshake age still works, but `wg_peers_rx_active` / `wg_peers_rx_i
 
 To apply: recreate the server and client containers (`docker compose pull && docker compose up -d`).
 
+### Upgrading to v5.0.5
+
+Monitoring fixes for AmneziaWG 3.1 long session timings. No config format change and no peer config regeneration — upgrade each end independently.
+
+- Fixed the v5.0.4 `wg_peers_stale` bug: the setup wizard writes 3.1 timings as ranges (`RekeyAfterTime=3000-4000`), which bash arithmetic read as subtraction, producing a negative staleness threshold and marking every peer stale. The threshold now takes the upper bound of each range and adds the rekey retry window.
+- Handshake-age alerts (`WireGuardHandshakeStale` / `WireGuardHandshakeAgeing`) fired permanently under 3.1 (healthy sessions go 50-67 min between handshakes). They are replaced by the rx-based `WireGuardPeerUnreachable` alert, which triggers when a connected peer stops receiving traffic.
+- Alert severity `critical` was renamed to `high` — update notification routing if you matched on the old label value.
+- Dashboard handshake panels no longer use hardcoded 180 s red thresholds; new "Peers RX Active" / "Peers RX Idle" panels show handshake-independent liveness.
+
+To apply: recreate the containers (`docker compose pull && docker compose up -d`), re-import `prometheus/wireguard_dashboard.json` and reload the `prometheus/wireguard_alerts.yaml` rules in Prometheus if you use the bundled files.
+
 ## Useful Commands
 
 ```bash
