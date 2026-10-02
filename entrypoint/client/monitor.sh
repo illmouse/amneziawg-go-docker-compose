@@ -28,6 +28,57 @@ check_tunnel_health() {
     fi
 }
 
+# Aggregate rx byte counter across all peers of the main interface.
+# Prints 0 (never empty) when the daemon is unreachable, so callers always
+# get a number they can compare.
+#
+# `transfer` is used instead of `dump`: for a single interface `awg show` runs
+# without the interface-name prefix, so dump peer lines have 8 fields (not the
+# 9 the collector's `awg show all dump` filter matches), and the fork has
+# already widened the dump format once. The transfer output — one
+# pubkey/rx/tx line per peer, no interface line — is stable against both.
+current_peer_rx() {
+    awg show "$WG_IFACE" transfer 2>/dev/null \
+        | awk -F'\t' '{rx += $2} END {print rx + 0}'
+}
+
+# Refresh the rx baseline used by current_peer_rx_advanced. Called once per
+# monitor iteration so the comparison below always spans a single interval.
+# Baseline persistence is best-effort: a failed write must never kill the
+# monitor, it only costs one liveness comparison.
+refresh_peer_rx_baseline() {
+    current_peer_rx > "${TMP_DIR}/monitor-peer-rx.state" 2>/dev/null || true
+}
+
+# True when the current peer received traffic since the baseline was recorded,
+# then stores the new counter as the baseline for the next call.
+#
+# Liveness cannot be derived from handshake age here: with AmneziaWG 3.1 long
+# session timings (RekeyAfterTime=3000-4000 s) a healthy session goes 50-67 min
+# between handshakes, so a recent handshake says nothing about whether the
+# peer is still reachable. PersistentKeepalive packets instead keep rx growing
+# roughly every 25 s for as long as the session actually carries traffic.
+#
+# A baseline that is older than the current interval is fine — rx grows
+# monotonically, so a counter from hours ago still answers "was this peer
+# alive?". The baseline is reset when rx goes backwards (daemon restart or a
+# peer switch zeroes the counters) so a fresh session is never mistaken for a
+# live one.
+current_peer_rx_advanced() {
+    local rx prev_rx
+    rx=$(current_peer_rx)
+    prev_rx=$(cat "${TMP_DIR}/monitor-peer-rx.state" 2>/dev/null || echo "")
+    case "$prev_rx" in
+        '' | *[!0-9]*) prev_rx="" ;;
+    esac
+    echo "$rx" > "${TMP_DIR}/monitor-peer-rx.state" 2>/dev/null || true
+
+    if [ -n "$prev_rx" ] && [ "$rx" -gt "$prev_rx" ]; then
+        return 0
+    fi
+    return 1
+}
+
 # Probe a peer by spinning up a temporary awg interface and waiting for a WireGuard handshake.
 # A successful handshake proves the server is reachable, WireGuard is running, and keys are valid.
 # The probe interface is always torn down on exit.
@@ -132,18 +183,12 @@ select_and_probe_next_peer() {
         candidate="${sorted_files[$idx]}"
 
         if [ "$candidate" = "$current_config" ]; then
-            # Check wg0's handshake directly — creating a probe interface with
-            # the same key would steal the server session from wg0.
-            local hs_ts hs_age max_hs_age
-            hs_ts=$(awg show "$WG_IFACE" latest-handshakes 2>/dev/null | awk '{print $2}')
-            max_hs_age=$(( MON_CHECK_TIMEOUT * 4 ))
-            if [ -n "$hs_ts" ] && [ "$hs_ts" -gt 0 ]; then
-                hs_age=$(( $(date +%s) - hs_ts ))
-                if [ "$hs_age" -le "$max_hs_age" ]; then
-                    info "Probe handshake succeeded: $(basename "$candidate")"
-                    _probe_result="$candidate"
-                    return 0
-                fi
+            # Check wg0's traffic counters directly — creating a probe interface
+            # with the same key would steal the server session from wg0.
+            if current_peer_rx_advanced; then
+                info "Probe succeeded: $(basename "$candidate") (still receiving traffic)"
+                _probe_result="$candidate"
+                return 0
             fi
             warn "Probe failed: $(basename "$candidate")"
             continue
@@ -435,6 +480,11 @@ while true; do
     fi
 
     current_peer_config=$(find_current_peer_config)
+
+    # Baseline for the current-peer liveness check below. Taken before the
+    # health check so the comparison spans the ping round-trip, giving
+    # PersistentKeepalive traffic a chance to register.
+    refresh_peer_rx_baseline
 
     debug "Master peer config $master_peer_config"
     debug "Current peer config: $current_peer_config"

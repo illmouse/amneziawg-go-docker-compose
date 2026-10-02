@@ -111,7 +111,35 @@ declare -A PROTOCOL_MAP=(
 : "${METRICS_ENABLED:=false}"
 : "${METRICS_PORT:=9586}"
 : "${METRICS_INTERVAL:=15}"
-: "${PEER_HANDSHAKE_TIMEOUT:=180}"  # seconds; peers idle longer than this are counted as stale
+
+# Peer staleness threshold: peers with no handshake for longer than this are
+# counted as stale by the metrics collector.
+#
+# 180 s is calibrated for legacy WireGuard (RekeyAfterTime=120 s). With AmneziaWG
+# 3.1 long session timings (RekeyAfterTime=3000-4000 s) a healthy peer can go
+# 50-67 min between handshakes, which would mark it stale almost all the time.
+# When 3.1 timings are configured and the user did not pin the value explicitly,
+# derive the threshold from the rekey interval so the metric stays meaningful.
+_PEER_HANDSHAKE_TIMEOUT_USER_SET=false
+if [ -n "${PEER_HANDSHAKE_TIMEOUT:-}" ]; then
+    _PEER_HANDSHAKE_TIMEOUT_USER_SET=true
+fi
+: "${PEER_HANDSHAKE_TIMEOUT:=180}"
+
+if [ "$_PEER_HANDSHAKE_TIMEOUT_USER_SET" = "false" ] && { [ -n "${RekeyAfterTime:-}" ] || [ -n "${RejectAfterTime:-}" ]; }; then
+    _base="${RekeyAfterTime:-}"
+    [ -n "$_base" ] || _base="${RejectAfterTime:-0}"
+    _keepalive="${KeepaliveTimeout:-0}"
+    _rekey_timeout="${RekeyTimeout:-0}"
+    # One full rekey interval + one handshake attempt window + keepalive slack,
+    # so a peer stays "active" for its whole session instead of 3 minutes.
+    PEER_HANDSHAKE_TIMEOUT=$(( _base + _rekey_timeout + _keepalive + 60 ))
+    # Guard against pathological inputs; 2 h comfortably covers the 3.1 defaults.
+    if [ "$PEER_HANDSHAKE_TIMEOUT" -gt 7200 ]; then
+        PEER_HANDSHAKE_TIMEOUT=7200
+    fi
+fi
+unset _PEER_HANDSHAKE_TIMEOUT_USER_SET _base _keepalive _rekey_timeout
 
 # ===============================
 # Save original DNS server

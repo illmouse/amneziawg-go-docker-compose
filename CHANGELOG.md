@@ -4,6 +4,36 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [5.0.4] - 2026-10-02
+
+### Fixed
+
+- `wg_peers_active` / `wg_peers_stale` reported healthy long-lived peers as stale
+  under the 3.1 profile. Both metrics compare handshake age against
+  `PEER_HANDSHAKE_TIMEOUT`, which defaulted to 180 s — calibrated for legacy
+  WireGuard's 120 s `RekeyAfterTime`. With 3.1 timings (`RekeyAfterTime=3000-4000`)
+  a healthy peer goes 50-67 min between handshakes, so it was counted as stale
+  almost all the time. `PEER_HANDSHAKE_TIMEOUT` now auto-derives from the
+  configured 3.1 `RekeyAfterTime` (+ `RekeyTimeout` + `KeepaliveTimeout` +
+  60 s slack, capped at 7200 s) when the variable is not pinned explicitly;
+  the 180 s default is preserved when 3.1 timings are unset.
+- Client failover on transient ping failures. When the tunnel check failed, the
+  monitor judged the *current* peer by handshake age with a 40 s window
+  (`MON_CHECK_TIMEOUT * 4`), because a probe interface using the same key would
+  steal the session from `wg0`. Under 3.1 timings that window almost never
+  matched a healthy session, so a single transient ping failure failed the
+  current peer over to a backup peer (and back again, when `MASTER_PEER` was
+  set). The check now uses rx traffic growth — PersistentKeepalive packets keep
+  the rx counter moving roughly every 25 s for as long as the session works,
+  independent of handshake cadence. A backwards-moving counter (daemon restart
+  or peer switch) resets the baseline instead of being read as liveness.
+
+### Changed
+
+- `docs/architecture.md` referenced the peer-count metrics as
+  `wg_server_peers_total` / `wg_server_peers_active` / `wg_server_peers_stale`;
+  the actual metric names have no `server_` prefix. Corrected.
+
 ## [5.0.3] - 2026-09-28
 
 ### Fixed

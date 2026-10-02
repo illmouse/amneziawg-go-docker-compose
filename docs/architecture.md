@@ -114,7 +114,7 @@ Ports (expose in docker-compose.yaml if needed):
 
 Enabled with `METRICS_ENABLED=true`. Two background processes start:
 
-- `metrics/collector.sh` — polls `awg show all dump` every `METRICS_INTERVAL` seconds, writes Prometheus-format data to `/tmp/amneziawg/metrics.prom`. In server mode, peer-count metrics (`wg_server_peers_total`, `wg_server_peers_active`, `wg_server_peers_stale`) are computed inline inside the per-peer loop of that single `awg show all dump` call.
+- `metrics/collector.sh` — polls `awg show all dump` every `METRICS_INTERVAL` seconds, writes Prometheus-format data to `/tmp/amneziawg/metrics.prom`. In server mode, peer-count metrics (`wg_peers_total`, `wg_peers_active`, `wg_peers_stale`) are computed inline inside the per-peer loop of that single `awg show all dump` call.
 - `metrics/server.sh` — serves metrics on `METRICS_PORT` (default 9586) at `/metrics`
 
 Key metrics exposed:
@@ -122,6 +122,7 @@ Key metrics exposed:
 - `wg_peer_last_handshake_timestamp_seconds` — last handshake per peer
 - `wg_peer_handshake_age_seconds` — seconds since last handshake
 - `wg_peers_rx_active` / `wg_peers_rx_idle` — handshake-independent liveness (peers with/without received traffic since the last scrape; rx grows at least every ~25 s via PersistentKeepalive)
+- `wg_peers_active` / `wg_peers_stale` — handshake-based liveness within `PEER_HANDSHAKE_TIMEOUT`, which auto-scales to the 3.1 `RekeyAfterTime` so long sessions are not reported as stale between rekeys
 - Transfer bytes (rx/tx) per peer
 - Active peer and tunnel state (client mode)
 

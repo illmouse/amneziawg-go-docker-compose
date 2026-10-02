@@ -129,6 +129,17 @@ Server timing fix: the server's `wg0.conf` now also receives the 3.1 timing para
 
 To apply: recreate the server container (`docker compose pull && docker compose up -d`) — the config regenerates automatically. Peer config content is unchanged, but redistributing them is harmless. Old (vanilla-default) clients are unaffected: they keep their own rekey cadence.
 
+### Upgrading to v5.0.4
+
+Two 3.1 session-timing fixes. No config format change and no peer config regeneration — both ends can be upgraded independently.
+
+- `PEER_HANDSHAKE_TIMEOUT` now auto-scales to the configured 3.1 `RekeyAfterTime` (capped at 7200 s), so `wg_peers_active` / `wg_peers_stale` no longer report healthy long-lived peers as stale between rekeys. The legacy 180 s default is unchanged when 3.1 timings are not set. Set `PEER_HANDSHAKE_TIMEOUT` explicitly to pin the value.
+- The client monitor's "is the current peer still alive?" check now uses rx traffic growth instead of handshake age. Previously a transient ping failure against a healthy 3.1 session (whose last handshake could be 50-67 min old) caused a spurious failover to a backup peer.
+
+Alerting on handshake age still works, but `wg_peers_rx_active` / `wg_peers_rx_idle` remain the more precise liveness signal. If you already migrated your alerts to the rx-based metrics in v5.0.2, no action is needed.
+
+To apply: recreate the server and client containers (`docker compose pull && docker compose up -d`).
+
 ## Useful Commands
 
 ```bash

@@ -163,9 +163,9 @@ PROM
     cat >> "$tmp" <<'PROM'
 # HELP wg_peers_total Total number of configured peers
 # TYPE wg_peers_total gauge
-# HELP wg_peers_active Number of peers with a handshake within PEER_HANDSHAKE_TIMEOUT seconds (handshake-based; with long session timings use wg_peers_rx_active)
+# HELP wg_peers_active Number of peers with a handshake within PEER_HANDSHAKE_TIMEOUT seconds (handshake-based; the threshold auto-scales to the AmneziaWG 3.1 RekeyAfterTime when 3.1 timings are set, otherwise prefer wg_peers_rx_active)
 # TYPE wg_peers_active gauge
-# HELP wg_peers_stale Number of peers whose last handshake exceeds PEER_HANDSHAKE_TIMEOUT or never connected (handshake-based; with long session timings use wg_peers_rx_idle)
+# HELP wg_peers_stale Number of peers whose last handshake exceeds PEER_HANDSHAKE_TIMEOUT or never connected (handshake-based; the threshold auto-scales to the AmneziaWG 3.1 RekeyAfterTime when 3.1 timings are set, otherwise prefer wg_peers_rx_idle)
 # TYPE wg_peers_stale gauge
 # HELP wg_peers_rx_active Number of peers with received traffic since the last metrics scrape (liveness not based on handshakes; requires PersistentKeepalive)
 # TYPE wg_peers_rx_active gauge
