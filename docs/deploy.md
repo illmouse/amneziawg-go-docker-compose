@@ -151,6 +151,14 @@ Monitoring fixes for AmneziaWG 3.1 long session timings. No config format change
 
 To apply: recreate the containers (`docker compose pull && docker compose up -d`), re-import `prometheus/wireguard_dashboard.json` and reload the `prometheus/wireguard_alerts.yaml` rules in Prometheus if you use the bundled files.
 
+### Upgrading to v5.0.6
+
+Client-mode fix for the peer staleness metrics. No config format change and no peer config regeneration — upgrade each end independently.
+
+- In client mode `wg_peers_active` / `wg_peers_stale` still used the fixed 180 s threshold after v5.0.5: the 3.1 timing params are empty in the client's `.env` by design (they are a server-wizard artifact), so the auto-scaling had no inputs. The threshold is now also derived from the active session config (`/etc/amneziawg/wg0.conf`), where the timings actually live in client mode. Precedence: explicit `PEER_HANDSHAKE_TIMEOUT` > `.env` timing vars > session config > 180 s.
+
+To apply: recreate the client containers (`docker compose pull && docker compose up -d`). Verify with `. /entrypoint/lib/env.sh; echo $PEER_HANDSHAKE_TIMEOUT` — with 3.1 timings it should exceed 180 (e.g. ~4000 for the wizard's `RekeyAfterTime=3000-4000`), after which `wg_peers_active` reports healthy long-lived sessions correctly.
+
 ## Useful Commands
 
 ```bash

@@ -124,6 +124,14 @@ declare -A PROTOCOL_MAP=(
 # 3.1 timing values may be ranges ("3000-4000") as produced by the setup wizard.
 # Take the upper bound of each range so the threshold covers the worst case;
 # bash arithmetic would otherwise read "3000-4000" as 3000 minus 4000 = -1000.
+#
+# Timing inputs come from environment variables first. In client mode the .env
+# never carries them (they are a server-wizard artifact): the timings live in
+# the server-generated peer config, i.e. the active session config
+# $WG_DIR/$WG_CONF_FILE. Fall back to that file per-param when the env var is
+# empty. Precedence: user pin > .env var > session conf > default 180.
+# The conf may not exist yet during early entrypoint stages — the fallback is
+# simply a no-op then (sed finds nothing, threshold stays 180).
 _awg31_range_max() {  # $1 = value or "min-max" range; prints 0 for garbage/empty
     case "$1" in
         [0-9]*) ;;
@@ -138,6 +146,15 @@ _awg31_range_max() {  # $1 = value or "min-max" range; prints 0 for garbage/empt
     fi
 }
 
+# Print the value of a 3.1 timing param from the active session config.
+# Always returns 0 so it is safe in command substitution under set -eu;
+# prints an empty string when the file is missing or the param is absent.
+_awg31_conf_param() {  # $1 = param name (literal, no regex metachars)
+    local _conf="${WG_DIR}/${WG_CONF_FILE}"
+    [ -f "$_conf" ] || return 0
+    sed -n "s/^[[:space:]]*$1[[:space:]]*=[[:space:]]*//p" "$_conf" | head -n 1
+}
+
 _PEER_HANDSHAKE_TIMEOUT_USER_SET=false
 if [ -n "${PEER_HANDSHAKE_TIMEOUT:-}" ]; then
     _PEER_HANDSHAKE_TIMEOUT_USER_SET=true
@@ -145,14 +162,26 @@ fi
 : "${PEER_HANDSHAKE_TIMEOUT:=180}"
 
 if [ "$_PEER_HANDSHAKE_TIMEOUT_USER_SET" = "false" ]; then
-    _base=$(_awg31_range_max "${RekeyAfterTime:-}")
+    # Collect timing inputs: .env vars first, session conf as per-param fallback.
+    _rekey_after="${RekeyAfterTime:-}"
+    [ -n "$_rekey_after" ] || _rekey_after=$(_awg31_conf_param RekeyAfterTime)
+    _reject_after="${RejectAfterTime:-}"
+    [ -n "$_reject_after" ] || _reject_after=$(_awg31_conf_param RejectAfterTime)
+    _attempts_raw="${MaxHandshakeAttempts:-}"
+    [ -n "$_attempts_raw" ] || _attempts_raw=$(_awg31_conf_param MaxHandshakeAttempts)
+    _rekey_timeout_raw="${RekeyTimeout:-}"
+    [ -n "$_rekey_timeout_raw" ] || _rekey_timeout_raw=$(_awg31_conf_param RekeyTimeout)
+    _keepalive_raw="${KeepaliveTimeout:-}"
+    [ -n "$_keepalive_raw" ] || _keepalive_raw=$(_awg31_conf_param KeepaliveTimeout)
+
+    _base=$(_awg31_range_max "$_rekey_after")
     if [ "$_base" -eq 0 ]; then
-        _base=$(_awg31_range_max "${RejectAfterTime:-}")
+        _base=$(_awg31_range_max "$_reject_after")
     fi
     if [ "$_base" -gt 0 ]; then
-        _attempts=$(_awg31_range_max "${MaxHandshakeAttempts:-}")
-        _rekey_timeout=$(_awg31_range_max "${RekeyTimeout:-}")
-        _keepalive=$(_awg31_range_max "${KeepaliveTimeout:-}")
+        _attempts=$(_awg31_range_max "$_attempts_raw")
+        _rekey_timeout=$(_awg31_range_max "$_rekey_timeout_raw")
+        _keepalive=$(_awg31_range_max "$_keepalive_raw")
         # One full rekey interval + the retry window (MaxHandshakeAttempts ×
         # RekeyTimeout) + keepalive slack + 60 s buffer, so a peer stays
         # "active" for its whole session instead of 3 minutes.
@@ -166,7 +195,8 @@ if [ "$_PEER_HANDSHAKE_TIMEOUT_USER_SET" = "false" ]; then
         fi
     fi
 fi
-unset _PEER_HANDSHAKE_TIMEOUT_USER_SET _base _attempts _rekey_timeout _keepalive
+unset _PEER_HANDSHAKE_TIMEOUT_USER_SET _base _attempts _rekey_timeout _keepalive \
+      _rekey_after _reject_after _attempts_raw _rekey_timeout_raw _keepalive_raw
 
 # ===============================
 # Save original DNS server

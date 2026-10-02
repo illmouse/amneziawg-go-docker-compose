@@ -152,7 +152,7 @@ Range values (`a-b`) are randomized by the daemon per packet/interval. After ena
 
 Generated S values stay within **12-20**, so packets never exceed a 1500-byte path MTU (a worst-case data packet is `1480 + S4` bytes outer). For constrained paths (PPPoE, IPv6 outer, nested tunnels) use the optional `WG_MTU` variable to lower the tunnel MTU.
 
-Wizard timings produce long sessions: rekey at 50-67 min, session cap ~2.5-2.8 h — handshakes are rare and randomized, so handshake-age is a coarse liveness signal; the peer staleness threshold (`PEER_HANDSHAKE_TIMEOUT`) auto-scales to the rekey interval so `wg_peers_active` / `wg_peers_stale` stay meaningful, and the rx-activity metrics (`wg_peers_rx_active` / `wg_peers_rx_idle`) give the most precise signal. Timing params are written to the server config as well as peer configs — the effective session lifetime is the minimum of both ends' `RejectAfterTime`.
+Wizard timings produce long sessions: rekey at 50-67 min, session cap ~2.5-2.8 h — handshakes are rare and randomized, so handshake-age is a coarse liveness signal; the peer staleness threshold (`PEER_HANDSHAKE_TIMEOUT`) auto-scales to the rekey interval (in client mode it is derived from the active session config, since the client's `.env` carries no timing vars) so `wg_peers_active` / `wg_peers_stale` stay meaningful, and the rx-activity metrics (`wg_peers_rx_active` / `wg_peers_rx_idle`) give the most precise signal. Timing params are written to the server config as well as peer configs — the effective session lifetime is the minimum of both ends' `RejectAfterTime`.
 
 # Internal Monitoring
 
@@ -264,4 +264,4 @@ Import the dashboard via Grafana → Dashboards → Import. Uncomment the metric
 | METRICS_ENABLED | `true`, `false` | `false` | Enable Prometheus metrics endpoint |
 | METRICS_PORT | 1–65535 | `9586` | Port to expose the `/metrics` endpoint on |
 | METRICS_INTERVAL | integer ≥ 1 | `15` | Seconds between metrics collection runs |
-| PEER_HANDSHAKE_TIMEOUT | integer ≥ 1 | `180` (auto-scaled with 3.1, max `7200`) | Seconds since last handshake before a peer is considered disconnected (server mode); auto-derived from the 3.1 `RekeyAfterTime` when set and not pinned explicitly. For the most precise liveness prefer rx-activity metrics (wg_peers_rx_active / wg_peers_rx_idle) |
+| PEER_HANDSHAKE_TIMEOUT | integer ≥ 1 | `180` (auto-scaled with 3.1, max `7200`) | Seconds since last handshake before a peer is considered disconnected (server mode); auto-derived from the 3.1 `RekeyAfterTime` when set and not pinned explicitly — in client mode the timings are read from the active session config, since the `.env` timing vars are empty there by design. For the most precise liveness prefer rx-activity metrics (wg_peers_rx_active / wg_peers_rx_idle) |

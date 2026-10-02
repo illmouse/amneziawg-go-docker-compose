@@ -4,6 +4,21 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [5.0.6] - 2026-10-02
+
+### Fixed
+
+- Client-mode `wg_peers_active` / `wg_peers_stale` still counted a healthy peer
+  as stale after v5.0.5: in client mode the 3.1 timing params never live in
+  `.env` (they are a server-wizard artifact) — they live in the active session
+  config built from the server-generated peer config. The auto-scaling only
+  read `.env`, so the threshold stayed at 180 s while real handshakes occur
+  every ~50-67 min. The threshold is now also derived from the active session
+  config (`/etc/amneziawg/wg0.conf`) when the env vars are absent.
+  Precedence: explicit `PEER_HANDSHAKE_TIMEOUT` > `.env` timing vars >
+  session config > 180 s default. Server mode is unaffected (its `.env`
+  carries the timings and its config is regenerated from them).
+
 ## [5.0.5] - 2026-10-02
 
 ### Fixed
