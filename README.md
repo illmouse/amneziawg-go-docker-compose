@@ -158,7 +158,7 @@ Wizard timings produce long sessions: rekey at 50-67 min, session cap ~2.5-2.8 h
 
 Monitoring logs are saved in `logs/amneziawg.log`.
 
-The monitoring script checks tunnel availability via ping to `MON_CHECK_IP` (default `9.9.9.9`).
+The monitoring script checks tunnel availability by pinging the `MON_CHECK_IP` target list (default `1.1.1.1,9.9.9.9,8.8.8.8`) — the tunnel counts as healthy when any target answers, so a single dead or rate-limiting target cannot fail a healthy tunnel.
 
 * In **server mode**, health checks run on a fixed interval without peer switching. If the `amneziawg-go` daemon dies (e.g. OOM kill), the monitor revives it **in place** — continuously retrying, never restarting the container.
 * In **client mode**, smart probe-based failover is used (see below), with the same in-place daemon revival.
@@ -256,10 +256,11 @@ Import the dashboard via Grafana → Dashboards → Import. Uncomment the metric
 | PROXY_HTTP_AUTH_PASSWORD | `string`  | `` | Password for HTTP proxy |
 | PROXY_CUSTOM_CONFIG | `true`, `false` | `false` | Disables managed config for 3proxy. You can mount your own config to /etc/3proxy/3proxy.cfg |
 | LOG_LEVEL | `ERROR`, `INFO`, `WARN`, `DEBUG` | `INFO` | Logging verbosity level |
-| MON_CHECK_IP | any valid IP | `9.9.9.9` | IP address used for tunnel health check pings |
+| MON_CHECK_IP | comma-separated IP list | `1.1.1.1,9.9.9.9,8.8.8.8` | Ping targets for tunnel health checks, tried in order; the check passes when any target answers |
 | MON_CHECK_INTERVAL | integer ≥ 1 | `10` | Interval in seconds between monitoring checks |
 | MON_CHECK_TIMEOUT | integer ≥ 1 | `10` | Timeout in seconds for health check pings and peer handshake probes |
-| MON_PING_COUNT | integer ≥ 1 | `3` | Number of ping packets sent per health check. The check passes if any packet gets a response (client mode) |
+| MON_PING_COUNT | integer ≥ 1 | `3` | Ping packets sent to the first (primary) health-check target. The check passes if any packet gets a response (client mode) |
+| MON_FALLBACK_PING_COUNT | integer ≥ 1 | `1` | Ping packets sent to health-check targets after the first; keeps the worst-case dead-tunnel check fast |
 | MON_FAIL_THRESHOLD | integer ≥ 1 | `3` | Client mode: consecutive failed health checks before peer probing/failover starts (debounce against transient blips). Bypassed immediately when the current peer's rx counter shows a dead session. `1` = switch on first failure (pre-5.0.7 behavior) |
 | MON_SWITCHBACK_DELAY | integer ≥ 0 | `60` | Client mode: minimum seconds on a backup peer before the master is probed for switchback. Prevents failover/switchback flap loops when the master answers handshakes but cannot carry traffic. `0` = probe as soon as the tunnel is healthy |
 | LOGROTATE_INTERVAL | integer ≥ 1 | `86400` | Seconds between log rotation runs inside the container (default: 24 h) |

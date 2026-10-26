@@ -77,10 +77,11 @@ Invalid values (bad base64/key length, S1–S4 < 12 with HeaderProtectionKey, ma
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `MON_CHECK_IP` | `9.9.9.9` | IP pinged through tunnel to verify health |
+| `MON_CHECK_IP` | `1.1.1.1,9.9.9.9,8.8.8.8` | Comma-separated ping targets, tried in order through the tunnel. The check passes when **any** target answers, so one dead or rate-limiting target cannot fail a healthy tunnel. Used by health checks and probe data-path verification |
 | `MON_CHECK_INTERVAL` | `10` | Seconds between health checks |
 | `MON_CHECK_TIMEOUT` | `10` | Ping timeout (seconds) |
-| `MON_PING_COUNT` | `3` | Number of ping packets sent per health check. The check passes if any packet gets a response (client mode) |
+| `MON_PING_COUNT` | `3` | Ping packets sent to the first (primary) health-check target. The check passes if any packet gets a response (client mode) |
+| `MON_FALLBACK_PING_COUNT` | `1` | Ping packets sent to health-check targets after the first. A low value keeps the worst-case dead-tunnel check fast while anycast targets are single-ping reliable |
 | `MON_FAIL_THRESHOLD` | `3` | Client mode: consecutive failed health checks before peer probing/failover starts (debounce against transient blips). Bypassed immediately when the current peer's rx counter shows a dead session. `1` = switch on first failure (pre-5.0.7 behavior) |
 | `MON_SWITCHBACK_DELAY` | `60` | Client mode: minimum seconds on a backup peer before the master is probed for switchback. Prevents failover/switchback flap loops when the master answers handshakes but cannot carry traffic. `0` = probe as soon as the tunnel is healthy |
 

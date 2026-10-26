@@ -6,10 +6,16 @@ set -eu
 . /entrypoint/lib/functions.sh
 . /entrypoint/lib/config_parser.sh
 
-# Client-specific health check
+# Client-specific health check. $1 = comma-separated ping target list,
+# $2 = per-reply ping timeout. The tunnel is healthy when ANY target
+# answers: targets are tried in order, the first (primary) getting
+# MON_PING_COUNT pings and every fallback MON_FALLBACK_PING_COUNT — so
+# a single dead or rate-limiting target cannot fail a healthy tunnel,
+# while a genuinely dead tunnel is still detected quickly.
 check_tunnel_health() {
-    local test_target="$1"
+    local targets="$1"
     local timeout="$2"
+    local target ping_count attempt=0
 
     if ! is_wg_interface_up; then
         return 1
@@ -19,13 +25,23 @@ check_tunnel_health() {
         return 1
     fi
 
-    if ping -c "$MON_PING_COUNT" -W "$timeout" -I "$WG_IFACE" "$test_target" >/dev/null 2>&1; then
-        debug "Tunnel health check passed: $test_target"
-        return 0
-    else
-        error "Tunnel health check failed: $test_target"
-        return 1
-    fi
+    for target in $(echo "$targets" | tr ',' ' '); do
+        [ -n "$target" ] || continue
+        if [ "$attempt" -eq 0 ]; then
+            ping_count="$MON_PING_COUNT"
+        else
+            ping_count="$MON_FALLBACK_PING_COUNT"
+        fi
+        if ping -c "$ping_count" -W "$timeout" -I "$WG_IFACE" "$target" >/dev/null 2>&1; then
+            debug "Tunnel health check passed: $target"
+            return 0
+        fi
+        debug "Tunnel health check ping failed: $target"
+        attempt=$(( attempt + 1 ))
+    done
+
+    error "Tunnel health check failed: no target answered ($targets)"
+    return 1
 }
 
 # Aggregate rx byte counter across all peers of the main interface.
@@ -123,23 +139,33 @@ probe_peer_tunnel() {
 
     # Data-path verification: a handshake alone does not prove traffic can
     # flow (a server with dead forwarding still answers handshakes). Route
-    # the health-check target through the probe interface and ping it: only
-    # a successful round-trip passes the probe. If the check target itself
-    # is unreachable, all probes fail and the monitor stays on the current
-    # peer — the correct anti-false-positive behavior.
+    # every health-check target through the probe interface and rotate
+    # until one answers — same any-target semantics as the health check,
+    # so a single dead check target cannot block failover or switchback.
+    # Added routes die with the probe interface in the cleanup below. If
+    # no target answers at all, the probe fails and the monitor stays on
+    # the current peer — the correct anti-false-positive behavior.
     if [ "$hs_ok" = "true" ]; then
-        local data_route_added=false
-        if ip route add "$MON_CHECK_IP/32" dev "$probe_iface" 2>/dev/null; then
-            data_route_added=true
-        fi
-        if ping -c "$MON_PING_COUNT" -W "$MON_CHECK_TIMEOUT" -I "$probe_iface" "$MON_CHECK_IP" >/dev/null 2>&1; then
-            info "Probe data-path check succeeded: $(basename "$peer_config")"
+        local target ping_count attempt=0 data_ok=false
+        for target in $(echo "$MON_CHECK_IP" | tr ',' ' '); do
+            [ -n "$target" ] || continue
+            ip route add "$target/32" dev "$probe_iface" 2>/dev/null || true
+            if [ "$attempt" -eq 0 ]; then
+                ping_count="$MON_PING_COUNT"
+            else
+                ping_count="$MON_FALLBACK_PING_COUNT"
+            fi
+            if ping -c "$ping_count" -W "$MON_CHECK_TIMEOUT" -I "$probe_iface" "$target" >/dev/null 2>&1; then
+                info "Probe data-path check succeeded: $(basename "$peer_config") (via $target)"
+                data_ok=true
+                break
+            fi
+            attempt=$(( attempt + 1 ))
+        done
+        if [ "$data_ok" = "true" ]; then
             result=0
         else
-            warn "Probe data-path check failed: $(basename "$peer_config") (handshake ok, no traffic flow)"
-        fi
-        if [ "$data_route_added" = "true" ]; then
-            ip route del "$MON_CHECK_IP/32" dev "$probe_iface" 2>/dev/null || true
+            warn "Probe data-path check failed: $(basename "$peer_config") (handshake ok, no traffic flow to any target)"
         fi
     fi
 

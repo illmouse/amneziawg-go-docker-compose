@@ -93,10 +93,20 @@ declare -A PROTOCOL_MAP=(
 # ===============================
 # Monitoring
 # ===============================
-: "${MON_CHECK_IP:=9.9.9.9}"
+# Health-check ping targets: comma-separated list, tried in order. The
+# tunnel counts as healthy when ANY target answers (first success wins),
+# so a single dead or rate-limiting target cannot fail a healthy tunnel.
+# The same rotation is used by the client probe data-path verification,
+# so one dead target cannot block failover/switchback either.
+: "${MON_CHECK_IP:=1.1.1.1,9.9.9.9,8.8.8.8}"
 : "${MON_CHECK_INTERVAL:=10}"
 : "${MON_CHECK_TIMEOUT:=10}"
 : "${MON_PING_COUNT:=3}"
+# Ping packets sent to health-check targets after the first (primary)
+# one. 1 keeps the worst-case dead-tunnel check fast (~50 s with the
+# default list) while anycast targets are single-ping reliable; raise it
+# for lossier links.
+: "${MON_FALLBACK_PING_COUNT:=1}"
 # Client failover debounce: consecutive failed health checks required before
 # peer probing/failover starts (client mode). Bypassed immediately when the
 # current peer's rx counter shows a dead session. Set to 1 to restore the
@@ -109,6 +119,7 @@ declare -A PROTOCOL_MAP=(
 # Guard against non-numeric values breaking integer comparisons in the monitor
 case "$MON_FAIL_THRESHOLD" in '' | *[!0-9]*) MON_FAIL_THRESHOLD=3 ;; esac
 case "$MON_SWITCHBACK_DELAY" in '' | *[!0-9]*) MON_SWITCHBACK_DELAY=60 ;; esac
+case "$MON_FALLBACK_PING_COUNT" in '' | *[!0-9]*) MON_FALLBACK_PING_COUNT=1 ;; esac
 
 # ===============================
 # Log rotation
@@ -225,7 +236,7 @@ export WG_MODE WG_IFACE WG_ADDRESS WG_PORT WG_ENDPOINT WG_PEER_COUNT WG_MTU
 export PROXY_SOCKS5_ENABLED PROXY_HTTP_ENABLED PROXY_HTTP_PORT PROXY_SOCKS5_PORT PROXY_LOG_DIR PROXY_CONF_DIR PROXY_SOCKS5_AUTH_ENABLED PROXY_SOCKS5_AUTH_USER PROXY_SOCKS5_AUTH_PASSWORD PROXY_HTTP_AUTH_ENABLED PROXY_HTTP_AUTH_USER PROXY_HTTP_AUTH_PASSWORD PROXY_CUSTOM_CONFIG
 export Jc Jmin Jmax S1 S2 S3 S4 H1 H2 H3 H4 UDP_SIGNATURE
 export HeaderProtectionKey ContentPaddingAddition RekeyAfterTime RekeyTimeout RejectAfterTime KeepaliveTimeout MaxHandshakeAttempts RandomTrailers DisableCookies
-export MON_CHECK_IP MON_CHECK_INTERVAL MON_CHECK_TIMEOUT MON_PING_COUNT MON_FAIL_THRESHOLD MON_SWITCHBACK_DELAY PROTOCOL_MAP
+export MON_CHECK_IP MON_CHECK_INTERVAL MON_CHECK_TIMEOUT MON_PING_COUNT MON_FALLBACK_PING_COUNT MON_FAIL_THRESHOLD MON_SWITCHBACK_DELAY PROTOCOL_MAP
 export LOGROTATE_INTERVAL LOGROTATE_ROTATE LOGROTATE_MAXAGE
 export METRICS_ENABLED METRICS_PORT METRICS_INTERVAL PEER_HANDSHAKE_TIMEOUT
 export ORIGINAL_DNS

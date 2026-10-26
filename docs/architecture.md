@@ -68,7 +68,7 @@ Entrypoint flow:
 
 1. The monitor counts consecutive failed checks. Peer probing starts only after `MON_FAIL_THRESHOLD` (default 3) failures — a debounce against transient ping blips.
 2. The debounce is bypassed immediately when the current peer's rx counter shows a dead session (no received traffic since the streak began — keepalives deliver rx at least every ~25 s on a live session), so a genuinely dead tunnel fails over without extra delay.
-3. Each candidate peer (the current peer excluded) is probed via a temporary `awg-probe-$$` interface: full WireGuard handshake, **then a data-path ping** to `MON_CHECK_IP` through the probe interface. A handshake alone does not prove traffic can flow — a server with broken forwarding still answers handshakes.
+3. Each candidate peer (the current peer excluded) is probed via a temporary `awg-probe-$$` interface: full WireGuard handshake, **then a data-path ping** to the `MON_CHECK_IP` targets through the probe interface, rotated until any target answers (a single dead target cannot block a failover or switchback). A handshake alone does not prove traffic can flow — a server with broken forwarding still answers handshakes.
 4. The first peer whose probe passes is switched to. If none pass, the current tunnel health check is re-run; the loop repeats after `MON_CHECK_INTERVAL` seconds.
 
 **Switchback to master (`MASTER_PEER` set):**

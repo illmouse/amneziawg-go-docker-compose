@@ -4,6 +4,29 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [5.0.8b] - 2026-10-26
+
+### Fixed
+
+- Client-mode health checks depended on a single ping target
+  (`MON_CHECK_IP`, default `9.9.9.9`). When that one third-party address
+  stopped answering ICMP — rate limiting, filtering, a dead anycast node —
+  a perfectly healthy tunnel was marked down and pushed into failover; and
+  under 5.0.7b probe semantics a dead check target would also have blocked
+  every failover and switchback, since probe data-path verification pings
+  the same address. `MON_CHECK_IP` now accepts a comma-separated list
+  (default `1.1.1.1,9.9.9.9,8.8.8.8`) checked in order, both by the health
+  check and by the probe data-path verification: the tunnel counts as
+  healthy when ANY target answers, so one misbehaving target can no longer
+  trigger (or block) a failover.
+
+### Added
+
+- `MON_FALLBACK_PING_COUNT` (default `1`): ping packets sent to
+  health-check targets after the first. The primary target keeps the full
+  `MON_PING_COUNT`, so the worst-case dead-tunnel check stays fast (~50 s
+  with the default list) instead of growing with the list length.
+
 ## [5.0.7b] - 2026-10-09
 
 ### Fixed
