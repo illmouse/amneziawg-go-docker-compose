@@ -81,6 +81,8 @@ Invalid values (bad base64/key length, S1–S4 < 12 with HeaderProtectionKey, ma
 | `MON_CHECK_INTERVAL` | `10` | Seconds between health checks |
 | `MON_CHECK_TIMEOUT` | `10` | Ping timeout (seconds) |
 | `MON_PING_COUNT` | `3` | Number of ping packets sent per health check. The check passes if any packet gets a response (client mode) |
+| `MON_FAIL_THRESHOLD` | `3` | Client mode: consecutive failed health checks before peer probing/failover starts (debounce against transient blips). Bypassed immediately when the current peer's rx counter shows a dead session. `1` = switch on first failure (pre-5.0.7 behavior) |
+| `MON_SWITCHBACK_DELAY` | `60` | Client mode: minimum seconds on a backup peer before the master is probed for switchback. Prevents failover/switchback flap loops when the master answers handshakes but cannot carry traffic. `0` = probe as soon as the tunnel is healthy |
 
 ### Prometheus Metrics
 

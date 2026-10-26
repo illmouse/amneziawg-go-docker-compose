@@ -4,6 +4,50 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [5.0.7b] - 2026-10-09
+
+### Fixed
+
+- Client-mode failover triggered on a single transient ping failure. Each
+  failed health check immediately started peer probing, and since a backup
+  peer's probe usually succeeds within a couple of seconds, a brief blip on
+  the path to `MON_CHECK_IP` caused a full tunnel rebuild plus a 3proxy
+  restart, dropping all client connections. The monitor now requires
+  `MON_FAIL_THRESHOLD` (default 3) consecutive failed checks before probing
+  peers. The debounce is bypassed immediately when the current peer's rx
+  counter shows a dead session (no received traffic since the streak began),
+  so genuinely dead tunnels still fail over without extra delay.
+- Master-peer switchback relied on a handshake-only probe, which a server
+  with broken forwarding still passes — producing failover/switchback flap
+  loops (~30 s cycle in the wild): switch back to master, ping fails, fail
+  over again. All probes (failover and switchback) now verify the **data
+  path**: after a successful handshake the probe pings `MON_CHECK_IP`
+  through the temporary probe interface; only a successful round-trip
+  passes. A failed switchback probe keeps the tunnel on the backup.
+- Switchback was attempted on every monitor iteration (10 s) with no
+  hysteresis. `MON_SWITCHBACK_DELAY` (default 60 s) now enforces a minimum
+  dwell on the backup peer before the master is probed for switchback; a
+  failed master probe extends the dwell, a successful switchback clears it.
+- Peer identification after a failover could pick the wrong peer template:
+  the matcher resolved endpoint hostnames through the (possibly down)
+  tunnel, and with peers sharing the same tunnel IP the IP-only fallback
+  was ambiguous. The active peer is now identified by comparing the
+  `Endpoint` of the built session config (`/etc/amneziawg/wg0.conf`)
+  against the peer templates — literal string match, no DNS. IP+endpoint
+  and IP-only matching remain as fallbacks.
+- The current peer was part of the failover probe rotation, so its
+  rx-liveness defense (v5.0.4) ran last — backups probed first and usually
+  succeeded, making the defense dead code. The current peer is now excluded
+  from probing (a probe interface with the same key would steal the wg0
+  session); its liveness is judged by the rx-based fail-streak logic in the
+  main loop instead.
+
+### Changed
+
+- `MON_FAIL_THRESHOLD=1` and `MON_SWITCHBACK_DELAY=0` restore the previous
+  (5.0.6) switch-on-first-failure, probe-on-every-iteration behavior for
+  users who need it.
+
 ## [5.0.6] - 2026-10-02
 
 ### Fixed

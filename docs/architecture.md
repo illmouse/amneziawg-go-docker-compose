@@ -62,13 +62,22 @@ Entrypoint flow:
 
 #### Smart switchover
 
-`client/monitor.sh` continuously probes tunnel health via ICMP ping through the `WG_IFACE` interface. On failure it:
+`client/monitor.sh` continuously probes tunnel health via ICMP ping through the `WG_IFACE` interface. It does not switch peers on a single failed check — that caused false failovers on transient blips and flap loops between a master that answers handshakes but cannot carry traffic.
 
-- Probes each peer config in `config/client_peers/` using a temporary `awg-probe-$$` interface (full WireGuard handshake test, no traffic through main tunnel).
-- Switches to first available peer.
-- If `MASTER_PEER` is set, switches back to the master peer as soon as it recovers.
+**Failover (health check fails):**
+
+1. The monitor counts consecutive failed checks. Peer probing starts only after `MON_FAIL_THRESHOLD` (default 3) failures — a debounce against transient ping blips.
+2. The debounce is bypassed immediately when the current peer's rx counter shows a dead session (no received traffic since the streak began — keepalives deliver rx at least every ~25 s on a live session), so a genuinely dead tunnel fails over without extra delay.
+3. Each candidate peer (the current peer excluded) is probed via a temporary `awg-probe-$$` interface: full WireGuard handshake, **then a data-path ping** to `MON_CHECK_IP` through the probe interface. A handshake alone does not prove traffic can flow — a server with broken forwarding still answers handshakes.
+4. The first peer whose probe passes is switched to. If none pass, the current tunnel health check is re-run; the loop repeats after `MON_CHECK_INTERVAL` seconds.
+
+**Switchback to master (`MASTER_PEER` set):**
+
+While on a backup peer and the tunnel is healthy, the master is probed (same handshake + data-path check) before every switchback — but no earlier than `MON_SWITCHBACK_DELAY` seconds (default 60) after the failover. The dwell prevents a master that passes quick probes but cannot sustain traffic from dragging the tunnel into a failover/switchback flap loop. A failed master probe extends the dwell; a successful switchback clears it.
 
 Probe interval: `MON_CHECK_INTERVAL` (default 10 s).
+
+The active peer is identified by matching the `Endpoint` of the built session config (`$WG_DIR/$WG_IFACE.conf`) against the peer templates — no DNS resolution (which would go through the possibly-down tunnel and is ambiguous when peers share the same tunnel IP). IP/endpoint and IP-only matching remain as fallbacks.
 
 Before the health check, the monitor verifies the `amneziawg-go` daemon itself is alive (PID file + UAPI socket). If the daemon crashed (OOM kill, stale socket), it is revived in place with `revive_wg_iface()` and the active peer config is re-applied — same continuous-retry semantics as server mode, no container restart.
 

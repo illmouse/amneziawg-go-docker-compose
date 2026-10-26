@@ -42,46 +42,27 @@ current_peer_rx() {
         | awk -F'\t' '{rx += $2} END {print rx + 0}'
 }
 
-# Refresh the rx baseline used by current_peer_rx_advanced. Called once per
-# monitor iteration so the comparison below always spans a single interval.
+# Refresh the rx baseline snapshot. Called once per monitor iteration BEFORE
+# the health check runs: when a check fails and starts a fail streak, this
+# value becomes the streak baseline, and any rx growth past it proves the
+# session still receives server traffic. Liveness cannot be derived from
+# handshake age: with AmneziaWG 3.1 long session timings
+# (RekeyAfterTime=3000-4000 s) a healthy session goes 50-67 min between
+# handshakes, while PersistentKeepalive packets keep rx growing roughly
+# every 25 s for as long as the session actually carries traffic.
 # Baseline persistence is best-effort: a failed write must never kill the
 # monitor, it only costs one liveness comparison.
 refresh_peer_rx_baseline() {
     current_peer_rx > "${TMP_DIR}/monitor-peer-rx.state" 2>/dev/null || true
 }
 
-# True when the current peer received traffic since the baseline was recorded,
-# then stores the new counter as the baseline for the next call.
-#
-# Liveness cannot be derived from handshake age here: with AmneziaWG 3.1 long
-# session timings (RekeyAfterTime=3000-4000 s) a healthy session goes 50-67 min
-# between handshakes, so a recent handshake says nothing about whether the
-# peer is still reachable. PersistentKeepalive packets instead keep rx growing
-# roughly every 25 s for as long as the session actually carries traffic.
-#
-# A baseline that is older than the current interval is fine — rx grows
-# monotonically, so a counter from hours ago still answers "was this peer
-# alive?". The baseline is reset when rx goes backwards (daemon restart or a
-# peer switch zeroes the counters) so a fresh session is never mistaken for a
-# live one.
-current_peer_rx_advanced() {
-    local rx prev_rx
-    rx=$(current_peer_rx)
-    prev_rx=$(cat "${TMP_DIR}/monitor-peer-rx.state" 2>/dev/null || echo "")
-    case "$prev_rx" in
-        '' | *[!0-9]*) prev_rx="" ;;
-    esac
-    echo "$rx" > "${TMP_DIR}/monitor-peer-rx.state" 2>/dev/null || true
-
-    if [ -n "$prev_rx" ] && [ "$rx" -gt "$prev_rx" ]; then
-        return 0
-    fi
-    return 1
-}
-
-# Probe a peer by spinning up a temporary awg interface and waiting for a WireGuard handshake.
-# A successful handshake proves the server is reachable, WireGuard is running, and keys are valid.
-# The probe interface is always torn down on exit.
+# Probe a peer by spinning up a temporary awg interface, waiting for a
+# WireGuard handshake and then verifying the data path through the probe
+# interface. A successful handshake proves the server is reachable and keys
+# are valid; the data-path ping proves packets actually flow through the
+# tunnel (a handshake-only probe passes servers with broken forwarding,
+# which caused switchback flapping). The probe interface is always torn
+# down on exit.
 probe_peer_tunnel() {
     local peer_config="$1"
     local probe_iface="awg-probe-$$"
@@ -126,6 +107,7 @@ probe_peer_tunnel() {
     ping -c 1 -W 1 -q 169.254.1.1 >/dev/null 2>&1 || true
 
     # Poll for a successful handshake (proves server is live and keys match)
+    local hs_ok=false
     local deadline
     deadline=$(( $(date +%s) + MON_CHECK_TIMEOUT ))
     while [ "$(date +%s)" -lt "$deadline" ]; do
@@ -133,14 +115,36 @@ probe_peer_tunnel() {
         hs_ts=$(awg show "$probe_iface" latest-handshakes 2>/dev/null | awk '{print $2}')
         if [ -n "$hs_ts" ] && [ "$hs_ts" -gt 0 ]; then
             info "Probe handshake succeeded: $(basename "$peer_config")"
-            result=0
+            hs_ok=true
             break
         fi
         sleep 1
     done
 
+    # Data-path verification: a handshake alone does not prove traffic can
+    # flow (a server with dead forwarding still answers handshakes). Route
+    # the health-check target through the probe interface and ping it: only
+    # a successful round-trip passes the probe. If the check target itself
+    # is unreachable, all probes fail and the monitor stays on the current
+    # peer — the correct anti-false-positive behavior.
+    if [ "$hs_ok" = "true" ]; then
+        local data_route_added=false
+        if ip route add "$MON_CHECK_IP/32" dev "$probe_iface" 2>/dev/null; then
+            data_route_added=true
+        fi
+        if ping -c "$MON_PING_COUNT" -W "$MON_CHECK_TIMEOUT" -I "$probe_iface" "$MON_CHECK_IP" >/dev/null 2>&1; then
+            info "Probe data-path check succeeded: $(basename "$peer_config")"
+            result=0
+        else
+            warn "Probe data-path check failed: $(basename "$peer_config") (handshake ok, no traffic flow)"
+        fi
+        if [ "$data_route_added" = "true" ]; then
+            ip route del "$MON_CHECK_IP/32" dev "$probe_iface" 2>/dev/null || true
+        fi
+    fi
+
     # Cleanup — always runs regardless of result
-    [ "$result" -ne 0 ] && debug "Probe timed out for $(basename "$peer_config"): no handshake within ${MON_CHECK_TIMEOUT}s"
+    [ "$result" -ne 0 ] && debug "Probe failed for $(basename "$peer_config"): no data path within ${MON_CHECK_TIMEOUT}s"
     ip link del "$probe_iface" 2>/dev/null || true
     # Remove the probe daemon's UAPI socket in case it was killed before cleanup
     rm -f "/var/run/amneziawg/$probe_iface.sock" 2>/dev/null || true
@@ -152,10 +156,14 @@ probe_peer_tunnel() {
     return $result
 }
 
-# Probe all peers in rotation order starting after current_config, wrapping around to include it.
-# Returns path of first peer whose probe succeeds, or empty string if none pass.
-# Cooldown state is not consulted — this is a live check.
-# Result is stored in _probe_result (not stdout) to avoid capturing log messages in callers.
+# Probe all peers in rotation order starting after current_config, wrapping
+# around but never probing the current peer itself — a probe interface with
+# the same key would steal the session from wg0, and whether the current peer
+# is worth keeping is decided by the rx-based fail streak in the main loop,
+# not here. Cooldown state is not consulted — this is a live check.
+# Returns path of first peer whose probe succeeds, or empty string if none
+# pass (result stored in _probe_result, not stdout, to avoid capturing log
+# messages in callers).
 _probe_result=""
 select_and_probe_next_peer() {
     _probe_result=""
@@ -183,14 +191,6 @@ select_and_probe_next_peer() {
         candidate="${sorted_files[$idx]}"
 
         if [ "$candidate" = "$current_config" ]; then
-            # Check wg0's traffic counters directly — creating a probe interface
-            # with the same key would steal the server session from wg0.
-            if current_peer_rx_advanced; then
-                info "Probe succeeded: $(basename "$candidate") (still receiving traffic)"
-                _probe_result="$candidate"
-                return 0
-            fi
-            warn "Probe failed: $(basename "$candidate")"
             continue
         fi
 
@@ -205,7 +205,14 @@ select_and_probe_next_peer() {
     return 1
 }
 
-# Find current peer config by matching interface IP and active endpoint
+# Find current peer config by matching the active endpoint of the running
+# tunnel. The Endpoint written in the built session config
+# ($WG_DIR/$WG_IFACE.conf) is compared against each peer template's Endpoint
+# as a literal string (host:port). This needs no DNS resolution: resolving
+# through the tunnel itself is unreliable (the tunnel may be the thing that
+# is down, and peers sharing the same Address made the old IP-only fallback
+# ambiguous). IP+endpoint and IP-only matching remain as last-resort
+# fallbacks for configs still running from before the endpoint was recorded.
 find_current_peer_config() {
     local current_ip
     current_ip=$(get_iface_ip "$WG_IFACE")
@@ -215,13 +222,27 @@ find_current_peer_config() {
         return
     fi
 
-    # Get the active peer endpoint from the running WireGuard interface
-    local current_endpoint
-    current_endpoint=$(awg show "$WG_IFACE" endpoints 2>/dev/null | head -1 | awk '{print $2}')
-
     local peer_files=("$CLIENT_PEERS_DIR"/*.conf)
 
-    # If we have endpoint info, match by both IP and endpoint for precision
+    # Primary: match the session config's Endpoint against peer templates.
+    local session_endpoint
+    session_endpoint=$(conf_get_value "Endpoint" "$WG_DIR/$WG_IFACE.conf" 2>/dev/null || true)
+    if [ -n "$session_endpoint" ]; then
+        for peer_file in "${peer_files[@]}"; do
+            [ -f "$peer_file" ] || continue
+            local peer_endpoint
+            peer_endpoint=$(conf_get_value "Endpoint" "$peer_file")
+            if [ -n "$peer_endpoint" ] && [ "$peer_endpoint" = "$session_endpoint" ]; then
+                debug "Found current peer config: $(basename "$peer_file") (session endpoint match)" >&2
+                echo "$peer_file"
+                return 0
+            fi
+        done
+    fi
+
+    # Fallback 1: interface IP + resolved endpoint
+    local current_endpoint
+    current_endpoint=$(awg show "$WG_IFACE" endpoints 2>/dev/null | head -1 | awk '{print $2}')
     if [ -n "$current_endpoint" ]; then
         for peer_file in "${peer_files[@]}"; do
             if [ -f "$peer_file" ]; then
@@ -247,7 +268,7 @@ find_current_peer_config() {
         done
     fi
 
-    # Fallback: match by IP only
+    # Fallback 2: match by IP only
     for peer_file in "${peer_files[@]}"; do
         if [ -f "$peer_file" ]; then
             local peer_ip
@@ -419,6 +440,47 @@ info "Starting client monitor..."
 failover_total=0
 last_failover_ts=0
 
+# Consecutive failed health checks on the current peer. A single transient
+# blip must not trigger a failover: the streak has to reach
+# MON_FAIL_THRESHOLD before peer probing starts — unless the rx counter
+# proves the session itself is dead (no traffic since the streak began),
+# which bypasses the debounce immediately.
+fail_streak=0
+# rx counter snapshot taken when the current failure streak began (read from
+# the pre-check baseline file). "rx did not grow past this value during the
+# streak" means no keepalive or data arrived since the streak started — the
+# session is dead. An empty value (baseline unreadable) is treated as
+# "unknown", which conservatively keeps the debounce active.
+streak_rx_baseline=""
+
+# Failover timestamp: records when the monitor last switched to a backup
+# peer. Switchback probing is deferred until MON_SWITCHBACK_DELAY elapses
+# from it, so a master that passes a quick handshake probe but cannot carry
+# traffic cannot drag the tunnel into a failover/switchback flap loop.
+# Persisted in TMP_DIR so a monitor restart does not reset the dwell.
+FAILOVER_TS_FILE="${TMP_DIR}/monitor-failover.ts"
+
+record_failover_ts() {
+    date +%s > "$FAILOVER_TS_FILE" 2>/dev/null || true
+}
+
+clear_failover_ts() {
+    rm -f "$FAILOVER_TS_FILE" 2>/dev/null || true
+}
+
+# True when master switchback probing is allowed: MON_SWITCHBACK_DELAY
+# seconds passed since the last failover, or no failover is on record
+# (fail-open: a probe alone cannot disrupt the active tunnel).
+switchback_allowed() {
+    [ "$MON_SWITCHBACK_DELAY" -le 0 ] && return 0
+    local ts
+    ts=$(cat "$FAILOVER_TS_FILE" 2>/dev/null || echo "")
+    case "$ts" in
+        '' | *[!0-9]*) return 0 ;;
+    esac
+    [ $(( $(date +%s) - ts )) -ge "$MON_SWITCHBACK_DELAY" ]
+}
+
 # Wait for the configuration to be created
 max_wait=120
 waited=0
@@ -481,7 +543,7 @@ while true; do
 
     current_peer_config=$(find_current_peer_config)
 
-    # Baseline for the current-peer liveness check below. Taken before the
+    # Baseline for the fail-streak liveness check below. Taken before the
     # health check so the comparison spans the ping round-trip, giving
     # PersistentKeepalive traffic a chance to register.
     refresh_peer_rx_baseline
@@ -491,60 +553,108 @@ while true; do
 
     if check_tunnel_health "$MON_CHECK_IP" "$MON_CHECK_TIMEOUT"; then
         write_tunnel_state 1 "$(basename "${current_peer_config:-}")" "$failover_total" "$last_failover_ts"
+        fail_streak=0
+        streak_rx_baseline=""
 
-        # Switch back to master whenever we're on a backup peer — probe first to confirm it's alive.
+        # Switch back to master while on a backup peer — but only after the
+        # switchback dwell has elapsed, and only through a probe that
+        # verifies the data path (handshake + ping through the probe
+        # interface), not a handshake alone.
         if [ -n "$master_peer_config" ] && [ -n "$current_peer_config" ] && [ "$current_peer_config" != "$master_peer_config" ]; then
-            info "Probing master peer $MASTER_PEER for switchback"
-            if probe_peer_tunnel "$master_peer_config"; then
-                info "Master peer $MASTER_PEER probe succeeded, switching back"
-                if switch_to_peer_config "$master_peer_config" "$current_peer_config"; then
-                    current_peer_config="$master_peer_config"
-                    failover_total=$(( failover_total + 1 ))
-                    last_failover_ts=$(date +%s)
+            if switchback_allowed; then
+                info "Probing master peer $MASTER_PEER for switchback"
+                if probe_peer_tunnel "$master_peer_config"; then
+                    info "Master peer $MASTER_PEER probe succeeded, switching back"
+                    if switch_to_peer_config "$master_peer_config" "$current_peer_config"; then
+                        current_peer_config="$master_peer_config"
+                        failover_total=$(( failover_total + 1 ))
+                        last_failover_ts=$(date +%s)
+                        clear_failover_ts
+                    fi
+                else
+                    warn "Master peer $MASTER_PEER probe failed, staying on backup"
+                    record_failover_ts
                 fi
             else
-                warn "Master peer $MASTER_PEER probe failed, staying on backup"
+                debug "Switchback deferred: dwell on backup below MON_SWITCHBACK_DELAY=${MON_SWITCHBACK_DELAY}s"
             fi
         fi
         sleep "$MON_CHECK_INTERVAL"
     else
-        # Tunnel is down — probe all peers before switching, to avoid blind disruption
-        warn "Tunnel is down, probing available peers..."
-
-        if [ -z "$current_peer_config" ]; then
-            current_peer_config="${sorted_files[0]}"
-            debug "Using initial peer config: $(basename "$current_peer_config")"
+        # Tunnel is down — the fail streak decides whether to probe peers now
+        # or wait for more confirmations. A dead rx session (no traffic since
+        # the streak began) bypasses the debounce: there is nothing to wait
+        # for. A live rx counter means keepalives still arrive, so the ping
+        # failure may be transient — give the threshold a chance.
+        fail_streak=$(( fail_streak + 1 ))
+        if [ "$fail_streak" -eq 1 ]; then
+            streak_rx_baseline=$(cat "${TMP_DIR}/monitor-peer-rx.state" 2>/dev/null || echo "")
+            case "$streak_rx_baseline" in
+                '' | *[!0-9]*) streak_rx_baseline="" ;;
+            esac
         fi
 
-        write_tunnel_state 0 "$(basename "$current_peer_config")" "$failover_total" "$last_failover_ts"
+        # Rx-dead check: no traffic since the streak baseline means the
+        # session itself is dead and the debounce can be bypassed. Only
+        # meaningful from the second failure on — at streak 1 the baseline
+        # was taken just before the current health check, so the comparison
+        # window (~12 s) is shorter than the 25 s keepalive interval and a
+        # healthy session could be misjudged as dead.
+        session_rx_dead=false
+        if [ "$fail_streak" -ge 2 ]; then
+            rx_now=$(current_peer_rx)
+            if [ -z "$streak_rx_baseline" ] || [ "$rx_now" -le "$streak_rx_baseline" ]; then
+                session_rx_dead=true
+            fi
+        fi
 
-        probe_loop_done=false
-        while [ "$probe_loop_done" = "false" ]; do
-            select_and_probe_next_peer "$current_peer_config" || true
-            next_peer="$_probe_result"
-
-            if [ -n "$next_peer" ]; then
-                if [ "$next_peer" = "$current_peer_config" ]; then
-                    # Current peer probe passed — tunnel issue was transient, stay
-                    info "Current peer probe succeeded, staying on $(basename "$current_peer_config")"
-                elif switch_to_peer_config "$next_peer" "$current_peer_config"; then
-                    current_peer_config="$next_peer"
-                    failover_total=$(( failover_total + 1 ))
-                    last_failover_ts=$(date +%s)
-                fi
-                probe_loop_done=true
+        if [ "$session_rx_dead" = "true" ] || [ "$fail_streak" -ge "$MON_FAIL_THRESHOLD" ]; then
+            if [ "$session_rx_dead" = "true" ]; then
+                warn "Tunnel is down (rx session dead), probing available peers..."
             else
-                # All peer probes failed — re-check if current tunnel self-healed
-                if check_tunnel_health "$MON_CHECK_IP" "$MON_CHECK_TIMEOUT"; then
-                    info "Tunnel health check recovered on current peer, staying"
+                warn "Tunnel is down (${fail_streak} consecutive failed checks), probing available peers..."
+            fi
+
+            if [ -z "$current_peer_config" ]; then
+                current_peer_config="${sorted_files[0]}"
+                debug "Using initial peer config: $(basename "$current_peer_config")"
+            fi
+
+            write_tunnel_state 0 "$(basename "$current_peer_config")" "$failover_total" "$last_failover_ts"
+
+            probe_loop_done=false
+            while [ "$probe_loop_done" = "false" ]; do
+                select_and_probe_next_peer "$current_peer_config" || true
+                next_peer="$_probe_result"
+
+                if [ -n "$next_peer" ]; then
+                    if switch_to_peer_config "$next_peer" "$current_peer_config"; then
+                        current_peer_config="$next_peer"
+                        failover_total=$(( failover_total + 1 ))
+                        last_failover_ts=$(date +%s)
+                        record_failover_ts
+                    fi
                     probe_loop_done=true
                 else
-                    warn "All peer probes failed and tunnel still down, retrying in ${MON_CHECK_INTERVAL}s..."
-                    sleep "$MON_CHECK_INTERVAL"
+                    # All peer probes failed — re-check if current tunnel self-healed
+                    if check_tunnel_health "$MON_CHECK_IP" "$MON_CHECK_TIMEOUT"; then
+                        info "Tunnel health check recovered on current peer, staying"
+                        probe_loop_done=true
+                    else
+                        warn "All peer probes failed and tunnel still down, retrying in ${MON_CHECK_INTERVAL}s..."
+                        sleep "$MON_CHECK_INTERVAL"
+                    fi
                 fi
-            fi
-        done
+            done
 
-        sleep "$MON_CHECK_INTERVAL"
+            fail_streak=0
+            streak_rx_baseline=""
+            sleep "$MON_CHECK_INTERVAL"
+        else
+            # Debounced: keep counting failures without disrupting the tunnel
+            warn "Tunnel check failed (streak ${fail_streak}/${MON_FAIL_THRESHOLD}, session rx still active) — debouncing"
+            write_tunnel_state 0 "$(basename "$current_peer_config")" "$failover_total" "$last_failover_ts"
+            sleep "$MON_CHECK_INTERVAL"
+        fi
     fi
 done

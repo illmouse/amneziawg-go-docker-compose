@@ -97,6 +97,18 @@ declare -A PROTOCOL_MAP=(
 : "${MON_CHECK_INTERVAL:=10}"
 : "${MON_CHECK_TIMEOUT:=10}"
 : "${MON_PING_COUNT:=3}"
+# Client failover debounce: consecutive failed health checks required before
+# peer probing/failover starts (client mode). Bypassed immediately when the
+# current peer's rx counter shows a dead session. Set to 1 to restore the
+# pre-5.0.7 switch-on-first-failure behavior.
+: "${MON_FAIL_THRESHOLD:=3}"
+# Minimum seconds on a backup peer before the master is probed for switchback
+# (client mode). Prevents failover/switchback flap loops when the master
+# answers handshakes but cannot carry traffic. Set to 0 to disable.
+: "${MON_SWITCHBACK_DELAY:=60}"
+# Guard against non-numeric values breaking integer comparisons in the monitor
+case "$MON_FAIL_THRESHOLD" in '' | *[!0-9]*) MON_FAIL_THRESHOLD=3 ;; esac
+case "$MON_SWITCHBACK_DELAY" in '' | *[!0-9]*) MON_SWITCHBACK_DELAY=60 ;; esac
 
 # ===============================
 # Log rotation
@@ -213,7 +225,7 @@ export WG_MODE WG_IFACE WG_ADDRESS WG_PORT WG_ENDPOINT WG_PEER_COUNT WG_MTU
 export PROXY_SOCKS5_ENABLED PROXY_HTTP_ENABLED PROXY_HTTP_PORT PROXY_SOCKS5_PORT PROXY_LOG_DIR PROXY_CONF_DIR PROXY_SOCKS5_AUTH_ENABLED PROXY_SOCKS5_AUTH_USER PROXY_SOCKS5_AUTH_PASSWORD PROXY_HTTP_AUTH_ENABLED PROXY_HTTP_AUTH_USER PROXY_HTTP_AUTH_PASSWORD PROXY_CUSTOM_CONFIG
 export Jc Jmin Jmax S1 S2 S3 S4 H1 H2 H3 H4 UDP_SIGNATURE
 export HeaderProtectionKey ContentPaddingAddition RekeyAfterTime RekeyTimeout RejectAfterTime KeepaliveTimeout MaxHandshakeAttempts RandomTrailers DisableCookies
-export MON_CHECK_IP MON_CHECK_INTERVAL MON_CHECK_TIMEOUT MON_PING_COUNT PROTOCOL_MAP
+export MON_CHECK_IP MON_CHECK_INTERVAL MON_CHECK_TIMEOUT MON_PING_COUNT MON_FAIL_THRESHOLD MON_SWITCHBACK_DELAY PROTOCOL_MAP
 export LOGROTATE_INTERVAL LOGROTATE_ROTATE LOGROTATE_MAXAGE
 export METRICS_ENABLED METRICS_PORT METRICS_INTERVAL PEER_HANDSHAKE_TIMEOUT
 export ORIGINAL_DNS

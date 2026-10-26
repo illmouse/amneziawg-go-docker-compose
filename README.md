@@ -165,25 +165,27 @@ The monitoring script checks tunnel availability via ping to `MON_CHECK_IP` (def
 
 ## Client Mode Failover
 
-When the tunnel health check fails, the monitor does **not** blindly switch to the next peer. Instead it probes each candidate peer by spinning up a temporary WireGuard interface and waiting for a successful handshake. A handshake proves the server is up, the WireGuard daemon is running, and the keys are valid end-to-end — unlike a simple ping to the endpoint IP, which only verifies host reachability.
+When the tunnel health check fails, the monitor does **not** blindly switch to the next peer — and it does not switch on a single failed check either. A transient ping blip used to trigger an immediate failover (with a full tunnel rebuild and 3proxy restart, dropping all client connections); now failures must accumulate first.
 
 **Failover flow:**
 
-1. Current peer is marked as failed.
-2. All peers are probed in rotation order (including the current one, which may have self-healed).
-3. The first peer whose handshake succeeds is switched to immediately.
-4. If no peers respond, the current tunnel health check is re-run. If it recovers, the monitor stays on the current peer and no switch is made.
-5. If the tunnel is still down, the process repeats after `MON_CHECK_INTERVAL` seconds.
+1. Failed health checks are counted. After `MON_FAIL_THRESHOLD` consecutive failures (default 3) the monitor starts probing peers.
+2. The debounce is bypassed immediately when the current peer's rx counter shows a dead session (no received traffic since the failures began — keepalives deliver traffic at least every ~25 s on a live session).
+3. Each candidate peer is probed through a temporary WireGuard interface: a successful handshake proves the server is up, the daemon is running, and the keys are valid; then a **data-path ping** through the probe interface proves traffic actually flows. A handshake alone is not enough — a server with broken forwarding still answers handshakes.
+4. The first peer whose probe passes is switched to.
+5. If no peers respond, the current tunnel health check is re-run. If it recovers, the monitor stays on the current peer and no switch is made.
+6. If the tunnel is still down, the process repeats after `MON_CHECK_INTERVAL` seconds.
 
-The probe handshake timeout is controlled by `MON_CHECK_TIMEOUT`.
+The probe handshake and data-path timeouts are controlled by `MON_CHECK_TIMEOUT`; the debounce threshold by `MON_FAIL_THRESHOLD`.
 
 ## Master Peer
 
 If the `MASTER_PEER` variable is set:
 
 * At container start in client mode, the specified peer is always activated first instead of the first one alphabetically.
-* While on a backup peer and the master's failure cooldown has expired, the master peer is **probed** (temporary interface + handshake check) before switching back. If the probe fails, the cooldown is extended and the active backup connection is not disrupted.
-* Once the master peer probe succeeds, the tunnel switches back to it.
+* While on a backup peer, the master is **probed** (handshake + data-path check) before switching back, but no earlier than `MON_SWITCHBACK_DELAY` seconds (default 60) after the failover. This dwell prevents flap loops when the master passes quick probes but cannot sustain traffic.
+* If the master probe fails, the dwell is extended and the active backup connection is not disrupted.
+* Once the master probe succeeds, the tunnel switches back to it.
 
 # Logs
 
@@ -258,6 +260,8 @@ Import the dashboard via Grafana → Dashboards → Import. Uncomment the metric
 | MON_CHECK_INTERVAL | integer ≥ 1 | `10` | Interval in seconds between monitoring checks |
 | MON_CHECK_TIMEOUT | integer ≥ 1 | `10` | Timeout in seconds for health check pings and peer handshake probes |
 | MON_PING_COUNT | integer ≥ 1 | `3` | Number of ping packets sent per health check. The check passes if any packet gets a response (client mode) |
+| MON_FAIL_THRESHOLD | integer ≥ 1 | `3` | Client mode: consecutive failed health checks before peer probing/failover starts (debounce against transient blips). Bypassed immediately when the current peer's rx counter shows a dead session. `1` = switch on first failure (pre-5.0.7 behavior) |
+| MON_SWITCHBACK_DELAY | integer ≥ 0 | `60` | Client mode: minimum seconds on a backup peer before the master is probed for switchback. Prevents failover/switchback flap loops when the master answers handshakes but cannot carry traffic. `0` = probe as soon as the tunnel is healthy |
 | LOGROTATE_INTERVAL | integer ≥ 1 | `86400` | Seconds between log rotation runs inside the container (default: 24 h) |
 | LOGROTATE_ROTATE | integer ≥ 0 | `1` | Number of rotated log files to keep (1 = keep only the previous log) |
 | LOGROTATE_MAXAGE | integer ≥ 1 | `1` | Delete rotated log files older than this many days |
